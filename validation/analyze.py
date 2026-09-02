@@ -254,7 +254,7 @@ def main():
         sub = [r for r in frows if r["noise_mm"] == noise and r["theta_true_deg"] == 0]
         xs = [max(r["t_true_mm"], 0.03) for r in sub]; ys = [max(r["t_err_mm"], 1e-5) for r in sub]
         ax.plot(xs, ys, marker=markers.get(noise, "o"), color=cols.get(noise, C_GREY), lw=1, ms=4, label=f"noise {noise:g} mm")
-    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected ‖t‖ (mm)  [θ = 0]"); ax.set_ylabel("‖t̂ − t‖ (mm)"); ax.set_title("(a) frame: translation estimate", loc="left")
+    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected ‖t‖ (mm)  [θ = 0]"); ax.set_ylabel("‖t̂ − t‖ (mm)  (floor 1e-5)"); ax.set_title("(a) frame: translation estimate", loc="left")
     ax.legend(fontsize=7)
     # (b) scale
     ax = axs[0, 1]
@@ -263,7 +263,7 @@ def main():
         ax.plot([r["s_true"] for r in sub], [r["s_hat_mean"] for r in sub], marker=markers.get(noise, "o"), color=cols.get(noise, C_GREY), lw=1, ms=4, label=f"ŝ (anchored), noise {noise:g} mm")
         ax.plot([r["s_true"] for r in sub], [r["r_int_mean"] for r in sub], marker=markers.get(noise, "o"), mfc="none", color=cols.get(noise, C_GREY), lw=1, ls="--", ms=4)
     ax.plot([0.1, 10], [0.1, 10], color=C_GREY, lw=0.8, ls=":")
-    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected scale s"); ax.set_ylabel("estimate"); ax.set_title("(b) scale: anchored ŝ (solid) vs. internal ratio (dashed)", loc="left", fontsize=8)
+    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected scale s"); ax.set_ylabel("estimate"); ax.set_title("(b) scale: anchored ŝ (solid), internal ratio (dashed)", loc="left", fontsize=7.5)
     ax.legend(fontsize=6.5)
     # (c) liveness
     ax = axs[1, 0]
@@ -300,7 +300,7 @@ def main():
             ax.plot(m["x_mm"], m["measured_mm"], "o", color=C_ORANGE, ms=4, mfc="white")
     ax.set_xlabel("‖p_c‖ or step (mm)"); ax.set_ylabel("positional error (mm)"); ax.set_title("(a) M1, JHU base_frame", loc="left"); ax.legend(fontsize=5.5)
     ax = axs[1]
-    for s, c in ((0.1, C_BLUE), (0.9, C_ORANGE), (1.1, C_GREEN)):
+    for s, c in ((0.1, C_BLUE), (0.5, C_ORANGE), (1.1, C_GREEN)):
         ax.plot(ps * 1e3, [G.m2_error(s, p) * 1e3 for p in ps], color=c, lw=1.5, label=f"s = {s}")
     for m in mrows:
         if m["kind"] == "scale_absolute":

@@ -101,8 +101,12 @@ class ScalingUnitsProbe:
             res.estimates["response_latency_s"] = estimate(latencies).to_dict()
         if s_anc:
             e_s = estimate(s_anc)
-            preds = [self.tol.dimensional_error(s) for s in s_anc]
-            e_pred = estimate(preds)
+            # predicted error from the *mean* estimate with its confidence interval mapped through |1 - s| r_ws.
+            # Using per-trial |1 - s_i| would bias the prediction upward under noise (|.| of a zero-mean error is positive).
+            cands = [self.tol.dimensional_error(v) for v in (e_s.ci_low, e_s.ci_high)]
+            lo = 0.0 if (e_s.ci_low <= 1.0 <= e_s.ci_high) else min(cands)
+            from ..stats import Estimate
+            e_pred = Estimate(e_s.n, self.tol.dimensional_error(e_s.mean), float("nan"), lo, max(cands), e_s.alpha)
             res.estimates["scale_anchored"] = e_s.to_dict()
             res.estimates["predicted_error_at_workspace_edge_m"] = e_pred.to_dict()
             res.predicted_error_m = e_pred.mean

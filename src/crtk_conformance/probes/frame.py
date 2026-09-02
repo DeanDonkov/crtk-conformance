@@ -102,7 +102,14 @@ class FrameSemanticsProbe:
                 T_hat = G.average_pose(trial_T)
                 e_t = estimate(trial_tnorm)
                 e_th = estimate([math.degrees(x) for x in trial_theta])
-                e_pred = estimate(trial_pred)
+                # predicted error at the *mean* transform; its confidence interval takes the trial-to-trial spread of
+                # the per-trial predictions (Student t over n trials). Centring on the mean transform avoids the upward
+                # bias of averaging per-trial norms when the true transform is near zero.
+                from ..stats import Estimate
+                e_tr = estimate(trial_pred)
+                centre = self.tol.spatial_error(float(np.linalg.norm(T_hat[:3, 3])), G.rotation_angle(T_hat[:3, :3]))
+                hw = e_tr.half_width if e_tr.n > 1 else float("inf")
+                e_pred = Estimate(e_tr.n, centre, e_tr.std, max(0.0, centre - hw), centre + hw, e_tr.alpha)
                 res.estimates = {
                     "binding_translation_m": [float(v) for v in T_hat[:3, 3]],
                     "binding_translation_norm_m": e_t.to_dict(),

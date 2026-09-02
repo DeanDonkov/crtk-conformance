@@ -17,14 +17,14 @@
  },
  "discovery": {
   "namespace": "/PSM1",
-  "discovery_latency_s": 0.0033912869994310313,
+  "discovery_latency_s": 0.003379546999980221,
   "topics": {
    "measured_cp": {
     "topic": "/PSM1/measured_cp",
-    "present": false,
-    "type": null,
-    "type_matches": null,
-    "published": false,
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
     "subscribed": false
    },
    "setpoint_cp": {
@@ -37,10 +37,10 @@
    },
    "local/measured_cp": {
     "topic": "/PSM1/local/measured_cp",
-    "present": false,
-    "type": null,
-    "type_matches": null,
-    "published": false,
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
     "subscribed": false
    },
    "local/setpoint_cp": {
@@ -53,11 +53,11 @@
    },
    "servo_cp": {
     "topic": "/PSM1/servo_cp",
-    "present": false,
-    "type": null,
-    "type_matches": null,
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
     "published": false,
-    "subscribed": false
+    "subscribed": true
    },
    "servo_cr": {
     "topic": "/PSM1/servo_cr",
@@ -69,27 +69,27 @@
    },
    "measured_js": {
     "topic": "/PSM1/measured_js",
-    "present": false,
-    "type": null,
-    "type_matches": null,
-    "published": false,
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
     "subscribed": false
    },
    "operating_state": {
     "topic": "/PSM1/operating_state",
-    "present": false,
-    "type": null,
-    "type_matches": null,
-    "published": false,
+    "present": true,
+    "type": "crtk_msgs/OperatingState",
+    "type_matches": true,
+    "published": true,
     "subscribed": false
    },
    "state_command": {
     "topic": "/PSM1/state_command",
-    "present": false,
-    "type": null,
-    "type_matches": null,
+    "present": true,
+    "type": "crtk_msgs/StringStamped",
+    "type_matches": true,
     "published": false,
-    "subscribed": false
+    "subscribed": true
    },
    "T_b_w": {
     "topic": "/PSM1/T_b_w",
@@ -102,24 +102,91 @@
   },
   "tf_present": false,
   "tf_static_present": false,
-  "all_topics_in_namespace": []
+  "all_topics_in_namespace": [
+   "/PSM1/local/measured_cp",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/operating_state",
+   "/PSM1/servo_cp",
+   "/PSM1/state_command"
+  ]
  },
  "result": {
   "probe": "FrameSemanticsProbe",
   "binding_class": "spatial",
-  "outcome": "undetermined",
-  "estimates": {},
-  "predicted_error_m": null,
-  "predicted_error_ci": null,
-  "decision_basis": "missing measured_cp",
+  "outcome": "divergent",
+  "estimates": {
+   "binding_translation_m": [
+    0.0011558256903986166,
+    -0.0039447750961899555,
+    0.002846544644633922
+   ],
+   "binding_translation_norm_m": {
+    "n": 10,
+    "mean": 0.004999999999999997,
+    "std": 0.0,
+    "ci_low": 0.004999999999999997,
+    "ci_high": 0.004999999999999997,
+    "alpha": 0.05
+   },
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 150.0,
+    "std": 0.0,
+    "ci_low": 150.0,
+    "ci_high": 150.0,
+    "alpha": 0.05
+   },
+   "binding_matrix": [
+    [
+     -0.8660254037844386,
+     -0.5000000000000001,
+     0.0,
+     0.0011558256903986166
+    ],
+    [
+     0.5000000000000001,
+     -0.8660254037844386,
+     0.0,
+     -0.0039447750961899555
+    ],
+    [
+     0.0,
+     0.0,
+     1.0,
+     0.002846544644633922
+    ],
+    [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.19818516525781368,
+    "std": 0.0,
+    "ci_low": 0.19818516525781368,
+    "ci_high": 0.19818516525781368,
+    "alpha": 0.05
+   }
+  },
+  "predicted_error_m": 0.19818516525781368,
+  "predicted_error_ci": [
+   0.19818516525781368,
+   0.19818516525781368
+  ],
+  "decision_basis": "eq. (3): ||t_hat|| + 2 sin(theta_hat/2) r_ws = 198.185 mm (95% CI 198.185..198.185) vs epsilon = 1.000 mm",
   "observations": {
    "discovery": {
     "measured_cp": {
      "topic": "/PSM1/measured_cp",
-     "present": false,
-     "type": null,
-     "type_matches": null,
-     "published": false,
+     "present": true,
+     "type": "geometry_msgs/PoseStamped",
+     "type_matches": true,
+     "published": true,
      "subscribed": false
     },
     "setpoint_cp": {
@@ -132,19 +199,19 @@
     },
     "local/measured_cp": {
      "topic": "/PSM1/local/measured_cp",
-     "present": false,
-     "type": null,
-     "type_matches": null,
-     "published": false,
+     "present": true,
+     "type": "geometry_msgs/PoseStamped",
+     "type_matches": true,
+     "published": true,
      "subscribed": false
     },
     "servo_cp": {
      "topic": "/PSM1/servo_cp",
-     "present": false,
-     "type": null,
-     "type_matches": null,
+     "present": true,
+     "type": "geometry_msgs/PoseStamped",
+     "type_matches": true,
      "published": false,
-     "subscribed": false
+     "subscribed": true
     },
     "T_b_w": {
      "topic": "/PSM1/T_b_w",
@@ -154,15 +221,19 @@
      "published": false,
      "subscribed": false
     }
+   },
+   "frame_ids": {
+    "measured_cp": "PSM1_base",
+    "local/measured_cp": "PSM1_base"
    }
   },
   "notes": [
-   "measured_cp not present: nothing to test"
+   "measured_cp and local/measured_cp carry the same frame_id but differ by a non-zero transform: frame_id does not disambiguate the binding"
   ],
-  "started_at": 1788359158.4193761,
-  "duration_s": 1.8596649169921875e-05
+  "started_at": 1788375537.8897095,
+  "duration_s": 0.5195157527923584
  },
- "wall_s": 2.9325485229492188e-05,
+ "wall_s": 0.5195379257202148,
  "truth": {
   "t_m": [
    0.0011558256903986168,

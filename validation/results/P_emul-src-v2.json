@@ -1,0 +1,513 @@
+{
+ "tool": "crtk-conformance",
+ "version": "0.1.0",
+ "generated_at": "2026-09-02T14:44:05.800750+00:00",
+ "namespace": "/PSM1",
+ "ros_master_uri": "http://localhost:11611",
+ "tolerance": {
+  "epsilon_m": 0.001,
+  "workspace_radius_m": 0.1,
+  "speed_m_s": 0.05,
+  "client_rate_hz": 100.0,
+  "jitter_max_s": 0.005
+ },
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.003699339999911899,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/T_b_w",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/servo_cp"
+  ]
+ },
+ "probes": [
+  {
+   "probe": "FrameSemanticsProbe",
+   "binding_class": "spatial",
+   "outcome": "undetermined",
+   "estimates": {
+    "T_b_w_translation_m": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "T_b_w_rotation_deg": 0.0
+   },
+   "predicted_error_m": null,
+   "predicted_error_ci": null,
+   "decision_basis": "no local/ reference available -> undetermined by construction",
+   "observations": {
+    "discovery": {
+     "measured_cp": {
+      "topic": "/PSM1/measured_cp",
+      "present": true,
+      "type": "geometry_msgs/PoseStamped",
+      "type_matches": true,
+      "published": true,
+      "subscribed": false
+     },
+     "setpoint_cp": {
+      "topic": "/PSM1/setpoint_cp",
+      "present": false,
+      "type": null,
+      "type_matches": null,
+      "published": false,
+      "subscribed": false
+     },
+     "local/measured_cp": {
+      "topic": "/PSM1/local/measured_cp",
+      "present": false,
+      "type": null,
+      "type_matches": null,
+      "published": false,
+      "subscribed": false
+     },
+     "servo_cp": {
+      "topic": "/PSM1/servo_cp",
+      "present": true,
+      "type": "geometry_msgs/PoseStamped",
+      "type_matches": true,
+      "published": false,
+      "subscribed": true
+     },
+     "T_b_w": {
+      "topic": "/PSM1/T_b_w",
+      "present": true,
+      "type": "geometry_msgs/PoseStamped",
+      "type_matches": true,
+      "published": true,
+      "subscribed": false
+     }
+    },
+    "frame_ids": {
+     "measured_cp": "psm1/baselink",
+     "T_b_w": "world"
+    }
+   },
+   "notes": [
+    "no local/measured_cp topic: the binding of the unqualified topics relative to the arm base cannot be verified through the interface",
+    "T_b_w present: interface exposes base-in-world, which suggests (but does not prove) an arm-base binding of measured_cp"
+   ],
+   "started_at": 1788360232.4979365,
+   "duration_s": 0.019777297973632812
+  },
+  {
+   "probe": "ScalingUnitsProbe",
+   "binding_class": "dimensional",
+   "outcome": "conformant",
+   "estimates": {
+    "internal_ratio": {
+     "n": 6,
+     "mean": 1.0000000000000002,
+     "std": 4.657646926676369e-16,
+     "ci_low": 0.9999999999999998,
+     "ci_high": 1.0000000000000007,
+     "alpha": 0.05
+    },
+    "internal_ratio_per_axis": {
+     "0": {
+      "n": 2,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci_low": 1.0,
+      "ci_high": 1.0,
+      "alpha": 0.05
+     },
+     "1": {
+      "n": 2,
+      "mean": 1.0,
+      "std": 0.0,
+      "ci_low": 1.0,
+      "ci_high": 1.0,
+      "alpha": 0.05
+     },
+     "2": {
+      "n": 2,
+      "mean": 1.0000000000000009,
+      "std": 0.0,
+      "ci_low": 1.0000000000000009,
+      "ci_high": 1.0000000000000009,
+      "alpha": 0.05
+     }
+    },
+    "response_latency_s": {
+     "n": 6,
+     "mean": 0.00665214716658132,
+     "std": 0.00046442477058299293,
+     "ci_low": 0.0061647632602810105,
+     "ci_high": 0.007139531072881629,
+     "alpha": 0.05
+    },
+    "scale_anchored": {
+     "n": 6,
+     "mean": 1.0000000000000002,
+     "std": 4.657646926676369e-16,
+     "ci_low": 0.9999999999999998,
+     "ci_high": 1.0000000000000007,
+     "alpha": 0.05
+    },
+    "predicted_error_at_workspace_edge_m": {
+     "n": 6,
+     "mean": 2.960594732333751e-17,
+     "std": 4.586533637279209e-17,
+     "ci_low": -1.8526771302088126e-17,
+     "ci_high": 7.773866594876313e-17,
+     "alpha": 0.05
+    }
+   },
+   "predicted_error_m": 2.960594732333751e-17,
+   "predicted_error_ci": [
+    -1.8526771302088126e-17,
+    7.773866594876313e-17
+   ],
+   "decision_basis": "eq. (M2.1) with anchored s_hat = 1.0000 (95% CI 1.0000..1.0000): |1-s| r_ws = 0.000 mm vs epsilon = 1.000 mm",
+   "observations": {
+    "enable": {
+     "operating_state_present": false,
+     "state_before": null,
+     "state_after": null,
+     "enable_latency_s": null
+    },
+    "trials": [
+     {
+      "trial": 0,
+      "ok": true,
+      "axis": 0,
+      "delta_cmd_if": [
+       0.005,
+       0.0,
+       0.0
+      ],
+      "delta_meas_if": [
+       0.005,
+       0.0,
+       0.0
+      ],
+      "r_int": 1.0,
+      "first_motion_s": 0.005917131999922276,
+      "delta_anchor_m": [
+       0.005,
+       0.0,
+       0.0
+      ],
+      "s_anchored": 1.0
+     },
+     {
+      "trial": 1,
+      "ok": true,
+      "axis": 1,
+      "delta_cmd_if": [
+       0.0,
+       0.005,
+       0.0
+      ],
+      "delta_meas_if": [
+       0.0,
+       0.005,
+       0.0
+      ],
+      "r_int": 1.0,
+      "first_motion_s": 0.006288400999437727,
+      "delta_anchor_m": [
+       0.0,
+       0.005,
+       0.0
+      ],
+      "s_anchored": 1.0
+     },
+     {
+      "trial": 2,
+      "ok": true,
+      "axis": 2,
+      "delta_cmd_if": [
+       0.0,
+       0.0,
+       0.005
+      ],
+      "delta_meas_if": [
+       0.0,
+       0.0,
+       0.0050000000000000044
+      ],
+      "r_int": 1.0000000000000009,
+      "first_motion_s": 0.006987572000070941,
+      "delta_anchor_m": [
+       0.0,
+       0.0,
+       0.0050000000000000044
+      ],
+      "s_anchored": 1.0000000000000009
+     },
+     {
+      "trial": 3,
+      "ok": true,
+      "axis": 0,
+      "delta_cmd_if": [
+       -0.005,
+       -0.0,
+       -0.0
+      ],
+      "delta_meas_if": [
+       -0.005,
+       0.0,
+       0.0
+      ],
+      "r_int": 1.0,
+      "first_motion_s": 0.006680866000351671,
+      "delta_anchor_m": [
+       -0.005,
+       0.0,
+       0.0
+      ],
+      "s_anchored": 1.0
+     },
+     {
+      "trial": 4,
+      "ok": true,
+      "axis": 1,
+      "delta_cmd_if": [
+       -0.0,
+       -0.005,
+       -0.0
+      ],
+      "delta_meas_if": [
+       0.0,
+       -0.005,
+       0.0
+      ],
+      "r_int": 1.0,
+      "first_motion_s": 0.006912855999871681,
+      "delta_anchor_m": [
+       0.0,
+       -0.005,
+       0.0
+      ],
+      "s_anchored": 1.0
+     },
+     {
+      "trial": 5,
+      "ok": true,
+      "axis": 2,
+      "delta_cmd_if": [
+       -0.0,
+       -0.0,
+       -0.005
+      ],
+      "delta_meas_if": [
+       0.0,
+       0.0,
+       -0.0050000000000000044
+      ],
+      "r_int": 1.0000000000000009,
+      "first_motion_s": 0.007126055999833625,
+      "delta_anchor_m": [
+       0.0,
+       0.0,
+       -0.0050000000000000044
+      ],
+      "s_anchored": 1.0000000000000009
+     }
+    ]
+   },
+   "notes": [],
+   "started_at": 1788360232.5177293,
+   "duration_s": 2.6195833683013916
+  },
+  {
+   "probe": "RateSensitivityProbe",
+   "binding_class": "temporal",
+   "outcome": "conformant",
+   "estimates": {
+    "required_rate_hz_from_tolerance": 50.0,
+    "liveness_margin_ok": null,
+    "effective_rate_at_client_rate_hz": 99.98688362060551,
+    "zoh_error_at_client_rate_m": 0.0005000655905000713
+   },
+   "predicted_error_m": null,
+   "predicted_error_ci": null,
+   "decision_basis": "eq. (4) satisfied or no liveness policy detected; effective rate >= v/epsilon; state precondition consistent with expectation",
+   "observations": {
+    "state_precondition": {
+     "operating_state_present": false,
+     "state_command_present": false,
+     "executed_without_state_machine": true
+    },
+    "liveness": {
+     "gap_max_s": 1.0,
+     "trials": [
+      {
+       "gap_s": 1.0002518330002204,
+       "gap_requested_s": 1.0,
+       "executed": true,
+       "drift_m": 0.0,
+       "state": null
+      },
+      {
+       "gap_s": 1.000327352999193,
+       "gap_requested_s": 1.0,
+       "executed": true,
+       "drift_m": 0.0,
+       "state": null
+      }
+     ],
+     "executed_after_gap_max": {
+      "count": 2,
+      "total": 2,
+      "p": 1.0,
+      "ci_low": 0.34238022750665303,
+      "ci_high": 1.0
+     },
+     "drift_during_gap_max_m": {
+      "n": 2,
+      "mean": 0.0,
+      "std": 0.0,
+      "ci_low": 0.0,
+      "ci_high": 0.0,
+      "alpha": 0.05
+     },
+     "tau_w_estimate_s": null,
+     "finding": "no liveness policy detected up to 1.0 s (n=2)"
+    },
+    "effective_rate": {
+     "publish_rate_hz": 119.98781715693073,
+     "per_rate": [
+      {
+       "command_rate_hz": 50,
+       "commands_sent": 50,
+       "distinct_positions_observed": 48,
+       "effective_rate_hz": 47.994950115331086,
+       "observation_bounded_by_publish_rate": false,
+       "zoh_error_bound_m": 0.0010417762677083905
+      },
+      {
+       "command_rate_hz": 100,
+       "commands_sent": 100,
+       "distinct_positions_observed": 100,
+       "effective_rate_hz": 99.98688362060551,
+       "observation_bounded_by_publish_rate": false,
+       "zoh_error_bound_m": 0.0005000655905000713
+      },
+      {
+       "command_rate_hz": 200,
+       "commands_sent": 200,
+       "distinct_positions_observed": 114,
+       "effective_rate_hz": 113.98854631686412,
+       "observation_bounded_by_publish_rate": true,
+       "zoh_error_bound_m": 0.0004386405618421569
+      },
+      {
+       "command_rate_hz": 500,
+       "commands_sent": 500,
+       "distinct_positions_observed": 120,
+       "effective_rate_hz": 119.98697721337584,
+       "observation_bounded_by_publish_rate": true,
+       "zoh_error_bound_m": 0.000416711889583515
+      },
+      {
+       "command_rate_hz": 1000,
+       "commands_sent": 1000,
+       "distinct_positions_observed": 121,
+       "effective_rate_hz": 120.97366137245714,
+       "observation_bounded_by_publish_rate": true,
+       "zoh_error_bound_m": 0.00041331310826460464
+      }
+     ]
+    }
+   },
+   "notes": [],
+   "started_at": 1788360235.137333,
+   "duration_s": 10.663328647613525
+  }
+ ],
+ "summary": {
+  "spatial": "undetermined",
+  "dimensional": "conformant",
+  "temporal": "conformant"
+ }
+}

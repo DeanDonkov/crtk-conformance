@@ -1,0 +1,199 @@
+{
+ "preset": "emul-ambf-object-watchdog",
+ "overrides": {},
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.004200551000394626,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/T_b_w",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/servo_cp"
+  ]
+ },
+ "result": {
+  "probe": "RateSensitivityProbe",
+  "binding_class": "temporal",
+  "outcome": "conformant",
+  "estimates": {
+   "required_rate_hz_from_tolerance": 50.0,
+   "liveness_margin_ok": null,
+   "effective_rate_at_client_rate_hz": 98.98817952451913,
+   "zoh_error_at_client_rate_m": 0.0005051108146464612
+  },
+  "predicted_error_m": null,
+  "predicted_error_ci": null,
+  "decision_basis": "eq. (4) satisfied or no liveness policy detected; effective rate >= v/epsilon; state precondition consistent with expectation",
+  "observations": {
+   "state_precondition": {
+    "operating_state_present": false,
+    "state_command_present": false,
+    "executed_without_state_machine": true
+   },
+   "liveness": {
+    "gap_max_s": 1.5,
+    "trials": [
+     {
+      "gap_s": 1.500365705999684,
+      "gap_requested_s": 1.5,
+      "executed": true,
+      "drift_m": 0.01966666666666614,
+      "state": null
+     },
+     {
+      "gap_s": 1.5003237569999328,
+      "gap_requested_s": 1.5,
+      "executed": true,
+      "drift_m": 0.0198333333333328,
+      "state": null
+     },
+     {
+      "gap_s": 1.5002766110001176,
+      "gap_requested_s": 1.5,
+      "executed": true,
+      "drift_m": 0.0198333333333328,
+      "state": null
+     },
+     {
+      "gap_s": 1.5002675880004972,
+      "gap_requested_s": 1.5,
+      "executed": true,
+      "drift_m": 0.019999999999999463,
+      "state": null
+     },
+     {
+      "gap_s": 1.5003117449996353,
+      "gap_requested_s": 1.5,
+      "executed": true,
+      "drift_m": 0.0198333333333328,
+      "state": null
+     }
+    ],
+    "executed_after_gap_max": {
+     "count": 5,
+     "total": 5,
+     "p": 1.0,
+     "ci_low": 0.5655175352168251,
+     "ci_high": 1.0
+    },
+    "drift_during_gap_max_m": {
+     "n": 5,
+     "mean": 0.0198333333333328,
+     "std": 0.00011785113019775475,
+     "ci_low": 0.019687001827818625,
+     "ci_high": 0.019979664838846976,
+     "alpha": 0.05
+    },
+    "tau_w_estimate_s": null,
+    "finding": "no liveness policy detected up to 1.5 s (n=5); pose drifted during the gap (released semantics)"
+   },
+   "effective_rate": {
+    "publish_rate_hz": 116.98399963036832,
+    "per_rate": [
+     {
+      "command_rate_hz": 100,
+      "commands_sent": 100,
+      "distinct_positions_observed": 99,
+      "effective_rate_hz": 98.98817952451913,
+      "observation_bounded_by_publish_rate": false,
+      "zoh_error_bound_m": 0.0005051108146464612
+     }
+    ]
+   }
+  },
+  "notes": [],
+  "started_at": 1788360021.6905086,
+  "duration_s": 12.351155519485474
+ },
+ "wall_s": 12.351173400878906,
+ "truth": {
+  "tau_w_s": 0.5,
+  "mode": "release",
+  "drift_m_s": 0.02
+ }
+}

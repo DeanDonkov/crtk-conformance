@@ -1,0 +1,224 @@
+{
+ "preset": "reference",
+ "overrides": {
+  "loop_rate_hz": 1500,
+  "publish_rate_hz": 1000,
+  "seed": 303
+ },
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.004489247000492469,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": true,
+    "type": "crtk_msgs/OperatingState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": true,
+    "type": "crtk_msgs/StringStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/local/measured_cp",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/operating_state",
+   "/PSM1/servo_cp",
+   "/PSM1/state_command"
+  ]
+ },
+ "result": {
+  "probe": "RateSensitivityProbe",
+  "binding_class": "temporal",
+  "outcome": "conformant",
+  "estimates": {
+   "required_rate_hz_from_tolerance": 50.0,
+   "liveness_margin_ok": null,
+   "effective_rate_at_client_rate_hz": 99.98398756440868,
+   "zoh_error_at_client_rate_m": 0.0005000800749999145
+  },
+  "predicted_error_m": null,
+  "predicted_error_ci": null,
+  "decision_basis": "eq. (4) satisfied or no liveness policy detected; effective rate >= v/epsilon; state precondition consistent with expectation",
+  "observations": {
+   "state_precondition": {
+    "operating_state_present": true,
+    "state_command_present": true,
+    "state_after_disable": "DISABLED",
+    "executed_when_disabled": false,
+    "enable": {
+     "operating_state_present": true,
+     "state_before": {
+      "state": "DISABLED",
+      "is_homed": false,
+      "is_busy": false
+     },
+     "state_after": {
+      "state": "ENABLED",
+      "is_homed": true,
+      "is_busy": false
+     },
+     "enable_latency_s": 0.017995307000091998
+    },
+    "executed_when_enabled": true
+   },
+   "liveness": {
+    "gap_max_s": 0.3,
+    "trials": [
+     {
+      "gap_s": 0.300307953999436,
+      "gap_requested_s": 0.3,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     }
+    ],
+    "executed_after_gap_max": {
+     "count": 1,
+     "total": 1,
+     "p": 1.0,
+     "ci_low": 0.20654931437723745,
+     "ci_high": 1.0
+    },
+    "drift_during_gap_max_m": {
+     "n": 1,
+     "mean": 0.0,
+     "std": null,
+     "ci_low": null,
+     "ci_high": null,
+     "alpha": 0.05
+    },
+    "tau_w_estimate_s": null,
+    "finding": "no liveness policy detected up to 0.3 s (n=1)"
+   },
+   "effective_rate": {
+    "publish_rate_hz": 943.902375009168,
+    "per_rate": [
+     {
+      "command_rate_hz": 50,
+      "commands_sent": 50,
+      "distinct_positions_observed": 50,
+      "effective_rate_hz": 49.9948760751559,
+      "observation_bounded_by_publish_rate": false,
+      "zoh_error_bound_m": 0.0010001024889998006
+     },
+     {
+      "command_rate_hz": 100,
+      "commands_sent": 100,
+      "distinct_positions_observed": 100,
+      "effective_rate_hz": 99.98398756440868,
+      "observation_bounded_by_publish_rate": false,
+      "zoh_error_bound_m": 0.0005000800749999145
+     },
+     {
+      "command_rate_hz": 200,
+      "commands_sent": 200,
+      "distinct_positions_observed": 191,
+      "effective_rate_hz": 190.9723237180396,
+      "observation_bounded_by_publish_rate": false,
+      "zoh_error_bound_m": 0.00026181804267000656
+     },
+     {
+      "command_rate_hz": 500,
+      "commands_sent": 500,
+      "distinct_positions_observed": 493,
+      "effective_rate_hz": 492.93165354776613,
+      "observation_bounded_by_publish_rate": false,
+      "zoh_error_bound_m": 0.00010143394046646447
+     },
+     {
+      "command_rate_hz": 1000,
+      "commands_sent": 1000,
+      "distinct_positions_observed": 701,
+      "effective_rate_hz": 700.920257002886,
+      "observation_bounded_by_publish_rate": false,
+      "zoh_error_bound_m": 7.133479094155233e-05
+     }
+    ]
+   }
+  },
+  "notes": [],
+  "started_at": 1788360073.2178044,
+  "duration_s": 9.945921659469604
+ },
+ "wall_s": 9.945950031280518,
+ "truth": {
+  "loop_rate_hz": 1500,
+  "publish_rate_hz": 1000
+ }
+}

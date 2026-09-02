@@ -47,6 +47,16 @@ def mock_node(preset: str = "reference", overrides: Optional[Dict] = None, names
     for k, v in (overrides or {}).items():
         cmd += ["--set", f"{k}={json.dumps(v)}"]
     p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=os.environ.copy())
+    # wait until the mock has registered at least one publisher in its namespace (bounded), then settle
+    m = rosgraph.Master("/crtk_validation_harness")
+    for _ in range(int(10.0 / 0.1)):
+        try:
+            pubs, _, _ = m.getSystemState()
+            if any(t.startswith(namespace + "/") for t, _ in pubs):
+                break
+        except Exception:
+            pass
+        time.sleep(0.1)
     time.sleep(startup_s)
     try:
         yield p

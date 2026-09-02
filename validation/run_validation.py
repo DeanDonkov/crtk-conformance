@@ -121,7 +121,7 @@ def exp_temporal(out, quick):
     k = 0
     for tau in taus:
         over = {"watchdog_s": tau, "watchdog_mode": "fault", "seed": 200 + k}
-        rec = run_probe(lambda a: RateSensitivityProbe(a, TOL, trials=trials, gap_max_s=1.5, bisection_steps=6, rates_hz=(50, 100, 200, 500, 1000)), "reference", over)
+        rec = run_probe(lambda a: RateSensitivityProbe(a, TOL, trials=trials, gap_max_s=1.5, bisection_steps=8, rates_hz=(50, 100, 200, 500, 1000)), "reference", over)
         rec["truth"] = {"tau_w_s": tau, "mode": "fault"}
         save(out, f"T_live_{k:03d}", rec)
         print(f"T{k:03d} tau={tau} -> {rec['result']['observations']['liveness']['finding']} ({rec['wall_s']:.1f}s)", flush=True)
@@ -188,11 +188,71 @@ def exp_presets(out, quick):
         print(f"P {name} -> {rep['summary']}", flush=True)
 
 
+# ------------------------------------------------------------------------------------------ M
+def exp_model_check(out, quick):
+    """Execute absolute and incremental commands against the mock with the JHU binding injected and
+    compare the executed (ground-truth) error with the error-model predictions (eqs. 1, 3b, M2.1).
+    This checks that the mock and the model agree — an implementation check, not a physics check."""
+    from crtk_conformance import geometry as G
+    from crtk_conformance.adapter import pose_msg_to_matrix
+    from crtk_conformance.probes.common import ensure_enabled, wait_settled
+
+    R = G.axis_angle([1, 0, 0], math.radians(150.0)); t = np.array([0.20, 0.0, 0.0])
+    cases = []
+    over = {"bind_translation_m": t.tolist(), "bind_axis": [1.0, 0.0, 0.0], "bind_angle_deg": 150.0, "seed": 500}
+    with mock_node("reference", over):
+        a = PlatformAdapter(NS, anchor_topic=ANCHOR); a.discover()
+        from geometry_msgs.msg import PoseStamped
+        buf = a.subscribe("measured_cp"); truth = a.subscribe("anchor", PoseStamped, full_topic=ANCHOR)
+        ensure_enabled(a); a.wait_for(truth, 1.0)
+        home = a.latest_pose(truth, 1.0)
+        # absolute commands: the client believes the unqualified frame is the arm base (T = I) and commands p_c
+        for pc in ([0.0, 0.02, 0.05, 0.10] if not quick else [0.0, 0.10]):
+            for kind, vec in (("perp", np.array([0, 0, 1.0])), ("axis", np.array([1.0, 0, 0]))):
+                p_c = home[:3, 3] * 0 + vec * pc  # intended position in the arm-base frame
+                T_cmd = G.make_pose(None, p_c)
+                a.servo_cp(T_cmd); time.sleep(0.15)
+                wait_settled(a, buf, 0.5)
+                ex = a.latest_pose(truth, 1.0)[:3, 3]
+                cases.append({"kind": "absolute_" + kind, "p_c_norm_m": pc, "measured_error_m": float(np.linalg.norm(ex - p_c)),
+                              "predicted_error_m": G.m1_positional_error(R, t, p_c), "upper_bound_m": G.m1_upper_bound(R, t, pc), "lower_bound_exact_m": G.m1_lower_bound_exact(R, t)})
+        # incremental commands: the client reads measured_cp and adds a delta (both through the divergent binding)
+        for step in ([0.001, 0.005, 0.02] if not quick else [0.005]):
+            for vec in (np.array([0, 0, 1.0]), np.array([1.0, 0, 0])):
+                a.servo_cp(G.make_pose(None, [0, 0, 0])); time.sleep(0.15); wait_settled(a, buf, 0.5)
+                p0_true = a.latest_pose(truth, 1.0)[:3, 3]
+                m0 = a.latest_pose(buf, 1.0)
+                goal = m0.copy(); goal[:3, 3] += vec * step
+                a.servo_cp(goal); time.sleep(0.15); wait_settled(a, buf, 0.5)
+                p1_true = a.latest_pose(truth, 1.0)[:3, 3]
+                executed_step = p1_true - p0_true
+                cases.append({"kind": "incremental_" + ("perp" if vec[2] else "axis"), "step_m": step,
+                              "measured_error_m": float(np.linalg.norm(executed_step - vec * step)),
+                              "predicted_error_m": float(np.linalg.norm((R - np.eye(3)) @ (vec * step))),
+                              "upper_bound_m": G.m1_incremental_bound(R, step)})
+        a.close()
+    # scale: error grows with distance from origin (s = 0.1)
+    with mock_node("reference", {"unit_m": 0.1, "seed": 501}):
+        a = PlatformAdapter(NS, anchor_topic=ANCHOR); a.discover()
+        from geometry_msgs.msg import PoseStamped
+        buf = a.subscribe("measured_cp"); truth = a.subscribe("anchor", PoseStamped, full_topic=ANCHOR)
+        ensure_enabled(a); a.wait_for(truth, 1.0)
+        for d in ([0.0, 0.02, 0.05, 0.10] if not quick else [0.10]):
+            p_c = np.array([0, d, 0.0])
+            a.servo_cp(G.make_pose(None, p_c)); time.sleep(0.15); wait_settled(a, buf, 0.5)
+            ex = a.latest_pose(truth, 1.0)[:3, 3]
+            cases.append({"kind": "scale_absolute", "p_c_norm_m": d, "measured_error_m": float(np.linalg.norm(ex - p_c)), "predicted_error_m": G.m2_error(0.1, d)})
+        a.close()
+    save(out, "M_model_check", {"binding": {"t_m": t.tolist(), "theta_deg": 150.0}, "cases": cases})
+    for c in cases:
+        print(f"M {c['kind']:18s} " + " ".join(f"{k}={v*1e3:.2f}mm" for k, v in c.items() if k.endswith("_m") and isinstance(v, float)), flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "results"))
     ap.add_argument("--quick", action="store_true")
-    ap.add_argument("--only", default="F,S,T,R,P")
+    ap.add_argument("--only", default="F,S,T,R,P,M")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
     meta = {
@@ -218,6 +278,8 @@ def main():
             exp_robustness(args.out, args.quick)
         if "P" in args.only:
             exp_presets(args.out, args.quick)
+        if "M" in args.only:
+            exp_model_check(args.out, args.quick)
     meta["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     meta["wall_s"] = time.time() - t0
     save(args.out, "meta", meta)

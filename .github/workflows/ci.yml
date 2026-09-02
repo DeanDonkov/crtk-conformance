@@ -1,0 +1,31 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install -e .[dev]
+      - run: python -m pytest -q tests/test_geometry.py tests/test_stats.py tests/test_thresholds.py tests/test_report.py
+  integration-ros1:
+    runs-on: ubuntu-latest
+    container: ros:noetic-ros-base
+    steps:
+      - uses: actions/checkout@v4
+      - name: deps
+        run: |
+          apt-get update && apt-get install -y python3-pip git ros-noetic-geometry-msgs ros-noetic-sensor-msgs ros-noetic-tf2-msgs
+          git clone --depth 1 https://github.com/collaborative-robotics/crtk_msgs /tmp/crtk_msgs
+          pip3 install -e .[dev]
+      - name: build crtk_msgs
+        shell: bash
+        run: |
+          source /opt/ros/noetic/setup.bash
+          mkdir -p /tmp/ws/src && cp -r /tmp/crtk_msgs /tmp/ws/src/ && cd /tmp/ws && catkin_make
+      - name: test
+        shell: bash
+        run: |
+          source /opt/ros/noetic/setup.bash && source /tmp/ws/devel/setup.bash
+          python3 -m pytest -q

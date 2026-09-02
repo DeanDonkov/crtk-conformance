@@ -1,0 +1,574 @@
+{
+ "preset": "reference",
+ "overrides": {
+  "watchdog_s": 0.1,
+  "watchdog_mode": "fault",
+  "seed": 202
+ },
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.0045386340007098624,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": true,
+    "type": "crtk_msgs/OperatingState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": true,
+    "type": "crtk_msgs/StringStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/local/measured_cp",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/operating_state",
+   "/PSM1/servo_cp",
+   "/PSM1/state_command"
+  ]
+ },
+ "result": {
+  "probe": "RateSensitivityProbe",
+  "binding_class": "temporal",
+  "outcome": "conformant",
+  "estimates": {
+   "required_rate_hz_from_tolerance": 50.0,
+   "liveness_margin_ok": true,
+   "effective_rate_at_client_rate_hz": 98.98604811448241,
+   "zoh_error_at_client_rate_m": 0.0005051216909091314
+  },
+  "predicted_error_m": null,
+  "predicted_error_ci": null,
+  "decision_basis": "eq. (4) satisfied or no liveness policy detected; effective rate >= v/epsilon; state precondition consistent with expectation",
+  "observations": {
+   "state_precondition": {
+    "operating_state_present": true,
+    "state_command_present": true,
+    "state_after_disable": "DISABLED",
+    "executed_when_disabled": false,
+    "enable": {
+     "operating_state_present": true,
+     "state_before": {
+      "state": "DISABLED",
+      "is_homed": false,
+      "is_busy": false
+     },
+     "state_after": {
+      "state": "ENABLED",
+      "is_homed": true,
+      "is_busy": false
+     },
+     "enable_latency_s": 0.007068264999361418
+    },
+    "executed_when_enabled": true
+   },
+   "liveness": {
+    "gap_max_s": 1.5,
+    "trials": [
+     {
+      "gap_s": 1.500384517999919,
+      "gap_requested_s": 1.5,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 1.500297522999972,
+      "gap_requested_s": 1.5,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 1.50025415699929,
+      "gap_requested_s": 1.5,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 1.5003452159999142,
+      "gap_requested_s": 1.5,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 1.5002236469999843,
+      "gap_requested_s": 1.5,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.05068624300020019,
+      "gap_requested_s": 0.02,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.7604235749995496,
+      "gap_requested_s": 0.76,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.3903096670001105,
+      "gap_requested_s": 0.39,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.20546614899922133,
+      "gap_requested_s": 0.20500000000000002,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.11288155700003699,
+      "gap_requested_s": 0.1125,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.06651155300005485,
+      "gap_requested_s": 0.06625,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.08973348600011377,
+      "gap_requested_s": 0.08937500000000001,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.10151716499967733,
+      "gap_requested_s": 0.10093750000000001,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.09537336299945309,
+      "gap_requested_s": 0.09515625000000001,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.050295070999709424,
+      "gap_requested_s": 0.02,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.7603893349996724,
+      "gap_requested_s": 0.76,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.3903518469996925,
+      "gap_requested_s": 0.39,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.20534757999939757,
+      "gap_requested_s": 0.20500000000000002,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.11293172199930268,
+      "gap_requested_s": 0.1125,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.06655855699955282,
+      "gap_requested_s": 0.06625,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.08976595500007534,
+      "gap_requested_s": 0.08937500000000001,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.10125717899973097,
+      "gap_requested_s": 0.10093750000000001,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.09548647700012225,
+      "gap_requested_s": 0.09515625000000001,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.05036394199942151,
+      "gap_requested_s": 0.02,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.7603919080002015,
+      "gap_requested_s": 0.76,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.3903264489999856,
+      "gap_requested_s": 0.39,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.20525372399970365,
+      "gap_requested_s": 0.20500000000000002,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.11296459099958156,
+      "gap_requested_s": 0.1125,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.06678441399981239,
+      "gap_requested_s": 0.06625,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.08969746799994027,
+      "gap_requested_s": 0.08937500000000001,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.10116425900014292,
+      "gap_requested_s": 0.10093750000000001,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.11486857599993527,
+      "gap_requested_s": 0.09515625000000001,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.05029072900015308,
+      "gap_requested_s": 0.02,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.7603585619999649,
+      "gap_requested_s": 0.76,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.3902415849997851,
+      "gap_requested_s": 0.39,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.20552943300026527,
+      "gap_requested_s": 0.20500000000000002,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.11296224900070229,
+      "gap_requested_s": 0.1125,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.06656787599968084,
+      "gap_requested_s": 0.06625,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.08973258500009251,
+      "gap_requested_s": 0.08937500000000001,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.10126377200049319,
+      "gap_requested_s": 0.10093750000000001,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.09542730600060167,
+      "gap_requested_s": 0.09515625000000001,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.05026401699979033,
+      "gap_requested_s": 0.02,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.7603343900000255,
+      "gap_requested_s": 0.76,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.43026485800055525,
+      "gap_requested_s": 0.39,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.20525353199991514,
+      "gap_requested_s": 0.20500000000000002,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.11276577199987514,
+      "gap_requested_s": 0.1125,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.06655738500012376,
+      "gap_requested_s": 0.06625,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.08962836999944557,
+      "gap_requested_s": 0.08937500000000001,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     },
+     {
+      "gap_s": 0.10119762900012574,
+      "gap_requested_s": 0.10093750000000001,
+      "executed": false,
+      "drift_m": 0.0,
+      "state": "FAULT"
+     },
+     {
+      "gap_s": 0.09548258999984682,
+      "gap_requested_s": 0.09515625000000001,
+      "executed": true,
+      "drift_m": 0.0,
+      "state": "ENABLED"
+     }
+    ],
+    "executed_after_gap_max": {
+     "count": 0,
+     "total": 5,
+     "p": 0.0,
+     "ci_low": 0.0,
+     "ci_high": 0.43448246478317476
+    },
+    "drift_during_gap_max_m": {
+     "n": 5,
+     "mean": 0.0,
+     "std": 0.0,
+     "ci_low": 0.0,
+     "ci_high": 0.0,
+     "alpha": 0.05
+    },
+    "tau_w_estimate_s": {
+     "n": 5,
+     "mean": 0.09915715249999266,
+     "std": 0.001747917022806939,
+     "ci_low": 0.09698682686092577,
+     "ci_high": 0.10132747813905954,
+     "alpha": 0.05
+    },
+    "finding": "liveness policy detected: tau_w ~ 0.099 s (95% CI 0.097..0.101, n=5)"
+   },
+   "effective_rate": {
+    "publish_rate_hz": 99.98172763936157,
+    "per_rate": [
+     {
+      "command_rate_hz": 50,
+      "commands_sent": 50,
+      "distinct_positions_observed": 49,
+      "effective_rate_hz": 48.99346319417158,
+      "observation_bounded_by_publish_rate": false,
+      "zoh_error_bound_m": 0.0010205443081628932
+     },
+     {
+      "command_rate_hz": 100,
+      "commands_sent": 100,
+      "distinct_positions_observed": 99,
+      "effective_rate_hz": 98.98604811448241,
+      "observation_bounded_by_publish_rate": true,
+      "zoh_error_bound_m": 0.0005051216909091314
+     },
+     {
+      "command_rate_hz": 200,
+      "commands_sent": 200,
+      "distinct_positions_observed": 99,
+      "effective_rate_hz": 98.98796167803752,
+      "observation_bounded_by_publish_rate": true,
+      "zoh_error_bound_m": 0.0005051119262625802
+     },
+     {
+      "command_rate_hz": 500,
+      "commands_sent": 500,
+      "distinct_positions_observed": 100,
+      "effective_rate_hz": 99.98693220791256,
+      "observation_bounded_by_publish_rate": true,
+      "zoh_error_bound_m": 0.0005000653474999127
+     },
+     {
+      "command_rate_hz": 1000,
+      "commands_sent": 1000,
+      "distinct_positions_observed": 91,
+      "effective_rate_hz": 90.99489345757729,
+      "observation_bounded_by_publish_rate": true,
+      "zoh_error_bound_m": 0.0005494813840659146
+     }
+    ]
+   }
+  },
+  "notes": [],
+  "started_at": 1788359743.0963228,
+  "duration_s": 57.12165141105652
+ },
+ "wall_s": 57.12167835235596,
+ "truth": {
+  "tau_w_s": 0.1,
+  "mode": "fault"
+ }
+}

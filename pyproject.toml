@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crtk-conformance"
+version = "0.1.0"
+description = "Black-box semantic conformance test suite for CRTK/ROS surgical-robot interfaces, with a configurable mock CRTK node for validation"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "Apache-2.0"}
+authors = [{name = "Deyan Donkov"}]
+dependencies = [
+  "numpy>=1.21",
+  "scipy>=1.7",
+  "jsonschema>=4.0",
+  "PyYAML>=5.4",
+]
+# ROS 1 (rospy, geometry_msgs, sensor_msgs, tf2_msgs, crtk_msgs) must be provided by a ROS Noetic
+# installation (or the pure-Python stack described in docs/ros1-stack.md). It is not a pip dependency.
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pytest-timeout>=2", "matplotlib>=3.5"]
+
+[project.scripts]
+crtk-conformance = "crtk_conformance.cli:main"
+crtk-mock = "crtk_mock.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+crtk_conformance = ["schema/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 120

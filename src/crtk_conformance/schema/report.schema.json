@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/deyan-donkov/crtk-conformance/schema/report.schema.json",
+  "title": "crtk-conformance report",
+  "type": "object",
+  "required": ["tool", "version", "generated_at", "namespace", "tolerance", "discovery", "probes", "summary"],
+  "properties": {
+    "tool": {"const": "crtk-conformance"},
+    "version": {"type": "string"},
+    "generated_at": {"type": "string"},
+    "namespace": {"type": "string"},
+    "ros_master_uri": {"type": "string"},
+    "tolerance": {
+      "type": "object",
+      "required": ["epsilon_m", "workspace_radius_m", "speed_m_s", "client_rate_hz", "jitter_max_s"],
+      "properties": {
+        "epsilon_m": {"type": "number", "exclusiveMinimum": 0},
+        "workspace_radius_m": {"type": "number", "exclusiveMinimum": 0},
+        "speed_m_s": {"type": "number", "minimum": 0},
+        "client_rate_hz": {"type": "number", "exclusiveMinimum": 0},
+        "jitter_max_s": {"type": "number", "minimum": 0}
+      }
+    },
+    "discovery": {"type": "object"},
+    "probes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["probe", "binding_class", "outcome", "estimates", "decision_basis", "observations", "notes", "duration_s"],
+        "properties": {
+          "probe": {"type": "string"},
+          "binding_class": {"enum": ["spatial", "dimensional", "temporal"]},
+          "outcome": {"enum": ["conformant", "divergent", "undetermined"]},
+          "estimates": {"type": "object"},
+          "predicted_error_m": {"type": ["number", "null"]},
+          "predicted_error_ci": {"type": ["array", "null"], "items": {"type": "number"}},
+          "decision_basis": {"type": "string"},
+          "observations": {"type": "object"},
+          "notes": {"type": "array", "items": {"type": "string"}},
+          "duration_s": {"type": "number"}
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["spatial", "dimensional", "temporal"],
+      "properties": {
+        "spatial": {"enum": ["conformant", "divergent", "undetermined"]},
+        "dimensional": {"enum": ["conformant", "divergent", "undetermined"]},
+        "temporal": {"enum": ["conformant", "divergent", "undetermined"]}
+      }
+    }
+  }
+}

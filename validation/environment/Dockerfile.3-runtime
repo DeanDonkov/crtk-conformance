@@ -1,0 +1,5 @@
+# Stage 4: the crtk-conformance runtime/test environment on top of the from-source ROS Noetic image.
+FROM focal-ros-noetic:rc3
+COPY wheels38 /tmp/wheels38
+RUN pip3 install --no-cache-dir --no-index --find-links /tmp/wheels38 "numpy==1.24.4" "scipy==1.10.1" "jsonschema==4.17.3" "matplotlib==3.7.5" "pytest==7.4.4" "pytest-timeout==2.3.1" "PyYAML==6.0.1" "psutil==5.9.8" && rm -rf /tmp/wheels38
+RUN echo 'source /opt/ros/noetic/setup.bash' >> /root/.bashrc

@@ -1,0 +1,1376 @@
+{
+  "tool": "crtk-conformance",
+  "version": "0.1.1",
+  "generated_at": "2026-09-03T20:40:11.115864+00:00",
+  "namespace": "/CRTK/psm1",
+  "ros_master_uri": "http://localhost:11311",
+  "tolerance": {
+    "epsilon_m": 0.001,
+    "workspace_radius_m": 0.1,
+    "speed_m_s": 0.05,
+    "client_rate_hz": 100.0,
+    "jitter_max_s": 0.005
+  },
+  "expectations": {
+    "spatial": {
+      "mode": "discover_only",
+      "translation_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "quaternion_xyzw": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "declared": false
+    },
+    "dimensional": {
+      "mode": "discover_only",
+      "expected_unit_m": 1.0,
+      "declared": false
+    },
+    "temporal": {
+      "state_machine": "any",
+      "stop_behaviour": "any",
+      "rate": "any",
+      "declared": false
+    },
+    "source": "default (discover-only in every class)"
+  },
+  "parameters": {
+    "namespace": "/CRTK/psm1",
+    "tolerance_mm": 1.0,
+    "workspace_radius_m": 0.1,
+    "speed_mm_s": 50.0,
+    "client_rate_hz": 100.0,
+    "jitter_max_ms": 5.0,
+    "expectations": null,
+    "trials": 10,
+    "temporal_trials": 5,
+    "anchor_topic": null,
+    "expect_state_machine": null,
+    "probes": "frame,scale,rate",
+    "gap_max_s": 2.0,
+    "gap_min_s": 0.0,
+    "bisection_steps": 7,
+    "rates_hz": "50,100,200,500",
+    "response_timeout_s": null,
+    "rate_match_tolerance_mm": null,
+    "rate_window_s": 1.0,
+    "settle_s": 2.0,
+    "still_tol_mm": 0.05,
+    "pairing_window_ms": 50.0,
+    "step_mm": 5.0,
+    "temporal_step_mm": 2.0,
+    "out": "/rc3/preprint/crtk-conformance/validation/v0.1.1/live-src-v1/report_discover_only.json",
+    "quiet": false
+  },
+  "discovery": {
+    "namespace": "/CRTK/psm1",
+    "discovery_latency_s": 0.009518433000266668,
+    "topics": {
+      "measured_cp": {
+        "topic": "/CRTK/psm1/measured_cp",
+        "present": true,
+        "type": "geometry_msgs/PoseStamped",
+        "type_matches": true,
+        "published": true,
+        "subscribed": false
+      },
+      "setpoint_cp": {
+        "topic": "/CRTK/psm1/setpoint_cp",
+        "present": false,
+        "type": null,
+        "type_matches": null,
+        "published": false,
+        "subscribed": false
+      },
+      "local/measured_cp": {
+        "topic": "/CRTK/psm1/local/measured_cp",
+        "present": false,
+        "type": null,
+        "type_matches": null,
+        "published": false,
+        "subscribed": false
+      },
+      "local/setpoint_cp": {
+        "topic": "/CRTK/psm1/local/setpoint_cp",
+        "present": false,
+        "type": null,
+        "type_matches": null,
+        "published": false,
+        "subscribed": false
+      },
+      "servo_cp": {
+        "topic": "/CRTK/psm1/servo_cp",
+        "present": true,
+        "type": "geometry_msgs/PoseStamped",
+        "type_matches": true,
+        "published": false,
+        "subscribed": true
+      },
+      "servo_cr": {
+        "topic": "/CRTK/psm1/servo_cr",
+        "present": false,
+        "type": null,
+        "type_matches": null,
+        "published": false,
+        "subscribed": false
+      },
+      "measured_js": {
+        "topic": "/CRTK/psm1/measured_js",
+        "present": true,
+        "type": "sensor_msgs/JointState",
+        "type_matches": true,
+        "published": true,
+        "subscribed": false
+      },
+      "operating_state": {
+        "topic": "/CRTK/psm1/operating_state",
+        "present": false,
+        "type": null,
+        "type_matches": null,
+        "published": false,
+        "subscribed": false
+      },
+      "state_command": {
+        "topic": "/CRTK/psm1/state_command",
+        "present": false,
+        "type": null,
+        "type_matches": null,
+        "published": false,
+        "subscribed": false
+      },
+      "T_b_w": {
+        "topic": "/CRTK/psm1/T_b_w",
+        "present": true,
+        "type": "geometry_msgs/PoseStamped",
+        "type_matches": true,
+        "published": true,
+        "subscribed": false
+      }
+    },
+    "tf_present": false,
+    "tf_static_present": false,
+    "all_topics_in_namespace": [
+      "/CRTK/psm1/T_b_w",
+      "/CRTK/psm1/jaw/servo_jp",
+      "/CRTK/psm1/measured_cp",
+      "/CRTK/psm1/measured_cv",
+      "/CRTK/psm1/measured_js",
+      "/CRTK/psm1/servo_cp",
+      "/CRTK/psm1/servo_jp",
+      "/CRTK/psm1/servo_jv"
+    ]
+  },
+  "probes": [
+    {
+      "probe": "FrameSemanticsProbe",
+      "binding_class": "spatial",
+      "outcome": "undetermined",
+      "estimates": {
+        "T_b_w_translation_m": [
+          0.9999999999999999,
+          1.3461,
+          1.3499
+        ],
+        "T_b_w_rotation_deg": 169.84319004522976
+      },
+      "predicted_error_m": null,
+      "predicted_error_ci": null,
+      "decision_basis": "no local/ reference available -> undetermined by construction (whatever the declared expectation)",
+      "observations": {
+        "expectation": {
+          "mode": "discover_only",
+          "translation_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion_xyzw": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "declared": false
+        },
+        "discovery": {
+          "measured_cp": {
+            "topic": "/CRTK/psm1/measured_cp",
+            "present": true,
+            "type": "geometry_msgs/PoseStamped",
+            "type_matches": true,
+            "published": true,
+            "subscribed": false
+          },
+          "setpoint_cp": {
+            "topic": "/CRTK/psm1/setpoint_cp",
+            "present": false,
+            "type": null,
+            "type_matches": null,
+            "published": false,
+            "subscribed": false
+          },
+          "local/measured_cp": {
+            "topic": "/CRTK/psm1/local/measured_cp",
+            "present": false,
+            "type": null,
+            "type_matches": null,
+            "published": false,
+            "subscribed": false
+          },
+          "servo_cp": {
+            "topic": "/CRTK/psm1/servo_cp",
+            "present": true,
+            "type": "geometry_msgs/PoseStamped",
+            "type_matches": true,
+            "published": false,
+            "subscribed": true
+          },
+          "T_b_w": {
+            "topic": "/CRTK/psm1/T_b_w",
+            "present": true,
+            "type": "geometry_msgs/PoseStamped",
+            "type_matches": true,
+            "published": true,
+            "subscribed": false
+          }
+        },
+        "frame_ids": {
+          "measured_cp": "psm1/baselink",
+          "T_b_w": "world"
+        }
+      },
+      "notes": [
+        "no local/measured_cp topic: the binding of the unqualified topics relative to the arm base cannot be verified through the interface",
+        "T_b_w present: interface exposes base-in-world, which suggests (but does not prove) an arm-base binding of measured_cp"
+      ],
+      "started_at": 1788467804.6041706,
+      "duration_s": 0.05337333679199219
+    },
+    {
+      "probe": "ScalingUnitsProbe",
+      "binding_class": "dimensional",
+      "outcome": "undetermined",
+      "estimates": {
+        "internal_ratio": {
+          "n": 10,
+          "mean": 0.8888041069890628,
+          "std": 0.14917757812486276,
+          "ci_low": 0.7820888962641628,
+          "ci_high": 0.9955193177139627,
+          "alpha": 0.05
+        },
+        "internal_ratio_per_axis": {
+          "0": {
+            "n": 4,
+            "mean": 0.9039011228700544,
+            "std": 0.1183150062777604,
+            "ci_low": 0.7156355455758829,
+            "ci_high": 1.092166700164226,
+            "alpha": 0.05
+          },
+          "1": {
+            "n": 3,
+            "mean": 1.002094211749623,
+            "std": 0.04809743272269831,
+            "ci_low": 0.8826135652803003,
+            "ci_high": 1.1215748582189455,
+            "alpha": 0.05
+          },
+          "2": {
+            "n": 3,
+            "mean": 0.7553846477205138,
+            "std": 0.1744213586945297,
+            "ci_low": 0.32209797283640634,
+            "ci_high": 1.1886713226046213,
+            "alpha": 0.05
+          }
+        },
+        "response_latency_s": {
+          "n": 10,
+          "mean": 0.06335910949983373,
+          "std": 0.09715352508366944,
+          "ci_low": -0.0061403356064056586,
+          "ci_high": 0.1328585546060731,
+          "alpha": 0.05
+        }
+      },
+      "predicted_error_m": null,
+      "predicted_error_ci": null,
+      "decision_basis": "no unit anchor: uniform scale is invariant under every interface ratio (Section 5.2) -> undetermined by construction",
+      "observations": {
+        "expectation": {
+          "mode": "discover_only",
+          "expected_unit_m": 1.0,
+          "declared": false
+        },
+        "enable": {
+          "operating_state_present": false,
+          "state_before": null,
+          "state_after": null,
+          "enable_latency_s": null
+        },
+        "resting_noise_sigma_if": 0.002811800954920914,
+        "step_used_if": 0.056236019098418286,
+        "still_tol_used_if": 0.008435402864762742,
+        "trials": [
+          {
+            "trial": 0,
+            "ok": true,
+            "axis": 0,
+            "delta_cmd_if": [
+              0.056236019098418286,
+              0.0,
+              0.0
+            ],
+            "delta_meas_if": [
+              0.0454332448346958,
+              -0.0008020579668286121,
+              0.0003258954243163803
+            ],
+            "r_int": 0.8080495958432261,
+            "first_motion_s": 0.33807786000033957,
+            "n_pre": 36,
+            "n_post": 36,
+            "post_std_if": 0.0038998397892741937
+          },
+          {
+            "trial": 1,
+            "ok": true,
+            "axis": 1,
+            "delta_cmd_if": [
+              0.0,
+              0.056236019098418286,
+              0.0
+            ],
+            "delta_meas_if": [
+              0.005042569610655939,
+              0.053400948578929075,
+              -0.0049509848632384446
+            ],
+            "r_int": 0.957864949044459,
+            "first_motion_s": 0.040596025999548147,
+            "n_pre": 37,
+            "n_post": 36,
+            "post_std_if": 0.0037604173101031713
+          },
+          {
+            "trial": 2,
+            "ok": true,
+            "axis": 2,
+            "delta_cmd_if": [
+              0.0,
+              0.0,
+              0.056236019098418286
+            ],
+            "delta_meas_if": [
+              -0.004898972378401936,
+              -0.017014809930720742,
+              0.03531863505548638
+            ],
+            "r_int": 0.7025452725518551,
+            "first_motion_s": 0.03656952999972418,
+            "n_pre": 36,
+            "n_post": 36,
+            "post_std_if": 0.003716747122531528
+          },
+          {
+            "trial": 3,
+            "ok": true,
+            "axis": 0,
+            "delta_cmd_if": [
+              -0.056236019098418286,
+              -0.0,
+              -0.0
+            ],
+            "delta_meas_if": [
+              -0.05724970831277004,
+              -0.0013641802043430074,
+              -0.0028643501818309824
+            ],
+            "r_int": 1.0195876325566804,
+            "first_motion_s": 0.04652806200010673,
+            "n_pre": 36,
+            "n_post": 36,
+            "post_std_if": 0.0037830504376837504
+          },
+          {
+            "trial": 4,
+            "ok": true,
+            "axis": 1,
+            "delta_cmd_if": [
+              -0.0,
+              -0.056236019098418286,
+              -0.0
+            ],
+            "delta_meas_if": [
+              -0.017055147400357018,
+              -0.0561621646099664,
+              0.007969752253619372
+            ],
+            "r_int": 1.0532982273331006,
+            "first_motion_s": 0.03699552399939421,
+            "n_pre": 36,
+            "n_post": 36,
+            "post_std_if": 0.0039158732165861035
+          },
+          {
+            "trial": 5,
+            "ok": true,
+            "axis": 2,
+            "delta_cmd_if": [
+              -0.0,
+              -0.0,
+              -0.056236019098418286
+            ],
+            "delta_meas_if": [
+              -0.0096365304732981,
+              -0.001684587466898202,
+              -0.052527549741845786
+            ],
+            "r_int": 0.9501159828301559,
+            "first_motion_s": 0.029637669999829086,
+            "n_pre": 36,
+            "n_post": 36,
+            "post_std_if": 0.003558266107315103
+          },
+          {
+            "trial": 6,
+            "ok": true,
+            "axis": 0,
+            "delta_cmd_if": [
+              0.056236019098418286,
+              0.0,
+              0.0
+            ],
+            "delta_meas_if": [
+              0.044708440220538756,
+              -0.00010872416393761797,
+              0.002147567266946482
+            ],
+            "r_int": 0.79593332530373,
+            "first_motion_s": 0.03529891099969973,
+            "n_pre": 36,
+            "n_post": 36,
+            "post_std_if": 0.0030919065446690297
+          },
+          {
+            "trial": 7,
+            "ok": true,
+            "axis": 1,
+            "delta_cmd_if": [
+              0.0,
+              0.056236019098418286,
+              0.0
+            ],
+            "delta_meas_if": [
+              0.006972042622149427,
+              0.05492609220645203,
+              -0.0081370059995452
+            ],
+            "r_int": 0.9951194588713093,
+            "first_motion_s": 0.03584310699989146,
+            "n_pre": 36,
+            "n_post": 36,
+            "post_std_if": 0.003712430813749902
+          },
+          {
+            "trial": 8,
+            "ok": true,
+            "axis": 2,
+            "delta_cmd_if": [
+              0.0,
+              0.0,
+              0.056236019098418286
+            ],
+            "delta_meas_if": [
+              0.01479986471017597,
+              0.001373558420144555,
+              0.03113445054821573
+            ],
+            "r_int": 0.6134926877795305,
+            "first_motion_s": 0.005004419999750098,
+            "n_pre": 36,
+            "n_post": 36,
+            "post_std_if": 0.0042363787082554715
+          },
+          {
+            "trial": 9,
+            "ok": true,
+            "axis": 0,
+            "delta_cmd_if": [
+              -0.056236019098418286,
+              -0.0,
+              -0.0
+            ],
+            "delta_meas_if": [
+              -0.055338087233056,
+              0.0004077441500713874,
+              -0.00705940465775054
+            ],
+            "r_int": 0.9920339377765808,
+            "first_motion_s": 0.029039985000054003,
+            "n_pre": 36,
+            "n_post": 36,
+            "post_std_if": 0.0036901082778526572
+          }
+        ],
+        "no_response_trials": 0,
+        "valid_trials": 10
+      },
+      "notes": [
+        "step enlarged from 0.005 to 0.05624 interface units (20 x resting noise sigma_hat = 0.00281)",
+        "internal consistency ratio 0.8888 (n=10) says nothing about the unit; supply --anchor-topic to test units"
+      ],
+      "started_at": 1788467804.657563,
+      "duration_s": 37.08193111419678
+    },
+    {
+      "probe": "RateSensitivityProbe",
+      "binding_class": "temporal",
+      "outcome": "undetermined",
+      "estimates": {
+        "required_rate_hz_from_tolerance": 50.0,
+        "stop_class": "rejected",
+        "tau_w_estimate_s": {
+          "n": 5,
+          "mean": 0.8322309027998926,
+          "std": 0.4797560561491403,
+          "ci_low": 0.23653507995928047,
+          "ci_high": 1.4279267256405048,
+          "alpha": 0.05,
+          "status": "ok"
+        },
+        "observable_rate_at_client_rate_hz": 0.9985744909760929,
+        "client_rate_achieved_hz": 1.9971489819521857,
+        "publish_rate_hz": 120.58837191764981,
+        "zoh_error_at_client_rate_m": 0.05007137720003812,
+        "sub_verdicts": {
+          "state_machine": null,
+          "stop_behaviour": null,
+          "rate": null
+        }
+      },
+      "predicted_error_m": null,
+      "predicted_error_ci": null,
+      "decision_basis": "no temporal expectation declared (discover-only): observations reported, no conformance verdict",
+      "observations": {
+        "expectation": {
+          "state_machine": "any",
+          "stop_behaviour": "any",
+          "rate": "any",
+          "declared": false
+        },
+        "state_precondition": {
+          "operating_state_present": false,
+          "state_command_present": false,
+          "executed_without_state_machine": false,
+          "attained_without_state_machine": false,
+          "closest_approach_m": 0.0023212376706135255
+        },
+        "resolution": {
+          "sleep_error_median_s": 0.00011286199995447525,
+          "sleep_error_p95_s": 0.00029639400065207145,
+          "send_interval_median_s": 4.150499989918899e-05,
+          "send_interval_p95_s": 0.00020065700027771527,
+          "feedback_period_s": 0.008276239909095283,
+          "resting_noise_sigma_m": 0.005562935351030301,
+          "response_latency_median_s": null,
+          "response_latency_p95_s": null,
+          "resolution_floor_s": 0.009270341910954856,
+          "response_timeout_s": 0.4,
+          "hold_tolerance_m": 0.022251741404121204
+        },
+        "liveness": {
+          "gap_max_s": 2.0,
+          "resolution_floor_s": 0.009270341910954856,
+          "response_timeout_s": 0.4,
+          "hold_tolerance_m": 0.022251741404121204,
+          "trials": [
+            {
+              "gap_requested_s": 2.0,
+              "gap_s": 2.0001970150005945,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.004187893570300759,
+              "moved_m": 0.013390046924712745,
+              "time_to_execute_s": null,
+              "drift_m": 0.013160698977555244,
+              "samples_in_gap": 240,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 2.0,
+              "gap_s": 2.0002914140004577,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0036515126323937754,
+              "moved_m": 0.011154668780577134,
+              "time_to_execute_s": null,
+              "drift_m": 0.012163318064527381,
+              "samples_in_gap": 240,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 2.0,
+              "gap_s": 2.000117089000014,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.004740746663728145,
+              "moved_m": 0.0175531474911774,
+              "time_to_execute_s": null,
+              "drift_m": 0.012347005895067932,
+              "samples_in_gap": 240,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 2.0,
+              "gap_s": 2.000265300999672,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0036000980558251947,
+              "moved_m": 0.010823042326467932,
+              "time_to_execute_s": null,
+              "drift_m": 0.012728050144246161,
+              "samples_in_gap": 240,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 2.0,
+              "gap_s": 2.0001405519997206,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.004234208553591754,
+              "moved_m": 0.014656454427723526,
+              "time_to_execute_s": null,
+              "drift_m": 0.011537122950038364,
+              "samples_in_gap": 240,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.009270341910954856,
+              "gap_s": 0.009390946999701555,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.003619669572032695,
+              "moved_m": 0.011934807261971938,
+              "time_to_execute_s": null,
+              "drift_m": 0.009178531480304572,
+              "samples_in_gap": 2,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.0046351709554775,
+              "gap_s": 1.004752957999699,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0038513206231085575,
+              "moved_m": 0.009877728380393629,
+              "time_to_execute_s": null,
+              "drift_m": 0.010537426742122403,
+              "samples_in_gap": 121,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.5069527564332161,
+              "gap_s": 0.5070326320001186,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.003564730798637104,
+              "moved_m": 0.012565719528202894,
+              "time_to_execute_s": null,
+              "drift_m": 0.012318501883706541,
+              "samples_in_gap": 61,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.7557939636943468,
+              "gap_s": 0.7559259999998176,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0038143725814464816,
+              "moved_m": 0.01142046775011373,
+              "time_to_execute_s": null,
+              "drift_m": 0.010852109548169543,
+              "samples_in_gap": 91,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.6313733600637814,
+              "gap_s": 0.6315769809998528,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0038309546468338635,
+              "moved_m": 0.014742347458062022,
+              "time_to_execute_s": null,
+              "drift_m": 0.011980709583741037,
+              "samples_in_gap": 76,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.6935836618790641,
+              "gap_s": 0.693710454000211,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.003671579413378885,
+              "moved_m": 0.011294451588617584,
+              "time_to_execute_s": null,
+              "drift_m": 0.010081189129690889,
+              "samples_in_gap": 84,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.6624785109714227,
+              "gap_s": 0.6626155419999122,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.003604962162264238,
+              "moved_m": 0.010704486364968558,
+              "time_to_execute_s": null,
+              "drift_m": 0.01183778724864435,
+              "samples_in_gap": 79,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.646925935517602,
+              "gap_s": 0.6470963019992269,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.004045957852315434,
+              "moved_m": 0.014044090470291879,
+              "time_to_execute_s": null,
+              "drift_m": 0.010535246290403852,
+              "samples_in_gap": 78,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.009270341910954856,
+              "gap_s": 0.009346904000267386,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.003814364594760028,
+              "moved_m": 0.014242485036769115,
+              "time_to_execute_s": null,
+              "drift_m": 0.010571644897772752,
+              "samples_in_gap": 1,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.0046351709554775,
+              "gap_s": 1.0046961959997134,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0035778706873295426,
+              "moved_m": 0.009740922613432366,
+              "time_to_execute_s": null,
+              "drift_m": 0.012200337343427823,
+              "samples_in_gap": 120,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.5069527564332161,
+              "gap_s": 0.5070755599999757,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.003875337402062485,
+              "moved_m": 0.010487415142542828,
+              "time_to_execute_s": null,
+              "drift_m": 0.011977727351731204,
+              "samples_in_gap": 61,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.2581115491720855,
+              "gap_s": 0.25824180400013574,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0036824227182117083,
+              "moved_m": 0.010311621570621246,
+              "time_to_execute_s": null,
+              "drift_m": 0.010023157963839811,
+              "samples_in_gap": 31,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.1336909455415202,
+              "gap_s": 0.1338215610003317,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0041111259327510806,
+              "moved_m": 0.014254867022595936,
+              "time_to_execute_s": null,
+              "drift_m": 0.010486345451826405,
+              "samples_in_gap": 16,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.19590124735680287,
+              "gap_s": 0.1960693379996883,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0038273842337035557,
+              "moved_m": 0.01274729252631478,
+              "time_to_execute_s": null,
+              "drift_m": 0.01058355533944653,
+              "samples_in_gap": 23,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.2270063982644442,
+              "gap_s": 0.22713777200078766,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.003532893374094114,
+              "moved_m": 0.011880428409627872,
+              "time_to_execute_s": null,
+              "drift_m": 0.009970766857618244,
+              "samples_in_gap": 27,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.24255897371826485,
+              "gap_s": 0.24292526400040515,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0035364323412828834,
+              "moved_m": 0.011749128618322165,
+              "time_to_execute_s": null,
+              "drift_m": 0.009915159864195966,
+              "samples_in_gap": 29,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.009270341910954856,
+              "gap_s": 0.009395368999321363,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.003472840637127863,
+              "moved_m": 0.011707552348439263,
+              "time_to_execute_s": null,
+              "drift_m": 0.009679655216219022,
+              "samples_in_gap": 1,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.0046351709554775,
+              "gap_s": 1.0047644129999753,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.003631342226317811,
+              "moved_m": 0.012716142949766066,
+              "time_to_execute_s": null,
+              "drift_m": 0.011442392983778488,
+              "samples_in_gap": 120,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.5023175854777389,
+              "gap_s": 1.5024901910001063,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0035242247142361063,
+              "moved_m": 0.013597701994807108,
+              "time_to_execute_s": null,
+              "drift_m": 0.011692478992627374,
+              "samples_in_gap": 176,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.7511587927388694,
+              "gap_s": 1.7512967440006832,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0036114691588937657,
+              "moved_m": 0.00885257389550441,
+              "time_to_execute_s": null,
+              "drift_m": 0.010612653156823403,
+              "samples_in_gap": 211,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.6267381891083041,
+              "gap_s": 1.626863589000095,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.003983743462661977,
+              "moved_m": 0.011675018025469268,
+              "time_to_execute_s": null,
+              "drift_m": 0.011437809873151576,
+              "samples_in_gap": 196,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.5645278872930215,
+              "gap_s": 1.5646548960003202,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.003670349513890669,
+              "moved_m": 0.011590515348796144,
+              "time_to_execute_s": null,
+              "drift_m": 0.013318358454142308,
+              "samples_in_gap": 188,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.53342273638538,
+              "gap_s": 1.5335208959995725,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.004008645369655571,
+              "moved_m": 0.012146328034436691,
+              "time_to_execute_s": null,
+              "drift_m": 0.011429330101858298,
+              "samples_in_gap": 184,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.5489753118392007,
+              "gap_s": 1.5497006789992156,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0035027072950628902,
+              "moved_m": 0.01006465894764805,
+              "time_to_execute_s": null,
+              "drift_m": 0.010851641266043844,
+              "samples_in_gap": 185,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.009270341910954856,
+              "gap_s": 0.00939212299999781,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0038685874771194843,
+              "moved_m": 0.013474184248750071,
+              "time_to_execute_s": null,
+              "drift_m": 0.010063975716636442,
+              "samples_in_gap": 1,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.0046351709554775,
+              "gap_s": 1.0047738169996592,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0034184738899003014,
+              "moved_m": 0.009450548647833757,
+              "time_to_execute_s": null,
+              "drift_m": 0.011526489029425,
+              "samples_in_gap": 120,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.5069527564332161,
+              "gap_s": 0.507056804000058,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.003480696896600272,
+              "moved_m": 0.012489798004534043,
+              "time_to_execute_s": null,
+              "drift_m": 0.01081043201002756,
+              "samples_in_gap": 61,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.7557939636943468,
+              "gap_s": 0.7559045010002592,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0035149909989888382,
+              "moved_m": 0.011270697353625228,
+              "time_to_execute_s": null,
+              "drift_m": 0.01131429181648283,
+              "samples_in_gap": 91,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.8802145673249122,
+              "gap_s": 0.8814592970002195,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0036453422028792774,
+              "moved_m": 0.017821425607986604,
+              "time_to_execute_s": null,
+              "drift_m": 0.013681573630747812,
+              "samples_in_gap": 106,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.9424248691401949,
+              "gap_s": 0.9425494719998824,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.003903181209080085,
+              "moved_m": 0.01564703652971203,
+              "time_to_execute_s": null,
+              "drift_m": 0.011620625892565154,
+              "samples_in_gap": 113,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.9735300200478362,
+              "gap_s": 0.9737621439999202,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0038571437297322316,
+              "moved_m": 0.011625673782717231,
+              "time_to_execute_s": null,
+              "drift_m": 0.011289888530523382,
+              "samples_in_gap": 117,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.9890825955016569,
+              "gap_s": 0.9891730469998947,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0037890334175883955,
+              "moved_m": 0.012952772035290768,
+              "time_to_execute_s": null,
+              "drift_m": 0.01251514072419921,
+              "samples_in_gap": 118,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.009270341910954856,
+              "gap_s": 0.0094089129997883,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0036259248953467746,
+              "moved_m": 0.011575476570718298,
+              "time_to_execute_s": null,
+              "drift_m": 0.008863857037451503,
+              "samples_in_gap": 1,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 1.0046351709554775,
+              "gap_s": 1.0048223920002783,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.0042574374172207755,
+              "moved_m": 0.0112339679202482,
+              "time_to_execute_s": null,
+              "drift_m": 0.011650816990504277,
+              "samples_in_gap": 120,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.5069527564332161,
+              "gap_s": 0.5071192380000866,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.003958741655786866,
+              "moved_m": 0.013761624116093402,
+              "time_to_execute_s": null,
+              "drift_m": 0.012853879337475489,
+              "samples_in_gap": 61,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.7557939636943468,
+              "gap_s": 0.7559119659999851,
+              "below_resolution": false,
+              "executed": false,
+              "responded": false,
+              "closest_approach_m": 0.003418621696132743,
+              "moved_m": 0.010548164299662433,
+              "time_to_execute_s": null,
+              "drift_m": 0.01075302449824922,
+              "samples_in_gap": 91,
+              "class": "rejected",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.6313733600637814,
+              "gap_s": 0.6315347220006515,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0037205289477501547,
+              "moved_m": 0.012532206053980916,
+              "time_to_execute_s": null,
+              "drift_m": 0.011687362597044521,
+              "samples_in_gap": 75,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.6935836618790641,
+              "gap_s": 0.6940584639996814,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0037769542293904874,
+              "moved_m": 0.0139361069175004,
+              "time_to_execute_s": null,
+              "drift_m": 0.011854928065479112,
+              "samples_in_gap": 83,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.7246888127867055,
+              "gap_s": 0.7248186899996654,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.0034302333316011202,
+              "moved_m": 0.011311071906059086,
+              "time_to_execute_s": null,
+              "drift_m": 0.010101045308077664,
+              "samples_in_gap": 87,
+              "class": "hold",
+              "state": null
+            },
+            {
+              "gap_requested_s": 0.7402413882405261,
+              "gap_s": 0.7404654160000064,
+              "below_resolution": false,
+              "executed": false,
+              "responded": true,
+              "closest_approach_m": 0.003935594807764534,
+              "moved_m": 0.014257011619530118,
+              "time_to_execute_s": null,
+              "drift_m": 0.01117925903370378,
+              "samples_in_gap": 89,
+              "class": "hold",
+              "state": null
+            }
+          ],
+          "tripped_at_gap_max": {
+            "count": 3,
+            "total": 5,
+            "p": 0.6,
+            "ci_low": 0.2307242812760128,
+            "ci_high": 0.882379225767352
+          },
+          "drift_during_gap_max_m": {
+            "n": 5,
+            "mean": 0.012387239206287017,
+            "std": 0.0006100920339177739,
+            "ci_low": 0.011629709892180406,
+            "ci_high": 0.013144768520393627,
+            "alpha": 0.05
+          },
+          "stop_class": "rejected",
+          "trials_below_resolution": 0,
+          "bisection_width_s": {
+            "n": 5,
+            "mean": 0.015668793599979837,
+            "std": 0.0003215064287923389,
+            "ci_low": 0.015269590642157327,
+            "ci_high": 0.016067996557802347,
+            "alpha": 0.05
+          },
+          "tau_w_estimate_s": {
+            "n": 5,
+            "mean": 0.8322309027998926,
+            "std": 0.4797560561491403,
+            "ci_low": 0.23653507995928047,
+            "ci_high": 1.4279267256405048,
+            "alpha": 0.05,
+            "status": "ok"
+          },
+          "finding": "rejected policy detected: tau_w ~ 0.832 s (95% CI 0.237..1.428, n=5)"
+        },
+        "effective_rate": {
+          "per_rate": [
+            {
+              "command_rate_requested_hz": 50.0,
+              "commands_sent": 2,
+              "client_rate_achieved_hz": 1.9976965320423634,
+              "window_s": 1.0011530619995028,
+              "publish_rate_hz": 119.9241065667613,
+              "samples_total": 174,
+              "samples_matched": 20,
+              "samples_unmatched": 154,
+              "unmatched_fraction": 0.8850574712643678,
+              "targets_reached": 1,
+              "transitions": 1,
+              "observable_rate_hz": 0.9988482660211817,
+              "match_tolerance_m": 0.027814676755151504,
+              "match_tolerance_source": "5 x resting noise sigma_hat (5.56e-03 m), floor 1e-6 m",
+              "target_spacing_m": 0.11125870702060602,
+              "observation_bounded_by": "none",
+              "status": "undetermined",
+              "reason": "unmatched_fraction 0.89 > 0.5: feedback does not settle on the commanded targets within the match tolerance",
+              "step_used_m": 0.22251741404121203,
+              "command_window_s": 1.0005608920000668,
+              "note": "targets reduced to 2 (spacing 4 delta) because the match tolerance is large",
+              "zoh_error_bound_m": 0.05005765309997514
+            },
+            {
+              "command_rate_requested_hz": 100.0,
+              "commands_sent": 2,
+              "client_rate_achieved_hz": 1.9971489819521857,
+              "window_s": 1.0014275440007623,
+              "publish_rate_hz": 120.58837191764981,
+              "samples_total": 175,
+              "samples_matched": 17,
+              "samples_unmatched": 158,
+              "unmatched_fraction": 0.9028571428571428,
+              "targets_reached": 1,
+              "transitions": 1,
+              "observable_rate_hz": 0.9985744909760929,
+              "match_tolerance_m": 0.027814676755151504,
+              "match_tolerance_source": "5 x resting noise sigma_hat (5.56e-03 m), floor 1e-6 m",
+              "target_spacing_m": 0.11125870702060602,
+              "observation_bounded_by": "none",
+              "status": "undetermined",
+              "reason": "unmatched_fraction 0.90 > 0.5: feedback does not settle on the commanded targets within the match tolerance",
+              "step_used_m": 0.22251741404121203,
+              "command_window_s": 1.0006999369998084,
+              "note": "targets reduced to 2 (spacing 4 delta) because the match tolerance is large",
+              "zoh_error_bound_m": 0.05007137720003812
+            },
+            {
+              "command_rate_requested_hz": 200.0,
+              "commands_sent": 2,
+              "client_rate_achieved_hz": 1.9991669871017448,
+              "window_s": 1.0004166799990344,
+              "publish_rate_hz": 119.87750321466712,
+              "samples_total": 174,
+              "samples_matched": 15,
+              "samples_unmatched": 159,
+              "unmatched_fraction": 0.9137931034482759,
+              "targets_reached": 1,
+              "transitions": 1,
+              "observable_rate_hz": 0.9995834935508724,
+              "match_tolerance_m": 0.027814676755151504,
+              "match_tolerance_source": "5 x resting noise sigma_hat (5.56e-03 m), floor 1e-6 m",
+              "target_spacing_m": 0.11125870702060602,
+              "observation_bounded_by": "none",
+              "status": "undetermined",
+              "reason": "unmatched_fraction 0.91 > 0.5: feedback does not settle on the commanded targets within the match tolerance",
+              "step_used_m": 0.22251741404121203,
+              "command_window_s": 1.0006460419999712,
+              "note": "targets reduced to 2 (spacing 4 delta) because the match tolerance is large",
+              "zoh_error_bound_m": 0.050020833999951726
+            },
+            {
+              "command_rate_requested_hz": 500.0,
+              "commands_sent": 2,
+              "client_rate_achieved_hz": 1.9982393552972735,
+              "window_s": 1.0008810980016278,
+              "publish_rate_hz": 119.9221642297944,
+              "samples_total": 174,
+              "samples_matched": 20,
+              "samples_unmatched": 154,
+              "unmatched_fraction": 0.8850574712643678,
+              "targets_reached": 1,
+              "transitions": 1,
+              "observable_rate_hz": 0.9991196776486367,
+              "match_tolerance_m": 0.027814676755151504,
+              "match_tolerance_source": "5 x resting noise sigma_hat (5.56e-03 m), floor 1e-6 m",
+              "target_spacing_m": 0.11125870702060602,
+              "observation_bounded_by": "none",
+              "status": "undetermined",
+              "reason": "unmatched_fraction 0.89 > 0.5: feedback does not settle on the commanded targets within the match tolerance",
+              "step_used_m": 0.22251741404121203,
+              "command_window_s": 1.000437251999756,
+              "note": "targets reduced to 2 (spacing 4 delta) because the match tolerance is large",
+              "zoh_error_bound_m": 0.050044054900081396
+            }
+          ],
+          "match_tolerance_m": 0.027814676755151504,
+          "match_tolerance_source": "5 x resting noise sigma_hat (5.56e-03 m), floor 1e-6 m"
+        }
+      },
+      "notes": [],
+      "started_at": 1788467841.7395768,
+      "duration_s": 169.3762228488922
+    }
+  ],
+  "summary": {
+    "spatial": "undetermined",
+    "dimensional": "undetermined",
+    "temporal": "undetermined"
+  },
+  "semantics": "conformant = the discovered binding satisfies an explicitly declared client expectation within the stated tolerance; no declared expectation -> undetermined (observations reported, no verdict)"
+}

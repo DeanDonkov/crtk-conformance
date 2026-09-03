@@ -72,6 +72,7 @@ class RateSensitivityProbe:
         response_timeout_s: Optional[float] = None,
         rate_match_tolerance_m: Optional[float] = None,
         rate_window_s: float = 1.0,
+        rate_max_step_if: float = 0.05,
         stream_rate_hz: float = 100.0,
         stream_duration_s: float = 0.3,
         expect_state_machine: Optional[str] = None,  # legacy alias: 'yes' | 'no' | 'any'
@@ -90,6 +91,7 @@ class RateSensitivityProbe:
         self.user_response_timeout = response_timeout_s
         self.user_delta = rate_match_tolerance_m
         self.rate_window = rate_window_s
+        self.rate_max_step = rate_max_step_if  # never command a rate sweep farther than this from the start pose (interface units)
         self.stream_rate = stream_rate_hz
         self.stream_duration = stream_duration_s
         # measured during run()
@@ -182,6 +184,11 @@ class RateSensitivityProbe:
         P = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in samples]) if samples else np.zeros((0, 3))
         self.sigma_hat = estimate_noise_sigma(P) if len(P) >= 3 else 0.0
         out["resting_noise_sigma_m"] = self.sigma_hat
+        # the probe step is at least 20 x the resting noise, so that attainment (0.25 step) is 5 sigma above the jitter
+        out["step_requested_m"] = self.step
+        self.step = max(self.step, 20.0 * self.sigma_hat)
+        out["step_used_m"] = self.step
+        self.hold_tol = max(4.0 * self.sigma_hat, 0.5 * self.step)
         # response latency: small command -> first reflecting sample
         lat = []
         for k in range(10):
@@ -205,7 +212,6 @@ class RateSensitivityProbe:
         auto = 5.0 * lat_p95 if not math.isnan(lat_p95) else 0.4
         self.response_timeout = max(self.user_response_timeout or 0.0, auto, 0.2)
         out["response_timeout_s"] = self.response_timeout
-        self.hold_tol = max(4.0 * self.sigma_hat, 0.5 * self.step)
         out["hold_tolerance_m"] = self.hold_tol
         self.resolution = out
         return out
@@ -379,8 +385,8 @@ class RateSensitivityProbe:
             note = ""
             if spacing < 4 * delta:
                 step = 4 * delta * n
-                if step > 0.05:  # do not command more than 5 cm; reduce the number of targets instead
-                    n = max(2, int(0.05 / (4 * delta)))
+                if step > self.rate_max_step:  # do not command farther than rate_max_step; reduce the number of targets instead
+                    n = max(2, int(self.rate_max_step / (4 * delta)))
                     step = 4 * delta * n
                     period = self.rate_window / n
                     note = f"targets reduced to {n} (spacing 4 delta) because the match tolerance is large"

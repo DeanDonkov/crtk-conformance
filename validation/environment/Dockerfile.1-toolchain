@@ -1,0 +1,22 @@
+# Stage 1: Ubuntu 20.04 (focal) base bootstrapped from archive.ubuntu.com (debootstrap --variant=minbase),
+# imported as focal-minbase:rc3. This file installs the build toolchain and system dependencies for
+# ROS 1 Noetic (built from source; packages.ros.org was unreachable from the build environment) and AMBF.
+FROM focal-minbase:rc3
+ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8 LC_ALL=C.UTF-8
+RUN sed -i 's|^deb http://archive.ubuntu.com/ubuntu focal main|deb http://archive.ubuntu.com/ubuntu focal main universe multiverse|' /etc/apt/sources.list \
+ && echo "deb http://archive.ubuntu.com/ubuntu focal-updates main universe multiverse" >> /etc/apt/sources.list \
+ && echo "deb http://archive.ubuntu.com/ubuntu focal-security main universe multiverse" >> /etc/apt/sources.list \
+ && apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake git pkg-config ca-certificates curl wget \
+    python3 python3-dev python3-pip python3-setuptools python3-wheel python3-numpy python3-yaml python3-empy \
+    python3-nose python3-netifaces python3-defusedxml python3-pykdl python3-psutil python3-opengl \
+    libboost-all-dev libbz2-dev liblz4-dev libgpgme-dev libconsole-bridge-dev libpoco-dev \
+    libtinyxml-dev libtinyxml2-dev liblog4cxx-dev libgtest-dev libeigen3-dev libyaml-cpp-dev \
+    libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev libglew-dev xorg-dev libasound2-dev libusb-1.0-0-dev \
+    freeglut3 freeglut3-dev libglvnd-dev libegl1-mesa-dev libxext6 libx11-6 \
+    xvfb mesa-utils libgl1-mesa-dri lsb-release \
+ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3-docutils python3-dateutil python3-pyparsing python3-six python3-distro python3-packaging && rm -rf /var/lib/apt/lists/*
+# Pure-Python ROS build tools: wheels downloaded on the build host from PyPI (the container cannot reach PyPI); see wheels/ and rc3 metadata
+COPY wheels /tmp/wheels
+RUN pip3 install --no-cache-dir --no-index --find-links /tmp/wheels catkin_pkg rospkg rosdistro vcstool pycryptodomex gnupg && rm -rf /tmp/wheels

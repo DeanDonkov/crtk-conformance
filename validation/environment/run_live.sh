@@ -8,9 +8,9 @@ source /rc3/live/env.sh
 source /rc3/sources/ambf-2.0/build/devel/setup.bash
 export PYTHONPATH=/rc3/sources/ambf-2.0/ambf_ros_modules/ambf_client/python:$PYTHONPATH
 if [ "$VER" = "v1" ]; then
-  SRC=/rc3/sources/src-v1; AMBF_ARGS="--launch_file $SRC/launch.yaml -l 0,1,3,4,14,15 -p 120 -t 1 --override_max_comm_freq 120 -g false"; Q3=1.0
+  SRC=/rc3/sources/src-v1; AMBF_ARGS="--launch_file $SRC/launch.yaml -l 0,1,3,4,14,15 -p 120 -t 1 --override_max_comm_freq 120 -g false"; Q3=1.0; AMBF_ARM=/ambf/env/psm1/baselink
 else
-  SRC=/rc3/sources/src-v2; AMBF_ARGS="--launch_file $SRC/launch.yaml -l 0,1,6,7,8,9 -p 200 -t 1 --override_max_comm_freq 100 --override_min_comm_freq 100 -g false"; Q3=0.1
+  SRC=/rc3/sources/src-v2; AMBF_ARGS="--launch_file $SRC/launch.yaml -l 0,1,6,7,8,9 -p 200 -t 1 --override_max_comm_freq 100 --override_min_comm_freq 100 -g false"; Q3=0.1; AMBF_ARM=/ambf/env/psm1/baselinksimple
 fi
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" | tee -a "$OUT/logs/run.log"; }
 git config --global --add safe.directory "*"
@@ -26,7 +26,7 @@ sleep 15
 rostopic list > "$OUT/topics.txt" 2>&1
 for t in measured_cp servo_cp measured_js T_b_w; do rostopic info /CRTK/psm1/$t > "$OUT/info_$t.txt" 2>&1; done
 log "auxiliary observations"
-python3 /rc3/live/live_aux.py --version "$VER" --q3-work $Q3 --out "$OUT/live_aux.json" > "$OUT/logs/live_aux.log" 2>&1
+python3 /rc3/live/live_aux.py --version "$VER" --q3-work $Q3 --ambf-arm $AMBF_ARM --out "$OUT/live_aux.json" > "$OUT/logs/live_aux.log" 2>&1
 tail -5 "$OUT/logs/live_aux.log"
 log "crtk-conformance run A: discover-only (no expectations)"
 python3 -m crtk_conformance.cli run --namespace /CRTK/psm1 --tolerance-mm 1.0 --workspace-radius-m 0.10 --speed-mm-s 50 --client-rate-hz 100 --jitter-max-ms 5 \

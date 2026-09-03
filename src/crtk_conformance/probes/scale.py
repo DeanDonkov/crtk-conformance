@@ -71,6 +71,21 @@ class ScalingUnitsProbe:
             if self.a.wait_for(anchor_buf, 1.0) is None:
                 res.notes.append(f"anchor topic {self.a.anchor_topic} configured but silent; anchored estimate unavailable")
                 anchor_buf = None
+        # resting noise of the feedback channel: scales the step and the still tolerance (0.1.1)
+        from ..rate_estimator import estimate_noise_sigma
+        buf.clear()
+        t0r = time.monotonic()
+        time.sleep(1.0)
+        rest = buf.since(t0r)
+        P = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in rest]) if rest else np.zeros((0, 3))
+        sigma_hat = estimate_noise_sigma(P) if len(P) >= 3 else 0.0
+        step_used = max(self.step, 20.0 * sigma_hat)  # implementation rule: the step is at least 20 x the resting noise
+        still_tol = max(self.still_tol, 3.0 * sigma_hat)
+        res.observations["resting_noise_sigma_if"] = sigma_hat
+        res.observations["step_used_if"] = step_used
+        res.observations["still_tol_used_if"] = still_tol
+        if step_used > self.step:
+            res.notes.append(f"step enlarged from {self.step} to {step_used:.4g} interface units (20 x resting noise sigma_hat = {sigma_hat:.3g})")
         axes = [np.array([1.0, 0, 0]), np.array([0, 1.0, 0]), np.array([0, 0, 1.0])]
         r_int: List[float] = []
         s_anc: List[float] = []
@@ -80,13 +95,18 @@ class ScalingUnitsProbe:
         no_response = 0
         for k in range(self.trials):
             ax = k % 3
-            delta = self.step * axes[ax] * (1 if (k // 3) % 2 == 0 else -1)
-            pa0 = self.a.latest_pose(anchor_buf, 1.0) if anchor_buf is not None else None
-            r = step_and_measure(self.a, buf, delta, self.settle, still_tol=self.still_tol)
+            delta = step_used * axes[ax] * (1 if (k // 3) % 2 == 0 else -1)
+            pa0 = None
+            if anchor_buf is not None:
+                t0a = time.monotonic(); time.sleep(0.3)
+                A0 = [pose_msg_to_matrix(m)[:3, 3] for _, m in anchor_buf.since(t0a)]
+                if A0:
+                    pa0 = np.eye(4); pa0[:3, 3] = np.mean(A0, axis=0)
+            r = step_and_measure(self.a, buf, delta, self.settle, still_tol=still_tol)
             if not r["ok"]:
                 trial_log.append({"trial": k, "ok": False, "reason": r["reason"]})
                 continue
-            if math.isnan(r["first_motion_s"]) and np.linalg.norm(r["delta_meas"]) <= self.still_tol:
+            if math.isnan(r["first_motion_s"]) and np.linalg.norm(r["delta_meas"]) <= still_tol:
                 no_response += 1
                 trial_log.append({"trial": k, "ok": False, "reason": "no_response: no motion above still tolerance within settle time"})
                 continue
@@ -95,10 +115,13 @@ class ScalingUnitsProbe:
             per_axis[ax].append(ratio)
             if not math.isnan(r["first_motion_s"]):
                 latencies.append(r["first_motion_s"])
-            entry = {"trial": k, "ok": True, "axis": ax, "delta_cmd_if": delta.tolist(), "delta_meas_if": r["delta_meas"].tolist(), "r_int": ratio, "first_motion_s": r["first_motion_s"]}
+            entry = {"trial": k, "ok": True, "axis": ax, "delta_cmd_if": delta.tolist(), "delta_meas_if": r["delta_meas"].tolist(), "r_int": ratio, "first_motion_s": r["first_motion_s"],
+                     "n_pre": r["n_pre"], "n_post": r["n_post"], "post_std_if": r["post_std_m"]}
             if anchor_buf is not None and pa0 is not None:
-                time.sleep(0.05)
-                pa1 = self.a.latest_pose(anchor_buf, 1.0)
+                A1 = [pose_msg_to_matrix(m)[:3, 3] for _, m in anchor_buf.since(time.monotonic() - 0.3)]
+                pa1 = None
+                if A1:
+                    pa1 = np.eye(4); pa1[:3, 3] = np.mean(A1, axis=0)
                 if pa1 is not None:
                     d_anc = pa1[:3, 3] - pa0[:3, 3]
                     s = float(np.linalg.norm(d_anc) / np.linalg.norm(delta))  # delta interpreted as metres

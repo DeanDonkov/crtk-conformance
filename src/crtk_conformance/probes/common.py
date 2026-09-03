@@ -57,20 +57,43 @@ def wait_settled(a: PlatformAdapter, buf: Buffer, timeout_s: float, still_tol: f
     return last, first_motion
 
 
-def step_and_measure(a: PlatformAdapter, buf: Buffer, delta: np.ndarray, settle_s: float = 1.0, still_tol: float = 1e-5) -> dict:
-    """Command measured_cp + delta (in interface units, unqualified frame) and measure the response."""
-    p0 = a.latest_pose(buf, max_age_s=1.0)
-    if p0 is None:
+def step_and_measure(a: PlatformAdapter, buf: Buffer, delta: np.ndarray, settle_s: float = 1.0, still_tol: float = 1e-5, window_s: float = 0.3) -> dict:
+    """Command measured_cp + delta (in interface units, unqualified frame) and measure the response.
+
+    0.1.1: noise-robust form.  The start pose p0 is the mean of the feedback samples in a window_s window before
+    the command; after the command the probe waits settle_s and takes p1 as the mean of the samples in the last
+    window_s.  The first-motion time is the first sample farther than still_tol from p0 (the caller passes a
+    noise-scaled still_tol).  A trial with no sample beyond still_tol is a 'no response' (first_motion_s = nan).
+    """
+    t0 = time.monotonic()
+    time.sleep(window_s)
+    pre = buf.since(t0)
+    if not pre:
         msg = a.wait_for(buf, 1.0)
         if msg is None:
             return {"ok": False, "reason": "no measured_cp"}
-        p0 = pose_msg_to_matrix(msg)
+        pre = [(time.monotonic(), msg)]
+    P0 = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in pre])
+    p0 = pose_msg_to_matrix(pre[-1][1])
+    p0[:3, 3] = P0.mean(axis=0)
     goal = p0.copy()
     goal[:3, 3] += delta
     t_cmd = time.monotonic()
     a.servo_cp(goal)
-    p1, t_first = wait_settled(a, buf, settle_s, still_tol=still_tol)
-    if p1 is None:
+    deadline = t_cmd + settle_s + window_s
+    first_motion = float("nan")
+    while time.monotonic() < deadline:
+        msg = a.wait_for(buf, min(0.05, max(0.0, deadline - time.monotonic())))
+        if msg is None:
+            continue
+        if np.isnan(first_motion) and np.linalg.norm(pose_msg_to_matrix(msg)[:3, 3] - p0[:3, 3]) > still_tol:
+            first_motion = time.monotonic() - t_cmd
+    post = buf.since(deadline - window_s)
+    if not post:
         return {"ok": False, "reason": "no response"}
+    P1 = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in post])
+    p1 = pose_msg_to_matrix(post[-1][1])
+    p1[:3, 3] = P1.mean(axis=0)
     moved = p1[:3, 3] - p0[:3, 3]
-    return {"ok": True, "p0": p0, "p1": p1, "delta_cmd": delta, "delta_meas": moved, "first_motion_s": t_first, "t_cmd": t_cmd}
+    return {"ok": True, "p0": p0, "p1": p1, "delta_cmd": delta, "delta_meas": moved, "first_motion_s": first_motion, "t_cmd": t_cmd,
+            "n_pre": int(len(pre)), "n_post": int(len(post)), "post_std_m": float(P1.std(axis=0).max())}

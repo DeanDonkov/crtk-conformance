@@ -10,7 +10,9 @@ Sub-probes, each reported separately:
      behaviour            probe first measures its own timing resolution (sleep, send, feedback period,
                           response latency) and reports a resolution floor r; gaps below r are
                           `below_resolution`.  During the gap the pose is recorded and the stop behaviour
-                          is classified as hold / release / rejected|fault / not_observable; the trip gap
+                          is classified as hold / release / rejected|fault / not_observable (a command counts as
+                          rejected only when no motion toward it is observed; a tracking error is not a
+                          rejection: attained and responded are reported separately); the trip gap
                           tau_w is estimated by bisection between realised gaps (monotonic clock) and is
                           reported only with n >= 3 trials and a CI lower bound above the floor.
   C. observable rate      Command distinct setpoints at f and classify feedback samples to the nearest
@@ -98,19 +100,37 @@ class RateSensitivityProbe:
 
     # ------------------------------------------------------------------ helpers
     def _executed(self, buf, goal_T, timeout: Optional[float] = None, tol=None) -> Tuple[bool, float]:
-        """Wait until measured_cp is within tol of goal_T; return (executed, time_to_execute)."""
+        """Wait until measured_cp is within tol of goal_T; return (attained, time_to_attain)."""
+        r = self._response(buf, goal_T, timeout=timeout, tol=tol)
+        return r["attained"], r["time_to_attain_s"]
+
+    def _response(self, buf, goal_T, timeout: Optional[float] = None, tol=None, p_ref=None) -> dict:
+        """Observe the response to a command: attained (within tol of the goal), responded (moved toward the goal
+        by more than the hold tolerance, or halved its distance to it), closest approach and time to attain.
+        A tracking error is not a rejection: `responded` and `attained` are reported separately."""
         tol = tol or self.step * 0.25
         timeout = self.response_timeout if timeout is None else timeout
         t0 = time.monotonic()
         deadline = t0 + timeout
+        g = goal_T[:3, 3]
+        d0 = None if p_ref is None else float(np.linalg.norm(p_ref - g))
+        closest = float("inf")
+        moved = 0.0
+        attained, t_att = False, float("nan")
         while time.monotonic() < deadline:
             msg = self.a.wait_for(buf, min(0.05, max(0.0, deadline - time.monotonic())))
             if msg is None:
                 continue
-            T = pose_msg_to_matrix(msg)
-            if np.linalg.norm(T[:3, 3] - goal_T[:3, 3]) < tol:
-                return True, time.monotonic() - t0
-        return False, float("nan")
+            p = pose_msg_to_matrix(msg)[:3, 3]
+            d = float(np.linalg.norm(p - g))
+            closest = min(closest, d)
+            if p_ref is not None:
+                moved = max(moved, float(np.linalg.norm(p - p_ref)))
+            if d < tol:
+                attained, t_att = True, time.monotonic() - t0
+                break
+        responded = attained or (p_ref is not None and (moved > self.hold_tol or (d0 is not None and closest < 0.5 * d0)))
+        return {"attained": attained, "responded": bool(responded), "closest_m": closest, "moved_m": moved, "time_to_attain_s": t_att}
 
     def _stream(self, buf, base_T) -> Tuple[float, np.ndarray]:
         """Stream small oscillating commands to keep any liveness policy fed; return (t_last, last setpoint)."""
@@ -208,7 +228,9 @@ class RateSensitivityProbe:
             goal = pose.copy()
             goal[0, 3] += self.step
             self.a.servo_cp(goal)
-            out["executed_when_disabled"], _ = self._executed(buf, goal)
+            r = self._response(buf, goal, timeout=max(0.5, self.response_timeout), p_ref=pose[:3, 3])
+            out["executed_when_disabled"] = r["responded"]
+            out["attained_when_disabled"] = r["attained"]
             self.a.servo_cp(pose)
             time.sleep(0.1)
             info = ensure_enabled(self.a)
@@ -216,14 +238,19 @@ class RateSensitivityProbe:
             goal = pose.copy()
             goal[1, 3] += self.step
             self.a.servo_cp(goal)
-            out["executed_when_enabled"], _ = self._executed(buf, goal)
+            r = self._response(buf, goal, timeout=max(0.5, self.response_timeout), p_ref=pose[:3, 3])
+            out["executed_when_enabled"] = r["responded"]
+            out["attained_when_enabled"] = r["attained"]
             self.a.servo_cp(pose)
             time.sleep(0.1)
         else:
             goal = pose.copy()
             goal[0, 3] += self.step
             self.a.servo_cp(goal)
-            out["executed_without_state_machine"], _ = self._executed(buf, goal)
+            r = self._response(buf, goal, timeout=max(0.5, self.response_timeout), p_ref=pose[:3, 3])
+            out["executed_without_state_machine"] = r["responded"]
+            out["attained_without_state_machine"] = r["attained"]
+            out["closest_approach_m"] = r["closest_m"]
             self.a.servo_cp(pose)
             time.sleep(0.1)
         return out
@@ -244,16 +271,18 @@ class RateSensitivityProbe:
         goal[2, 3] += self.step
         t_send = time.monotonic()
         gap_samples = buf.since(t_last)
+        p_pre = pose_msg_to_matrix(gap_samples[-1][1])[:3, 3] if gap_samples else p_last
         self.a.servo_cp(goal)
         actual_gap = t_send - t_last
-        ok, t_exec = self._executed(buf, goal)
+        resp = self._response(buf, goal, p_ref=p_pre)
+        ok, t_exec = resp["attained"], resp["time_to_attain_s"]
         st = self.a.operating_state(0.2) if self.a.has("operating_state") else None
         state = None if st is None else st.state
         drifts = [float(np.linalg.norm(pose_msg_to_matrix(m)[:3, 3] - p_last)) for _, m in gap_samples]
         drift = max(drifts) if drifts else float("nan")
         n_gap = len(gap_samples)
         fp = self.resolution.get("feedback_period_s", 0.01)
-        if not ok:
+        if not resp["responded"]:
             cls = "fault" if state in ("FAULT", "DISABLED") else "rejected"
         elif n_gap < 2 and gap_s >= 2 * fp:
             cls = "not_observable"
@@ -264,7 +293,8 @@ class RateSensitivityProbe:
         self.a.servo_cp(base_T)
         self._executed(buf, base_T, timeout=max(0.5, self.response_timeout))
         return {"gap_requested_s": gap_s, "gap_s": actual_gap, "below_resolution": gap_s < self.resolution.get("resolution_floor_s", 0.0),
-                "executed": ok, "time_to_execute_s": t_exec, "drift_m": drift, "samples_in_gap": n_gap, "class": cls, "state": state}
+                "executed": ok, "responded": resp["responded"], "closest_approach_m": resp["closest_m"], "moved_m": resp["moved_m"],
+                "time_to_execute_s": t_exec, "drift_m": drift, "samples_in_gap": n_gap, "class": cls, "state": state}
 
     @staticmethod
     def _tripped(r: dict) -> bool:
@@ -414,12 +444,16 @@ class RateSensitivityProbe:
             res.decision_basis = "no data"
             res.duration_s = time.time() - t0
             return res
-        A = self.probe_state_precondition(buf)
         ensure_enabled(self.a)
         base_T, _ = wait_settled(self.a, buf, 1.0)
         if base_T is None:
             base_T = self.a.latest_pose(buf, 2.0)
         R = self.measure_resolution(buf, base_T)
+        A = self.probe_state_precondition(buf)
+        ensure_enabled(self.a)
+        base_T, _ = wait_settled(self.a, buf, 1.0)
+        if base_T is None:
+            base_T = self.a.latest_pose(buf, 2.0)
         B = self.probe_liveness(buf, base_T)
         C = self.probe_effective_rate(buf, base_T)
         res.observations.update({"state_precondition": A, "resolution": R, "liveness": B, "effective_rate": C})

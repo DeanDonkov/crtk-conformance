@@ -55,6 +55,9 @@ from .common import ensure_enabled, wait_settled
 STOP_CLASSES = ("hold", "release", "rejected", "fault", "not_observable", "no_policy_within_range")
 
 
+MIN_RATE_TARGETS = 5  # fewest separable targets from which an observable rate is reported
+
+
 class RateSensitivityProbe:
     name = "RateSensitivityProbe"
 
@@ -433,17 +436,30 @@ class RateSensitivityProbe:
             self._recover(buf, base_T)
             period = 1.0 / f
             n = int(f * self.rate_window)
-            # target spacing must exceed 4 delta; enlarge the step, then reduce n if the step would be unreasonable
+            # target spacing must exceed 4 delta; enlarge the step, and if that would exceed the allowed excursion
+            # send fewer targets at the SAME requested rate (shorter window).  Fewer than MIN_RATE_TARGETS
+            # separable targets within the excursion -> undetermined (targets_not_separable); nothing is sent.
             step = self.step
             spacing = step / n
             note = ""
             if spacing < 4 * delta:
                 step = 4 * delta * n
-                if step > self.rate_max_step:  # do not command farther than rate_max_step; reduce the number of targets instead
-                    n = max(2, int(self.rate_max_step / (4 * delta)))
+                if step > self.rate_max_step:
+                    n_max = int(self.rate_max_step / (4 * delta))
+                    if n_max < MIN_RATE_TARGETS:
+                        row = {"command_rate_requested_hz": float(f), "commands_sent": 0, "client_rate_achieved_hz": 0.0, "window_s": 0.0,
+                               "publish_rate_hz": (1.0 / self.resolution["feedback_period_s"]) if self.resolution.get("feedback_period_s") else 0.0, "samples_total": 0, "samples_matched": 0,
+                               "samples_unmatched": 0, "unmatched_fraction": 0.0, "targets_reached": 0, "transitions": 0, "observable_rate_hz": 0.0,
+                               "match_tolerance_m": delta, "match_tolerance_source": src, "target_spacing_m": 4 * delta, "observation_bounded_by": "none",
+                               "status": "undetermined", "reason": "targets_not_separable",
+                               "note": f"{n} targets at spacing >= 4 delta = {4 * delta:.3g} would need an excursion of {step:.3g} > max {self.rate_max_step:.3g}; "
+                                       f"only {n_max} separable targets fit (minimum {MIN_RATE_TARGETS}); no commands sent",
+                               "step_used_m": None, "command_window_s": 0.0, "zoh_error_bound_m": None}
+                        out["per_rate"].append(row)
+                        continue
+                    n = n_max
                     step = 4 * delta * n
-                    period = self.rate_window / n
-                    note = f"targets reduced to {n} (spacing 4 delta) because the match tolerance is large"
+                    note = f"targets reduced to {n} (spacing 4 delta) at the requested rate: window shortened to {n / f:.3g} s to stay within the excursion {self.rate_max_step:.3g}"
                 spacing = step / n
             targets = np.tile(base_T[:3, 3], (n, 1))
             targets[:, 0] += step * (np.arange(n) + 1) / n

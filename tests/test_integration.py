@@ -274,3 +274,29 @@ def test_missing_topic_gives_undetermined_not_conformant(master):
               RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.2, rates_hz=(100,), expectations=Expectations.from_dict({"temporal": {"state_machine": "required"}})).run()]
         a.close()
     assert all(r.outcome == Outcome.UNDETERMINED for r in rs)
+
+
+def test_rate_targets_not_separable_is_undetermined_and_sends_nothing(master):
+    # resting noise 2 mm -> delta = 10 mm, spacing 40 mm: fewer than MIN_RATE_TARGETS fit in the 50 mm excursion
+    with mock_node("reference", {"noise_m": 0.002, "seed": 5}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.2, bisection_steps=2, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
+        a.close()
+    row = r.observations["effective_rate"]["per_rate"][0]
+    assert row["status"] == "undetermined" and row["reason"] == "targets_not_separable"
+    assert row["commands_sent"] == 0 and row["transitions"] == 0
+    assert r.outcome == Outcome.UNDETERMINED
+
+
+def test_rate_reduced_targets_keep_the_requested_rate(master):
+    # resting noise 0.5 mm -> delta = 2.5 mm, spacing 10 mm: 5 targets fit; the client rate must stay at 100 Hz
+    with mock_node("reference", {"noise_m": 0.0005, "loop_rate_hz": 1000, "publish_rate_hz": 1000, "seed": 6}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.2, bisection_steps=2, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
+        a.close()
+    row = r.observations["effective_rate"]["per_rate"][0]
+    assert row["commands_sent"] == 5 and "window shortened" in row.get("note", "")
+    assert 70.0 <= row["client_rate_achieved_hz"] <= 130.0
+    assert row["transitions"] <= row["commands_sent"]

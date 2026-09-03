@@ -24,8 +24,10 @@ Surgical Robotics Challenge software).
   feedback samples are classified to the nearest commanded target within a matching tolerance (user-supplied
   or 5 x the measured resting noise) and monotone target transitions are counted; transitions never exceed
   commands sent; the client's achieved rate and the feedback publish rate are measured and reported; large
-  unmatched fractions or inseparable targets yield `undetermined`. Optional secondary channel on
-  `setpoint_cp`.
+  unmatched fractions or inseparable targets yield `undetermined`. When the resting noise forces fewer
+  targets than the requested rate needs, the requested rate is kept and the window shortened; fewer than 5
+  separable targets within the allowed excursion send nothing and report `targets_not_separable` (found on the
+  live SRC v1.0.0 instance, resting noise ~10 mm interface units). Optional secondary channel on `setpoint_cp`.
 - **Liveness / stop-behaviour probe redesigned** (`rc3/LIVENESS_PROBE_DESIGN.md`, M6): the probe measures its
   own timing resolution (sleep, send, feedback period, response latency) and reports a resolution floor; no
   fixed post-stream sleep; monotonic timing; configurable response timeout (default 5 x p95 latency);
@@ -59,7 +61,7 @@ Surgical Robotics Challenge software).
   Noetic container recipe, pinned source manifests, wheel hashes, image ids). `meta.json` records numpy,
   scipy, jsonschema, matplotlib, container and ROS manifest.
 - Tests: `tests/test_rate_estimator.py` (synthetic feedback, 18 tests incl. the Reviewer #2 120-of-100
-  regression), `tests/test_expectations.py` (8), integration tests extended to 19 (identity / non-identity /
+  regression), `tests/test_expectations.py` (8), integration tests extended to 21 (identity / non-identity /
   missing expectation; required / forbidden / discover-only state machine; fault / release / hold /
   below-resolution liveness; noisy, interpolating, delayed, dropped rate cases).
 

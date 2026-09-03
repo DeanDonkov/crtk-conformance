@@ -6,9 +6,10 @@
 3. measured_cp publish rate;
 4. Reviewer #2 M2 check: measured_js (reported, de-perturbed) vs the simulator's own joint state
    (/ambf/env/<arm>/baselink/State, field joint_positions) after commanding a joint configuration;
-5. cross-version differential for D2: measured_cp at a fixed joint configuration (q = 0), whose norm is
-   determined by the kinematic link lengths only, so that the ratio between v1.0.0 and v2.0.0 is the
-   unit factor (an inter-version comparison, not a unit anchor).
+5. cross-version differential for D2: measured_cp at the same physical joint configuration (yaw = pitch = 0,
+   insertion at ~40 % of the documented range expressed in each version's own unit), whose norm is determined
+   by the kinematic geometry, so that the ratio between v1.0.0 and v2.0.0 is the unit factor (an inter-version
+   comparison, not a unit anchor).
 6. servo_cp -> measured_cp residual after settling (interface-level agreement despite injected joint errors).
 Everything is written as JSON to --out.
 """
@@ -42,6 +43,9 @@ def main():
     ap.add_argument("--ambf-arm", default="/ambf/env/psm1/baselink")
     ap.add_argument("--out", required=True)
     ap.add_argument("--version", required=True)
+    ap.add_argument("--q3-work", type=float, required=True,
+                    help="insertion-joint value (interface units) of the working configuration the arm is placed in before probing: "
+                         "~40 %% of the documented insertion range (v1.0.0: j3 in [0, 2.40] s.u., enforce_limits in psmIK.py; v2.0.0: qmax 0.24 m, psm_400006.json)")
     args = ap.parse_args()
     rospy.init_node("rc3_live_aux", anonymous=True, disable_signals=True)
     out = {"version": args.version, "namespace": args.ns, "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
@@ -106,9 +110,12 @@ def main():
     # q_ins: insertion 0.1 interface units keeps the tip clear of the RCM; the position norm at a fixed joint vector is
     # determined by the kinematic link lengths, so it can be compared between versions.  The arm is returned to its
     # initial joint configuration afterwards so that the probes start from the released scene's home pose.
-    configs = {"q_ins": [0.0, 0.0, 0.1, 0.0, 0.0, 0.0], "q_ins_yaw": [0.3, 0.0, 0.1, 0.0, 0.0, 0.0]}
-    if q_start is not None:
-        configs["q_return"] = q_start[:6]
+    # q_work: the same physical configuration in both versions (insertion at ~40 % of the documented range, in each
+    # version's own interface unit), so that the position norm can be compared between versions; the arm is left there
+    # for the probes, because the released scenes start with the tool at (or within millimetres of) the RCM, where
+    # Cartesian control is singular.
+    q3 = args.q3_work
+    configs = {"q_work": [0.0, 0.0, q3, 0.0, 0.0, 0.0], "q_work_yaw": [0.3, 0.0, q3, 0.0, 0.0, 0.0], "q_work_return": [0.0, 0.0, q3, 0.0, 0.0, 0.0]}
     out["joint_configs"] = {}
     for name, q in configs.items():
         js = JointState()
@@ -162,11 +169,11 @@ def main():
         out["servo_cp_step"] = {"goal_position": g.tolist(), "measured_mean": P.mean(axis=0).tolist(),
                                 "residual_norm_if_units": float(np.linalg.norm(P.mean(axis=0) - g)), "measured_std": P.std(axis=0).tolist(),
                                 "commanded_step_if_units": 0.01}
-        # return to the start pose
-        goal.pose = copy.deepcopy(m0.pose)
-        for _ in range(100):
-            goal.header.stamp = rospy.Time.now()
-            pub_cp.publish(goal)
+        # back to the working configuration (joint space) for the probes
+        js = JointState(); js.position = configs["q_work"]
+        for _ in range(150):
+            js.header.stamp = rospy.Time.now()
+            pub_jp.publish(js)
             time.sleep(0.02)
         time.sleep(1.0)
     out["finished_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

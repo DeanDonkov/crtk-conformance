@@ -327,13 +327,23 @@ class RateSensitivityProbe:
         ok, t_exec = resp["attained"], resp["time_to_attain_s"]
         st = self.a.operating_state(0.2) if self.a.has("operating_state") else None
         state = None if st is None else st.state
-        drifts = [float(np.linalg.norm(pose_msg_to_matrix(m)[:3, 3] - p_last)) for _, m in gap_samples]
+        # drift = motion *during* the gap: distance from where the pose settled at the start of the gap (mean of the
+        # first 0.1 s of gap samples) to the farthest sample after the first 0.2 s.  Measuring from the last streamed
+        # setpoint would confuse a steady-state tracking error with a release (found on the live SRC v1.0.0 instance).
+        gap_pos = [(tq, pose_msg_to_matrix(m)[:3, 3]) for tq, m in gap_samples]
+        ref_pts = [q for tq, q in gap_pos if tq <= t_last + 0.1] or ([gap_pos[0][1]] if gap_pos else [])
+        late = [q for tq, q in gap_pos if tq >= t_last + 0.2]
+        if ref_pts and late:
+            ref = np.mean(ref_pts, axis=0)
+            drifts = [float(np.linalg.norm(q - ref)) for q in late]
+        else:
+            drifts = []
         drift = max(drifts) if drifts else float("nan")
         n_gap = len(gap_samples)
         fp = self.resolution.get("feedback_period_s", 0.01)
         if not resp["responded"]:
             cls = "fault" if state in ("FAULT", "DISABLED") else "rejected"
-        elif n_gap < 2 and gap_s >= 2 * fp:
+        elif (n_gap < 2 and gap_s >= 2 * fp) or (not drifts and gap_s >= 0.3):
             cls = "not_observable"
         elif drifts and drift > self.hold_tol:
             cls = "release"

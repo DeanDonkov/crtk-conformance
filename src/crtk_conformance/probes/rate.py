@@ -119,6 +119,9 @@ class RateSensitivityProbe:
         t0 = time.monotonic()
         deadline = t0 + timeout
         g = goal_T[:3, 3]
+        if p_ref is None:
+            cur = self.a.latest_pose(buf, 1.0)
+            p_ref = cur[:3, 3] if cur is not None else None
         d0 = None if p_ref is None else float(np.linalg.norm(p_ref - g))
         closest = float("inf")
         moved = 0.0
@@ -213,14 +216,16 @@ class RateSensitivityProbe:
         lat = []
         att = 0
         for k in range(10):
-            goal = base_T.copy()
+            cur = self.a.latest_pose(buf, 1.0)
+            goal = (cur if cur is not None else base_T).copy()
             goal[1, 3] += self.step * (1 if k % 2 == 0 else -1)
-            r = self._response(buf, goal, timeout=max(1.0, 5 * self.response_timeout), p_ref=base_T[:3, 3])
+            self.a.servo_cp(goal)
+            r = self._response(buf, goal, timeout=max(1.0, 5 * self.response_timeout))
             if r["responded"] and not math.isnan(r["time_to_respond_s"]):
                 lat.append(r["time_to_respond_s"])
             att += r["attained"]
             self.a.servo_cp(base_T)
-            self._response(buf, base_T, timeout=max(1.0, 5 * self.response_timeout), p_ref=goal[:3, 3])
+            self._response(buf, base_T, timeout=max(1.0, 5 * self.response_timeout))
         out["latency_probes_attained"] = att
         out["latency_probes_responded"] = len(lat)
         if lat:

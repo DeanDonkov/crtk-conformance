@@ -58,12 +58,16 @@ class MockConfig:
     watchdog_s: float = 0.0  # 0 = no liveness policy
     watchdog_mode: str = "fault"  # 'fault' -> state FAULT, commands rejected until 'enable'; 'release' -> stop tracking until next command
     release_drift_m_s: float = 0.0  # drift while released (emulates loss of actuation); 0 = hold
-    loop_rate_hz: float = 1000.0  # execution loop; latest command wins per tick
+    loop_rate_hz: float = 1000.0  # execution loop; the latest *due* command wins per tick
     publish_rate_hz: float = 100.0  # measured_cp publish rate
-    response_delay_s: float = 0.0  # fixed delay between command receipt and execution
+    response_delay_s: float = 0.0  # fixed delay between command receipt and execution (commands are queued, not discarded)
     response_jitter_s: float = 0.0  # uniform jitter added to the delay
     drop_prob: float = 0.0  # probability of ignoring a servo_cp message
-    noise_m: float = 0.0  # Gaussian noise (per axis, metres) added to measured_cp
+    noise_m: float = 0.0  # Gaussian noise (per axis, metres) added to measured_cp / local/measured_cp positions
+    orientation_noise_deg: float = 0.0  # Gaussian noise (deg, random axis) added to the published orientations (0.1.1)
+    stamp_skew_s: float = 0.0  # header.stamp offset applied to local/measured_cp relative to measured_cp (0.1.1)
+    max_speed_m_s: float = 0.0  # 0 = setpoints are attained instantaneously; >0 = move toward the goal at this speed (0.1.1)
+    anchor_noise_m: float = 0.0  # Gaussian noise added to the out-of-band ground-truth (anchor) topic, validation only (0.1.1)
     # misc
     publish_measured_cp: bool = True  # False emulates a missing topic
     publish_measured_js: bool = True
@@ -89,8 +93,9 @@ class MockCRTKNode:
         self.lock = threading.Lock()
         # ground-truth tool pose in the arm-base frame, SI
         self.pose = G.make_pose(None, cfg.home_pose_m)
-        self.goal: Optional[np.ndarray] = None
-        self.goal_due: float = 0.0
+        self.goal: Optional[np.ndarray] = None  # current target being tracked (max_speed_m_s > 0) or None
+        self.queue: List = []  # (due_time, seq, T_local) pending commands (0.1.1: delayed commands are queued, not discarded)
+        self.seq = 0
         self.state = "DISABLED" if cfg.state_machine else "ENABLED"
         self.homed = not cfg.state_machine
         self.released = False
@@ -128,8 +133,8 @@ class MockCRTKNode:
             T_if[:3, 3] *= self.cfg.unit_m  # -> metres
             T_local = self.T_bind_inv @ T_if  # -> arm-base frame
             delay = self.cfg.response_delay_s + self.rng.uniform(0.0, self.cfg.response_jitter_s)
-            self.goal = T_local
-            self.goal_due = now + delay
+            self.seq += 1
+            self.queue.append((now + delay, self.seq, T_local))
             self.last_cmd_time = now
             self.released = False
 
@@ -165,23 +170,52 @@ class MockCRTKNode:
                         if self.cfg.watchdog_mode == "fault":
                             self.state = "FAULT"
                             self.goal = None
+                            self.queue.clear()
                             self._publish_state()
                         else:
                             self.released = True
                             self.goal = None
+                            self.queue.clear()
                 if self.released and self.cfg.release_drift_m_s > 0:
                     self.pose[2, 3] -= self.cfg.release_drift_m_s * period
-                # execute latest command (latest wins)
-                if self.goal is not None and now >= self.goal_due and self.state == "ENABLED":
-                    self.pose = self.goal
-                    self.goal = None
-                    self.executed += 1
+                # execute: among the commands that are due, the latest wins (a delayed pipeline still executes
+                # every setpoint whose due time has passed, in order, one per tick at most)
+                if self.state == "ENABLED":
+                    due = [q for q in self.queue if q[0] <= now]
+                    if due:
+                        # latest-wins among the due commands (highest sequence number); anything older than the
+                        # command executed is stale and is discarded, so a jittered pipeline never moves backwards
+                        newest = max(due, key=lambda q: q[1])
+                        self.queue = [q for q in self.queue if q[1] > newest[1]]
+                        self.goal = newest[2]
+                        self.executed += 1
+                    if self.goal is not None:
+                        if self.cfg.max_speed_m_s <= 0:
+                            self.pose = self.goal
+                            self.goal = None
+                        else:
+                            d = self.goal[:3, 3] - self.pose[:3, 3]
+                            dist = float(np.linalg.norm(d))
+                            step = self.cfg.max_speed_m_s * period
+                            if dist <= step:
+                                self.pose = self.goal
+                                self.goal = None
+                            else:
+                                P = self.pose.copy()
+                                P[:3, 3] += d / dist * step
+                                P[:3, :3] = self.goal[:3, :3]
+                                self.pose = P
             next_t += period
             dt = next_t - time.monotonic()
             if dt > 0:
                 time.sleep(dt)
             else:
                 next_t = time.monotonic()
+
+    def _rot_noise(self) -> np.ndarray:
+        axis = self.nrng.normal(size=3)
+        axis /= np.linalg.norm(axis)
+        return G.axis_angle(axis, math.radians(self.nrng.normal(0.0, self.cfg.orientation_noise_deg)))
 
     def _publish_state(self):
         if self.pub_state is None:
@@ -204,15 +238,24 @@ class MockCRTKNode:
             T_if = self.T_bind @ pose
             if self.cfg.noise_m > 0:
                 T_if[:3, 3] += self.nrng.normal(0.0, self.cfg.noise_m, 3)
+            if self.cfg.orientation_noise_deg > 0:
+                T_if[:3, :3] = self._rot_noise() @ T_if[:3, :3]
             T_if[:3, 3] /= self.cfg.unit_m
+            stamp = rospy.Time.now()
             if self.pub_measured is not None:
-                self.pub_measured.publish(matrix_to_pose_msg(T_if, self.cfg.measured_frame_id))
+                m = matrix_to_pose_msg(T_if, self.cfg.measured_frame_id)
+                m.header.stamp = stamp
+                self.pub_measured.publish(m)
             if self.pub_local is not None:
                 T_loc = pose.copy()
                 if self.cfg.noise_m > 0:
                     T_loc[:3, 3] += self.nrng.normal(0.0, self.cfg.noise_m, 3)
+                if self.cfg.orientation_noise_deg > 0:
+                    T_loc[:3, :3] = self._rot_noise() @ T_loc[:3, :3]
                 T_loc[:3, 3] /= self.cfg.unit_m
-                self.pub_local.publish(matrix_to_pose_msg(T_loc, self.cfg.local_frame_id))
+                m = matrix_to_pose_msg(T_loc, self.cfg.local_frame_id)
+                m.header.stamp = stamp + rospy.Duration.from_sec(self.cfg.stamp_skew_s)
+                self.pub_local.publish(m)
             if self.pub_tbw is not None:
                 # base-in-world; in the mock the "world" is the bound frame
                 self.pub_tbw.publish(matrix_to_pose_msg(self.T_bind, "world"))
@@ -222,7 +265,10 @@ class MockCRTKNode:
                 js.name = ["outer_yaw", "outer_pitch", "outer_insertion"]
                 js.position = [0.0, 0.0, float(np.linalg.norm(pose[:3, 3]) / self.cfg.unit_m)]
                 self.pub_js.publish(js)
-            self.pub_truth.publish(matrix_to_pose_msg(pose, "mock_ground_truth_base"))
+            T_truth = pose.copy()
+            if self.cfg.anchor_noise_m > 0:
+                T_truth[:3, 3] += self.nrng.normal(0.0, self.cfg.anchor_noise_m, 3)
+            self.pub_truth.publish(matrix_to_pose_msg(T_truth, "mock_ground_truth_base"))
             if self.pub_tf is not None:
                 tr = TransformStamped()
                 tr.header.stamp = rospy.Time.now()

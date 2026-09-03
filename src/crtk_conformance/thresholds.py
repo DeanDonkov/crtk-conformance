@@ -5,14 +5,25 @@ epsilon (metres), a workspace radius r_ws (metres, the largest ||p_c|| the clien
 in the interface frame) and a nominal end-effector speed v (m/s). The decision thresholds follow
 from the error model of the paper (Section 5):
 
-  spatial      predicted worst-case absolute-command error  e_hat = ||t_hat|| + 2 sin(theta_hat/2) r_ws   (eq. 3)
-  dimensional  predicted error at the workspace edge          e_hat = |1 - s_hat| r_ws                    (eq. M2.1)
-  temporal     required command rate                          f_req = v / epsilon                         (eq. 6)
-               required liveness period                       1/f_client + J_max < tau_w_hat             (eq. 4)
+  spatial      predicted worst-case absolute-command error of the residual binding (observed vs expected)
+                                                              e_hat = ||t_E|| + 2 sin(theta_E/2) r_ws     (eq. 3)
+  dimensional  predicted error at the workspace edge          e_hat = |1 - s_hat/u| r_ws                  (eq. 6)
+  temporal     required command rate                          f_req = v / epsilon                         (eq. 9)
+               required liveness period                       1/f_client + J_max < tau_w_hat             (eq. 7)
 
-A quantity is CONFORMANT if the upper confidence limit of its predicted error is <= epsilon,
-DIVERGENT if the lower confidence limit is > epsilon, and UNDETERMINED otherwise (including
-when the estimate could not be formed). See probes/base.py for the outcome type.
+A quantity is CONFORMANT if the upper confidence limit of its predicted error is below epsilon,
+DIVERGENT if the lower confidence limit is above epsilon, and UNDETERMINED otherwise (including
+when the estimate could not be formed, and for interval ends within a 1e-9 relative guard band of
+epsilon). See probes/base.py for the outcome type.
+
+These are the *task thresholds*: every one is derived from the user's tolerance inputs. They are distinct
+from the *implementation constants* of the probes (settle tolerance, pairing window, response timeout,
+match tolerance, stream duration, ...), which affect whether an estimate can be formed but never move the
+decision boundary; they are listed in the README ("Implementation constants") and exposed as CLI options.
+Equation numbers refer to the manuscript: (3) spatial bound, (6) unit-scale error, (7) bounded-jitter rate,
+(9) zero-order-hold lag.
+
+0.1.1: a decision is only taken against a *declared* client expectation (see expectations.py).
 """
 from __future__ import annotations
 

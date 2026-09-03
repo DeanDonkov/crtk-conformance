@@ -57,7 +57,7 @@ def wait_settled(a: PlatformAdapter, buf: Buffer, timeout_s: float, still_tol: f
     return last, first_motion
 
 
-def step_and_measure(a: PlatformAdapter, buf: Buffer, delta: np.ndarray, settle_s: float = 1.0) -> dict:
+def step_and_measure(a: PlatformAdapter, buf: Buffer, delta: np.ndarray, settle_s: float = 1.0, still_tol: float = 1e-5) -> dict:
     """Command measured_cp + delta (in interface units, unqualified frame) and measure the response."""
     p0 = a.latest_pose(buf, max_age_s=1.0)
     if p0 is None:
@@ -69,7 +69,7 @@ def step_and_measure(a: PlatformAdapter, buf: Buffer, delta: np.ndarray, settle_
     goal[:3, 3] += delta
     t_cmd = time.monotonic()
     a.servo_cp(goal)
-    p1, t_first = wait_settled(a, buf, settle_s)
+    p1, t_first = wait_settled(a, buf, settle_s, still_tol=still_tol)
     if p1 is None:
         return {"ok": False, "reason": "no response"}
     moved = p1[:3, 3] - p0[:3, 3]

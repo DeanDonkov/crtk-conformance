@@ -1,45 +1,56 @@
-"""RateSensitivityProbe — temporal binding class (state precondition, command liveness, rate).
+"""RateSensitivityProbe — temporal binding class (state precondition, command liveness / stop behaviour, rate).
+
+Version 0.1.1 (designs: rc3/LIVENESS_PROBE_DESIGN.md, rc3/RATE_ESTIMATOR_DESIGN.md).
 
 Sub-probes, each reported separately:
 
-  A. state precondition   Is servo_cp executed without an operating-state transition? Is there an
-                          operating_state topic at all? (CRTK does not mandate a state machine.)
-  B. liveness policy      After streaming commands, pause for a gap g, then send one command. If it
-                          is not executed, a liveness policy tripped. Bisection over g estimates
-                          tau_w. If commands are executed after the largest gap tested, the report
-                          says "no liveness policy detected up to g_max" — a scoped statement, not a
-                          claim that none exists. Drift during the gap is reported separately
-                          ("released" semantics).
-  C. effective rate       Command distinct setpoints at f and count distinct executed positions per
-                          second through measured_cp. The observation is bounded by the measured_cp
-                          publish rate, which is also measured and reported.
+  A. state precondition   Is there an operating_state topic? Is servo_cp executed when DISABLED and
+                          after enable/home (or without any state machine)?  Enable latency.
+  B. liveness / stop      After streaming commands, stay silent for a gap g, then send one command.  The
+     behaviour            probe first measures its own timing resolution (sleep, send, feedback period,
+                          response latency) and reports a resolution floor r; gaps below r are
+                          `below_resolution`.  During the gap the pose is recorded and the stop behaviour
+                          is classified as hold / release / rejected|fault / not_observable; the trip gap
+                          tau_w is estimated by bisection between realised gaps (monotonic clock) and is
+                          reported only with n >= 3 trials and a CI lower bound above the floor.
+  C. observable rate      Command distinct setpoints at f and classify feedback samples to the nearest
+                          commanded target within a matching tolerance (user-supplied or estimated from
+                          the resting noise); count monotone target transitions.  Reports the client's
+                          achieved rate, the feedback publish rate, matched/unmatched counts and whether
+                          the observation is channel-bounded.  Optional secondary channel on setpoint_cp.
 
-Decision (temporal): the client's stated rate and jitter bound must satisfy eq. (7) of the manuscript
-(bounded-jitter liveness) against the estimated tau_w (if any), and the observable effective command rate
-must reach the rate eq. (9) (zero-order-hold lag) requires for the stated tolerance and speed. NOTE: the
-decision_basis strings emitted at run time say "eq. (4)" and "eq. 6" -- the draft numbering in force when
-the archived validation (commit 5393272c) was run; they are left unchanged so that the archive reproduces
-byte for byte. Sub-probe C estimates the *observable* rate at which distinct executed setpoints appear on
-measured_cp: it is bounded by the client's achieved send rate, the execution rate and the publish rate, and
-the internal execution rate is not identifiable from the interface. Known limitation of this release: the
-`observation_bounded_by_publish_rate` criterion (eff >= 0.9 * publish rate) does not flag a run whose
-observable rate is reduced well below the publish rate by the send loop and sampling coincidence (see the
-manuscript, Section 7, and CHANGELOG "Known issues"). The state-precondition finding is compared with what the user
-declares the client expects (--expect-state-machine yes|no|any).
+Decision (temporal): only against the client's *declared* expectations (expectations.py):
+  state_machine required|forbidden, stop_behaviour hold|release|fault, rate required.  With no declared
+  temporal expectation the probe reports its observations and returns UNDETERMINED.
+
+Implementation constants (all exposed as constructor / CLI parameters; none is a task threshold):
+  stream duration 0.3 s at 100 Hz, executed-tolerance 0.25 * step, resolution-sample counts (20 sleeps,
+  10 latency probes), hold tolerance max(4 sigma_hat, 0.5 step), rate window 1 s per nominal rate.
 """
 from __future__ import annotations
 
 import math
+import statistics
 import time
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
 from ..adapter import PlatformAdapter, pose_msg_to_matrix
+from ..expectations import Expectations, TemporalExpectation, combine
+from ..rate_estimator import (
+    RateEstimate,
+    estimate_noise_sigma,
+    estimate_rate,
+    match_tolerance_from_sigma,
+    rate_subverdict,
+)
 from ..stats import estimate, rate_estimate
 from ..thresholds import Tolerance
 from .base import Outcome, ProbeResult
 from .common import ensure_enabled, wait_settled
+
+STOP_CLASSES = ("hold", "release", "rejected", "fault", "not_observable", "no_policy_within_range")
 
 
 class RateSensitivityProbe:
@@ -51,11 +62,17 @@ class RateSensitivityProbe:
         tol: Tolerance,
         trials: int = 5,
         gap_max_s: float = 2.0,
-        gap_min_s: float = 0.02,
-        bisection_steps: int = 6,
+        gap_min_s: float = 0.0,
+        bisection_steps: int = 7,
         rates_hz=(50, 100, 200, 500, 1000),
-        expect_state_machine: str = "any",
+        expectations: Optional[Expectations] = None,
         step_if: float = 0.002,
+        response_timeout_s: Optional[float] = None,
+        rate_match_tolerance_m: Optional[float] = None,
+        rate_window_s: float = 1.0,
+        stream_rate_hz: float = 100.0,
+        stream_duration_s: float = 0.3,
+        expect_state_machine: Optional[str] = None,  # legacy alias: 'yes' | 'no' | 'any'
     ):
         self.a = adapter
         self.tol = tol
@@ -64,26 +81,41 @@ class RateSensitivityProbe:
         self.gap_min = gap_min_s
         self.bisect = bisection_steps
         self.rates = rates_hz
-        self.expect_sm = expect_state_machine
+        self.exp = expectations or Expectations()
+        if expect_state_machine is not None:
+            self.exp.temporal.state_machine = {"yes": "required", "no": "forbidden", "any": "any"}[expect_state_machine]
         self.step = step_if
+        self.user_response_timeout = response_timeout_s
+        self.user_delta = rate_match_tolerance_m
+        self.rate_window = rate_window_s
+        self.stream_rate = stream_rate_hz
+        self.stream_duration = stream_duration_s
+        # measured during run()
+        self.resolution: Dict[str, float] = {}
+        self.response_timeout = 0.4
+        self.sigma_hat = 0.0
+        self.hold_tol = 0.5 * step_if
 
     # ------------------------------------------------------------------ helpers
-    def _executed(self, buf, goal_T, timeout=0.4, tol=None) -> bool:
+    def _executed(self, buf, goal_T, timeout: Optional[float] = None, tol=None) -> Tuple[bool, float]:
+        """Wait until measured_cp is within tol of goal_T; return (executed, time_to_execute)."""
         tol = tol or self.step * 0.25
-        deadline = time.monotonic() + timeout
+        timeout = self.response_timeout if timeout is None else timeout
+        t0 = time.monotonic()
+        deadline = t0 + timeout
         while time.monotonic() < deadline:
-            msg = self.a.wait_for(buf, 0.1)
+            msg = self.a.wait_for(buf, min(0.05, max(0.0, deadline - time.monotonic())))
             if msg is None:
                 continue
             T = pose_msg_to_matrix(msg)
             if np.linalg.norm(T[:3, 3] - goal_T[:3, 3]) < tol:
-                return True
-        return False
+                return True, time.monotonic() - t0
+        return False, float("nan")
 
-    def _stream(self, buf, base_T, duration_s=0.3, rate_hz=100.0) -> float:
-        """Stream small oscillating commands to keep any liveness policy fed; return the time of the last command."""
-        period = 1.0 / rate_hz
-        t_end = time.monotonic() + duration_s
+    def _stream(self, buf, base_T) -> Tuple[float, np.ndarray]:
+        """Stream small oscillating commands to keep any liveness policy fed; return (t_last, last setpoint)."""
+        period = 1.0 / self.stream_rate
+        t_end = time.monotonic() + self.stream_duration
         k = 0
         while time.monotonic() < t_end:
             T = base_T.copy()
@@ -92,11 +124,71 @@ class RateSensitivityProbe:
             k += 1
             time.sleep(period)
         self.a.servo_cp(base_T)
-        return time.monotonic()
+        return time.monotonic(), base_T[:3, 3].copy()
 
-    def _recover(self):
+    def _recover(self, buf, base_T):
         if self.a.has("operating_state"):
             ensure_enabled(self.a, timeout_s=2.0)
+        self.a.servo_cp(base_T)
+        self._executed(buf, base_T, timeout=max(0.5, self.response_timeout))
+
+    # ------------------------------------------------------------------ resolution
+    def measure_resolution(self, buf, base_T) -> Dict[str, float]:
+        out: Dict[str, float] = {}
+        # sleep resolution
+        errs = []
+        for req in (0.001, 0.002, 0.005, 0.010):
+            for _ in range(5):
+                t0 = time.monotonic()
+                time.sleep(req)
+                errs.append(time.monotonic() - t0 - req)
+        errs.sort()
+        out["sleep_error_median_s"] = float(statistics.median(errs))
+        out["sleep_error_p95_s"] = float(errs[int(0.95 * (len(errs) - 1))])
+        # send resolution: interval between consecutive publications
+        ts = []
+        for _ in range(20):
+            ts.append(time.monotonic())
+            self.a.servo_cp(base_T)
+        d = sorted(np.diff(ts).tolist())
+        out["send_interval_median_s"] = float(statistics.median(d))
+        out["send_interval_p95_s"] = float(d[int(0.95 * (len(d) - 1))])
+        # feedback period and resting noise
+        buf.clear()
+        t0 = time.monotonic()
+        time.sleep(1.0)
+        samples = buf.since(t0)
+        out["feedback_period_s"] = (time.monotonic() - t0) / max(1, len(samples))
+        P = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in samples]) if samples else np.zeros((0, 3))
+        self.sigma_hat = estimate_noise_sigma(P) if len(P) >= 3 else 0.0
+        out["resting_noise_sigma_m"] = self.sigma_hat
+        # response latency: small command -> first reflecting sample
+        lat = []
+        for k in range(10):
+            goal = base_T.copy()
+            goal[1, 3] += self.step * (1 if k % 2 == 0 else -1)
+            ok, dt = self._executed(buf, goal, timeout=max(1.0, 5 * self.response_timeout))
+            if ok:
+                lat.append(dt)
+            self.a.servo_cp(base_T)
+            self._executed(buf, base_T, timeout=max(1.0, 5 * self.response_timeout))
+        if lat:
+            lat.sort()
+            out["response_latency_median_s"] = float(statistics.median(lat))
+            out["response_latency_p95_s"] = float(lat[int(0.95 * (len(lat) - 1))])
+        else:
+            out["response_latency_median_s"] = float("nan")
+            out["response_latency_p95_s"] = float("nan")
+        out["resolution_floor_s"] = 2.0 * (out["sleep_error_p95_s"] + out["send_interval_p95_s"]) + out["feedback_period_s"]
+        # response timeout: user value or 5 x p95 latency, at least 0.2 s
+        lat_p95 = out["response_latency_p95_s"]
+        auto = 5.0 * lat_p95 if not math.isnan(lat_p95) else 0.4
+        self.response_timeout = max(self.user_response_timeout or 0.0, auto, 0.2)
+        out["response_timeout_s"] = self.response_timeout
+        self.hold_tol = max(4.0 * self.sigma_hat, 0.5 * self.step)
+        out["hold_tolerance_m"] = self.hold_tol
+        self.resolution = out
+        return out
 
     # ------------------------------------------------------------------ A
     def probe_state_precondition(self, buf) -> dict:
@@ -116,7 +208,7 @@ class RateSensitivityProbe:
             goal = pose.copy()
             goal[0, 3] += self.step
             self.a.servo_cp(goal)
-            out["executed_when_disabled"] = self._executed(buf, goal)
+            out["executed_when_disabled"], _ = self._executed(buf, goal)
             self.a.servo_cp(pose)
             time.sleep(0.1)
             info = ensure_enabled(self.a)
@@ -124,125 +216,192 @@ class RateSensitivityProbe:
             goal = pose.copy()
             goal[1, 3] += self.step
             self.a.servo_cp(goal)
-            out["executed_when_enabled"] = self._executed(buf, goal)
+            out["executed_when_enabled"], _ = self._executed(buf, goal)
             self.a.servo_cp(pose)
             time.sleep(0.1)
         else:
             goal = pose.copy()
             goal[0, 3] += self.step
             self.a.servo_cp(goal)
-            out["executed_without_state_machine"] = self._executed(buf, goal)
+            out["executed_without_state_machine"], _ = self._executed(buf, goal)
             self.a.servo_cp(pose)
             time.sleep(0.1)
         return out
 
     # ------------------------------------------------------------------ B
     def _gap_trial(self, buf, base_T, gap_s: float) -> dict:
-        """Stream, then stay silent for gap_s measured from the last command, then send one command."""
-        self._recover()
-        t_last = self._stream(buf, base_T)
-        time.sleep(0.05)
-        p_before = self.a.latest_pose(buf, 1.0)
-        remaining = t_last + gap_s - time.monotonic()
-        if remaining > 0:
-            time.sleep(remaining)
-        p_after = self.a.latest_pose(buf, 1.0)
-        drift = float(np.linalg.norm(p_after[:3, 3] - p_before[:3, 3])) if (p_before is not None and p_after is not None) else float("nan")
+        """Stream, stay silent for gap_s from the last command (no fixed sleep), send one command, classify."""
+        self._recover(buf, base_T)
+        t_last, p_last = self._stream(buf, base_T)
+        buf.clear()
+        deadline = t_last + gap_s
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(min(remaining, 0.001))
         goal = base_T.copy()
         goal[2, 3] += self.step
         t_send = time.monotonic()
+        gap_samples = buf.since(t_last)
         self.a.servo_cp(goal)
         actual_gap = t_send - t_last
-        ok = self._executed(buf, goal)
+        ok, t_exec = self._executed(buf, goal)
         st = self.a.operating_state(0.2) if self.a.has("operating_state") else None
+        state = None if st is None else st.state
+        drifts = [float(np.linalg.norm(pose_msg_to_matrix(m)[:3, 3] - p_last)) for _, m in gap_samples]
+        drift = max(drifts) if drifts else float("nan")
+        n_gap = len(gap_samples)
+        fp = self.resolution.get("feedback_period_s", 0.01)
+        if not ok:
+            cls = "fault" if state in ("FAULT", "DISABLED") else "rejected"
+        elif n_gap < 2 and gap_s >= 2 * fp:
+            cls = "not_observable"
+        elif drifts and drift > self.hold_tol:
+            cls = "release"
+        else:
+            cls = "hold"
         self.a.servo_cp(base_T)
-        time.sleep(0.05)
-        return {"gap_s": actual_gap, "gap_requested_s": gap_s, "executed": ok, "drift_m": drift, "state": None if st is None else st.state}
+        self._executed(buf, base_T, timeout=max(0.5, self.response_timeout))
+        return {"gap_requested_s": gap_s, "gap_s": actual_gap, "below_resolution": gap_s < self.resolution.get("resolution_floor_s", 0.0),
+                "executed": ok, "time_to_execute_s": t_exec, "drift_m": drift, "samples_in_gap": n_gap, "class": cls, "state": state}
+
+    @staticmethod
+    def _tripped(r: dict) -> bool:
+        return r["class"] in ("rejected", "fault", "release")
 
     def probe_liveness(self, buf, base_T) -> dict:
-        out = {"gap_max_s": self.gap_max, "trials": []}
-        # 1) largest gap, n times
+        r_floor = self.resolution.get("resolution_floor_s", 0.0)
+        out = {"gap_max_s": self.gap_max, "resolution_floor_s": r_floor, "response_timeout_s": self.response_timeout,
+               "hold_tolerance_m": self.hold_tol, "trials": []}
         big = [self._gap_trial(buf, base_T, self.gap_max) for _ in range(self.trials)]
         out["trials"] += big
-        n_exec = sum(1 for b in big if b["executed"])
-        out["executed_after_gap_max"] = rate_estimate(n_exec, len(big))
+        n_trip = sum(1 for b in big if self._tripped(b))
+        out["tripped_at_gap_max"] = rate_estimate(n_trip, len(big))
         drifts = [b["drift_m"] for b in big if not math.isnan(b["drift_m"])]
         out["drift_during_gap_max_m"] = estimate(drifts).to_dict() if drifts else None
-        if n_exec == len(big):
+        classes = [b["class"] for b in big]
+        if n_trip == 0:
+            out["stop_class"] = "not_observable" if all(c == "not_observable" for c in classes) else "no_policy_within_range"
             out["tau_w_estimate_s"] = None
-            out["finding"] = f"no liveness policy detected up to {self.gap_max} s (n={len(big)})"
-            if drifts and estimate(drifts).mean > 4 * self.step * 0.25:
-                out["finding"] += "; pose drifted during the gap (released semantics)"
+            out["finding"] = (f"no stop policy detected up to {self.gap_max} s (n={len(big)}): post-gap commands executed, pose held"
+                              if out["stop_class"] == "no_policy_within_range" else f"stop behaviour not observable (measured_cp too sparse during the gap)")
             return out
-        # 2) bisection per trial
+        # majority class among tripped trials
+        trip_classes = [b["class"] for b in big if self._tripped(b)]
+        out["stop_class"] = max(set(trip_classes), key=trip_classes.count)
+        # bisection per trial between the resolution floor and gap_max
+        lo0 = max(self.gap_min, r_floor)
         taus: List[float] = []
+        widths: List[float] = []
+        below = 0
         for _ in range(self.trials):
-            lo, hi = self.gap_min, self.gap_max
-            # ensure lo passes
-            r = self._gap_trial(buf, base_T, lo)
+            r = self._gap_trial(buf, base_T, lo0)
             out["trials"].append(r)
-            if not r["executed"]:
-                taus.append(r["gap_s"])
+            if self._tripped(r):
+                below += 1  # trips even at the smallest resolvable gap
                 continue
-            lo_actual, hi_actual = r["gap_s"], self.gap_max
+            lo, hi = lo0, self.gap_max
+            lo_real, hi_real = r["gap_s"], big[0]["gap_s"]
             for _ in range(self.bisect):
                 mid = 0.5 * (lo + hi)
                 r = self._gap_trial(buf, base_T, mid)
                 out["trials"].append(r)
-                if r["executed"]:
-                    lo, lo_actual = mid, r["gap_s"]
+                if self._tripped(r):
+                    hi, hi_real = mid, r["gap_s"]
                 else:
-                    hi, hi_actual = mid, r["gap_s"]
-            taus.append(0.5 * (lo_actual + hi_actual))
+                    lo, lo_real = mid, r["gap_s"]
+            taus.append(0.5 * (lo_real + hi_real))
+            widths.append(hi_real - lo_real)
+        out["trials_below_resolution"] = below
+        if below > 0 and not taus:
+            out["tau_w_estimate_s"] = {"upper_bound_s": lo0, "n": below}
+            out["finding"] = f"{out['stop_class']} policy trips at every gap down to the resolution floor {lo0*1e3:.1f} ms: tau_w <= {lo0*1e3:.1f} ms (below resolution, n={below})"
+            return out
         e = estimate(taus)
-        out["tau_w_estimate_s"] = e.to_dict()
-        out["finding"] = f"liveness policy detected: tau_w ~ {e.mean:.3f} s (95% CI {e.ci_low:.3f}..{e.ci_high:.3f}, n={e.n})"
+        out["bisection_width_s"] = estimate(widths).to_dict() if widths else None
+        if e.n < 3 or not (e.ci_low > r_floor):
+            out["tau_w_estimate_s"] = dict(e.to_dict(), status="undetermined",
+                                           reason=("n < 3" if e.n < 3 else "CI lower bound not above the resolution floor"))
+            out["finding"] = f"{out['stop_class']} policy observed but tau_w undetermined ({out['tau_w_estimate_s']['reason']}; n={e.n})"
+            return out
+        out["tau_w_estimate_s"] = dict(e.to_dict(), status="ok")
+        out["finding"] = f"{out['stop_class']} policy detected: tau_w ~ {e.mean:.3f} s (95% CI {e.ci_low:.3f}..{e.ci_high:.3f}, n={e.n})"
         return out
 
     # ------------------------------------------------------------------ C
     def probe_effective_rate(self, buf, base_T) -> dict:
-        out = {"publish_rate_hz": None, "per_rate": []}
-        # measured_cp publish rate
-        c0 = buf.count
-        t0 = time.monotonic()
-        time.sleep(1.0)
-        out["publish_rate_hz"] = (buf.count - c0) / (time.monotonic() - t0)
+        out: Dict[str, object] = {"per_rate": []}
+        if self.user_delta is not None:
+            delta, src = self.user_delta, "user"
+        else:
+            delta, src = match_tolerance_from_sigma(self.sigma_hat), f"5 x resting noise sigma_hat ({self.sigma_hat:.2e} m), floor 1e-6 m"
+        out["match_tolerance_m"] = delta
+        out["match_tolerance_source"] = src
+        sp_buf = self.a.subscribe("setpoint_cp") if self.a.has("setpoint_cp") else None
         for f in self.rates:
-            self._recover()
+            self._recover(buf, base_T)
             period = 1.0 / f
-            n = int(f * 1.0)
+            n = int(f * self.rate_window)
+            # target spacing must exceed 4 delta; enlarge the step, then reduce n if the step would be unreasonable
+            step = self.step
+            spacing = step / n
+            note = ""
+            if spacing < 4 * delta:
+                step = 4 * delta * n
+                if step > 0.05:  # do not command more than 5 cm; reduce the number of targets instead
+                    n = max(2, int(0.05 / (4 * delta)))
+                    step = 4 * delta * n
+                    period = self.rate_window / n
+                    note = f"targets reduced to {n} (spacing 4 delta) because the match tolerance is large"
+                spacing = step / n
+            targets = np.tile(base_T[:3, 3], (n, 1))
+            targets[:, 0] += step * (np.arange(n) + 1) / n
             buf.clear()
+            if sp_buf is not None:
+                sp_buf.clear()
+            send_times = []
             t_start = time.monotonic()
-            seen = set()
             for k in range(n):
                 T = base_T.copy()
-                T[0, 3] += self.step * (k + 1) / n
+                T[0, 3] = targets[k, 0]
+                send_times.append(time.monotonic())
                 self.a.servo_cp(T)
                 dt = t_start + (k + 1) * period - time.monotonic()
                 if dt > 0:
                     time.sleep(dt)
+            t_end_cmd = time.monotonic()
+            # tail: wait until the last target is reached or the response timeout expires
+            self._executed(buf, T, timeout=self.response_timeout, tol=delta)
+            time.sleep(max(0.05, 2 * self.resolution.get("feedback_period_s", 0.01)))
             t_end = time.monotonic()
-            time.sleep(0.2)
-            for _, m in buf.since(t_start):
-                seen.add(round(m.pose.position.x, 9))
-            distinct = max(0, len(seen) - 1)
-            eff = distinct / (t_end - t_start)
-            out["per_rate"].append({
-                "command_rate_hz": f,
-                "commands_sent": n,
-                "distinct_positions_observed": distinct,
-                "effective_rate_hz": eff,
-                "observation_bounded_by_publish_rate": eff >= 0.9 * out["publish_rate_hz"],
-                "zoh_error_bound_m": self.tol.zoh_error(min(f, eff if eff > 0 else f)),
-            })
+            samples = buf.since(t_start)
+            P = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in samples]) if samples else np.zeros((0, 3))
+            ts = np.array([t for t, _ in samples])
+            est = estimate_rate(targets, P, ts, np.array(send_times), float(f), delta, src, t_start, t_end)
+            row = est.to_dict()
+            row["step_used_m"] = step
+            row["command_window_s"] = t_end_cmd - t_start
+            if note:
+                row["note"] = note
+            row["zoh_error_bound_m"] = self.tol.zoh_error(est.observable_rate_hz) if est.observable_rate_hz > 0 else None
+            if sp_buf is not None:
+                sps = sp_buf.since(t_start)
+                if sps:
+                    SP = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in sps])
+                    est_sp = estimate_rate(targets, SP, np.array([t for t, _ in sps]), np.array(send_times), float(f), delta, src, t_start, t_end)
+                    row["setpoint_cp_accepted_rate_hz"] = est_sp.observable_rate_hz
+                    row["setpoint_cp_transitions"] = est_sp.transitions
+            out["per_rate"].append(row)
             self.a.servo_cp(base_T)
-            time.sleep(0.1)
+            self._executed(buf, base_T, timeout=max(0.5, self.response_timeout))
         return out
 
     # ------------------------------------------------------------------ run
     def run(self) -> ProbeResult:
         t0 = time.time()
         res = ProbeResult(self.name, "temporal", Outcome.UNDETERMINED)
+        res.observations["expectation"] = self.exp.to_dict()["temporal"]
         disc = self.a.discovery or self.a.discover()
         if not (disc["topics"]["measured_cp"]["present"] and disc["topics"]["servo_cp"]["present"]):
             res.notes.append("measured_cp or servo_cp missing")
@@ -260,57 +419,89 @@ class RateSensitivityProbe:
         base_T, _ = wait_settled(self.a, buf, 1.0)
         if base_T is None:
             base_T = self.a.latest_pose(buf, 2.0)
+        R = self.measure_resolution(buf, base_T)
         B = self.probe_liveness(buf, base_T)
         C = self.probe_effective_rate(buf, base_T)
-        res.observations = {"state_precondition": A, "liveness": B, "effective_rate": C}
+        res.observations.update({"state_precondition": A, "resolution": R, "liveness": B, "effective_rate": C})
 
-        # decision
+        # ---- sub-verdicts against declared expectations
+        te: TemporalExpectation = self.exp.temporal
+        sub: Dict[str, Optional[str]] = {"state_machine": None, "stop_behaviour": None, "rate": None}
         notes = []
-        divergent = False
-        undetermined = False
         f_req = self.tol.required_rate_hz()
         res.estimates["required_rate_hz_from_tolerance"] = f_req
+        sm_present = bool(A.get("operating_state_present"))
+        if te.state_machine == "required":
+            if sm_present and A.get("executed_when_disabled") is False and A.get("executed_when_enabled") is True:
+                sub["state_machine"] = "satisfied"
+            elif not sm_present or A.get("executed_when_disabled") is True:
+                sub["state_machine"] = "violated"
+                notes.append("client requires an operating-state precondition; " + ("no operating_state topic exposed" if not sm_present else "commands executed while DISABLED"))
+            else:
+                sub["state_machine"] = "undetermined"
+        elif te.state_machine == "forbidden":
+            if not sm_present or A.get("executed_when_disabled") is True:
+                sub["state_machine"] = "satisfied"
+            elif A.get("executed_when_disabled") is False:
+                sub["state_machine"] = "violated"
+                notes.append("client expects commands to execute without enabling; implementation rejects them when DISABLED")
+            else:
+                sub["state_machine"] = "undetermined"
+        stop_class = B.get("stop_class")
         tau = B.get("tau_w_estimate_s")
-        if tau is not None:
-            ok = self.tol.liveness_ok(tau["ci_low"])
-            res.estimates["liveness_margin_ok"] = ok
-            if not ok:
-                divergent = True
-                notes.append(f"eq. (4) violated: client period 1/{self.tol.client_rate_hz} + J_max {self.tol.jitter_max_s} s >= tau_w {tau['mean']:.3f} s")
+        res.estimates["stop_class"] = stop_class
+        res.estimates["tau_w_estimate_s"] = tau
+        if te.stop_behaviour != "any":
+            if stop_class in (None, "not_observable"):
+                sub["stop_behaviour"] = "undetermined"
+            elif te.stop_behaviour == "hold":
+                sub["stop_behaviour"] = "satisfied" if stop_class == "no_policy_within_range" else "violated"
+                if sub["stop_behaviour"] == "violated":
+                    notes.append(f"client expects the last setpoint to be held when commands stop; observed {stop_class}")
+            else:  # release | fault expected
+                want = ("release",) if te.stop_behaviour == "release" else ("fault", "rejected")
+                if stop_class in want:
+                    ok_margin = True
+                    if isinstance(tau, dict) and tau.get("status") == "ok":
+                        ok_margin = self.tol.liveness_ok(tau["ci_low"])
+                        if not ok_margin:
+                            notes.append(f"eq. (7) violated: client period 1/{self.tol.client_rate_hz} + J_max {self.tol.jitter_max_s} s >= tau_w CI low {tau['ci_low']:.3f} s")
+                    elif isinstance(tau, dict) and "upper_bound_s" in tau:
+                        ok_margin = None
+                    sub["stop_behaviour"] = "satisfied" if ok_margin is True else ("violated" if ok_margin is False else "undetermined")
+                elif stop_class == "no_policy_within_range":
+                    sub["stop_behaviour"] = "violated"
+                    notes.append(f"client expects a {te.stop_behaviour} stop policy; none detected up to {self.gap_max} s")
+                else:
+                    sub["stop_behaviour"] = "violated"
+                    notes.append(f"client expects {te.stop_behaviour} stop behaviour; observed {stop_class}")
+        # rate at the client's declared rate
+        rows = C["per_rate"]
+        at_client = None
+        if rows:
+            at_client = min(rows, key=lambda r: abs(r["command_rate_requested_hz"] - self.tol.client_rate_hz))
+            res.estimates["observable_rate_at_client_rate_hz"] = at_client["observable_rate_hz"]
+            res.estimates["client_rate_achieved_hz"] = at_client["client_rate_achieved_hz"]
+            res.estimates["publish_rate_hz"] = at_client["publish_rate_hz"]
+            res.estimates["zoh_error_at_client_rate_m"] = at_client.get("zoh_error_bound_m")
+        if te.rate == "required":
+            est = None
+            if at_client is not None:
+                keys = RateEstimate.__dataclass_fields__.keys()
+                est = RateEstimate(**{k: at_client[k] for k in keys})
+            sub["rate"] = rate_subverdict(est, f_req)
+            if sub["rate"] == "violated":
+                notes.append(f"observable command rate {at_client['observable_rate_hz']:.1f} Hz < required {f_req:.1f} Hz (eq. 9) and the channel is not the limit")
+            elif sub["rate"] == "undetermined" and at_client is not None:
+                notes.append("rate expectation cannot be decided: " + (at_client.get("reason") or f"observation bounded by {at_client['observation_bounded_by']}"))
+        res.estimates["sub_verdicts"] = sub
+        res.outcome = Outcome(combine(sub))
+        if not te.declared:
+            res.decision_basis = "no temporal expectation declared (discover-only): observations reported, no conformance verdict"
+        elif res.outcome == Outcome.CONFORMANT:
+            res.decision_basis = "every declared temporal expectation satisfied: " + ", ".join(k for k, v in sub.items() if v == "satisfied")
         else:
-            res.estimates["liveness_margin_ok"] = None
-        # effective rate at the client's rate
-        eff_at_client = None
-        for r in C["per_rate"]:
-            if abs(r["command_rate_hz"] - self.tol.client_rate_hz) < 1e-6:
-                eff_at_client = r
-        if eff_at_client is None and C["per_rate"]:
-            eff_at_client = min(C["per_rate"], key=lambda r: abs(r["command_rate_hz"] - self.tol.client_rate_hz))
-        if eff_at_client is not None:
-            eff = eff_at_client["effective_rate_hz"]
-            res.estimates["effective_rate_at_client_rate_hz"] = eff
-            res.estimates["zoh_error_at_client_rate_m"] = self.tol.zoh_error(eff) if eff > 0 else None
-            if eff_at_client["observation_bounded_by_publish_rate"] and eff < f_req:
-                undetermined = True
-                notes.append("effective rate observation is bounded by the measured_cp publish rate; rate conformance cannot be decided")
-            elif eff < f_req and eff > 0:
-                divergent = True
-                notes.append(f"effective command rate {eff:.1f} Hz < required {f_req:.1f} Hz (eq. 6)")
-        # state precondition vs expectation
-        sm = A.get("operating_state_present")
-        if self.expect_sm == "yes" and not sm:
-            divergent = True
-            notes.append("client expects an operating-state machine; none exposed")
-        if self.expect_sm == "no" and sm and A.get("executed_when_disabled") is False:
-            divergent = True
-            notes.append("client expects commands to be executed without enabling; implementation rejects them when disabled")
-        if divergent:
-            res.outcome = Outcome.DIVERGENT
-        elif undetermined:
-            res.outcome = Outcome.UNDETERMINED
-        else:
-            res.outcome = Outcome.CONFORMANT
-        res.decision_basis = "; ".join(notes) if notes else "eq. (4) satisfied or no liveness policy detected; effective rate >= v/epsilon; state precondition consistent with expectation"
+            res.decision_basis = "; ".join(notes) if notes else "declared expectation(s) undetermined: " + ", ".join(k for k, v in sub.items() if v == "undetermined")
         res.notes += notes
         res.duration_s = time.time() - t0
         return res

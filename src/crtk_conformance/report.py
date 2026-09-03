@@ -42,7 +42,8 @@ def _clean(o):
     return o
 
 
-def build_report(namespace: str, tol: Tolerance, discovery: Dict[str, Any], results: List[ProbeResult], ros_master_uri: str = "") -> Dict[str, Any]:
+def build_report(namespace: str, tol: Tolerance, discovery: Dict[str, Any], results: List[ProbeResult], ros_master_uri: str = "",
+                 expectations=None, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
     summary = {"spatial": "undetermined", "dimensional": "undetermined", "temporal": "undetermined"}
     for r in results:
         summary[r.binding_class] = r.outcome.value
@@ -53,9 +54,13 @@ def build_report(namespace: str, tol: Tolerance, discovery: Dict[str, Any], resu
         "namespace": namespace,
         "ros_master_uri": ros_master_uri,
         "tolerance": tol.to_dict(),
+        "expectations": expectations.to_dict() if expectations is not None else None,
+        "parameters": parameters or {},
         "discovery": discovery,
         "probes": [r.to_dict() for r in results],
         "summary": summary,
+        "semantics": "conformant = the discovered binding satisfies an explicitly declared client expectation within the stated tolerance; "
+                     "no declared expectation -> undetermined (observations reported, no verdict)",
     }
     rep = _clean(rep)
     with open(SCHEMA_PATH) as f:
@@ -67,6 +72,9 @@ def text_summary(rep: Dict[str, Any]) -> str:
     lines = [f"crtk-conformance {rep['version']} — namespace {rep['namespace']} — {rep['generated_at']}"]
     t = rep["tolerance"]
     lines.append(f"tolerance epsilon = {t['epsilon_m']*1e3:.3f} mm, r_ws = {t['workspace_radius_m']:.3f} m, v = {t['speed_m_s']*1e3:.0f} mm/s, client {t['client_rate_hz']:.0f} Hz, J_max {t['jitter_max_s']*1e3:.1f} ms")
+    e = rep.get("expectations")
+    if e:
+        lines.append(f"expectations ({e.get('source')}): spatial {e['spatial']['mode']}, dimensional {e['dimensional']['mode']}, temporal state_machine={e['temporal']['state_machine']} stop_behaviour={e['temporal']['stop_behaviour']} rate={e['temporal']['rate']}")
     for p in rep["probes"]:
         lines.append(f"[{p['binding_class']:11s}] {p['probe']:24s} -> {p['outcome'].upper():12s} ({p['duration_s']:.1f} s)")
         lines.append(f"    basis: {p['decision_basis']}")

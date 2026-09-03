@@ -291,7 +291,7 @@ def main():
     ax.plot(ps * 1e3, [G.m1_positional_error(R, t, np.array([0, 0, p])) * 1e3 for p in ps], color=C_BLUE, lw=1.5, label="absolute, p⊥axis (eq. 1)")
     ax.plot(ps * 1e3, [G.m1_positional_error(R, t, np.array([p, 0, 0])) * 1e3 for p in ps], color=C_BLUE, lw=1.5, ls="--", label="absolute, p∥axis")
     ax.plot(ps * 1e3, [G.m1_upper_bound(R, t, p) * 1e3 for p in ps], color=C_GREY, lw=1, ls=":", label="bound (3)")
-    ax.plot(ps * 1e3, [G.m1_incremental_bound(R, p) * 1e3 for p in ps], color=C_ORANGE, lw=1.5, label="incremental (3b), step = ‖p‖")
+    ax.plot(ps * 1e3, [G.m1_incremental_bound(R, p) * 1e3 for p in ps], color=C_ORANGE, lw=1.5, label="incremental (5), step = ‖p‖")
     ax.plot(ps * 1e3, [0 for p in ps], color=C_ORANGE, lw=1.5, ls="--", label="incremental, R = I")
     for m in mrows:
         if m["kind"].startswith("absolute"):
@@ -311,7 +311,7 @@ def main():
     for v, c in ((0.02, C_GREEN), (0.05, C_BLUE), (0.1, C_ORANGE)):
         ax.plot(fs, v / fs * 1e3, color=c, lw=1.5, label=f"v = {v*1e3:.0f} mm/s")
     ax.axhline(1.0, color=C_GREY, lw=0.8, ls=":"); ax.axhline(0.5, color=C_GREY, lw=0.8, ls=":")
-    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("command rate f (Hz)"); ax.set_ylabel("ZOH lag bound v/f (mm)"); ax.set_title("(c) M3, eq. (6)", loc="left"); ax.legend(fontsize=6)
+    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("command rate f (Hz)"); ax.set_ylabel("ZOH lag bound v/f (mm)"); ax.set_title("(c) M3, eq. (9)", loc="left"); ax.legend(fontsize=6)
     fig.tight_layout()
     fig.savefig(os.path.join(figdir, "fig03_error_model.pdf")); fig.savefig(os.path.join(figdir, "fig03_error_model.png"), dpi=200)
     print("figures written to", figdir)

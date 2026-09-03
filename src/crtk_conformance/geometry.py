@@ -131,6 +131,7 @@ def average_pose(Ts: Iterable[np.ndarray]) -> np.ndarray:
 
 
 # ---------------------------------------------------------------- error model (paper, Section 5)
+# Equation numbers in the docstrings below follow the final manuscript numbering (see README, "Equation numbering").
 
 
 def m1_positional_error(R: np.ndarray, t: np.ndarray, p_c: np.ndarray) -> float:
@@ -145,7 +146,7 @@ def m1_upper_bound(R: np.ndarray, t: np.ndarray, p_norm: float) -> float:
 
 
 def m1_lower_bound_exact(R: np.ndarray, t: np.ndarray) -> float:
-    """Eq. (3'): e_p >= ||t_parallel|| where t_parallel is the component of t along the rotation axis
+    """Eq. (4): e_p >= ||t_parallel|| where t_parallel is the component of t along the rotation axis
     (for theta = 0 the whole of t counts)."""
     theta = rotation_angle(R)
     if theta < 1e-9:
@@ -162,27 +163,27 @@ def m1_lower_bound_exact(R: np.ndarray, t: np.ndarray) -> float:
 
 
 def m1_incremental_bound(R: np.ndarray, step_norm: float) -> float:
-    """Eq. (3b): e_delta <= 2 sin(theta/2) ||delta p||."""
+    """Eq. (5): e_delta <= 2 sin(theta/2) ||delta p|| (left-composed translational increment)."""
     return float(2.0 * math.sin(rotation_angle(R) / 2.0) * step_norm)
 
 
 def m2_error(s: float, p_norm: float) -> float:
-    """Eq. (M2.1): e = |1 - s| ||p|| (single step or distance from origin)."""
+    """Eq. (6): e = |1 - s| ||p|| (single step or distance from origin)."""
     return abs(1.0 - s) * p_norm
 
 
 def m3_zoh_bound(speed: float, rate_hz: float) -> float:
-    """Eq. (6): e_ZOH <= v / f."""
+    """Eq. (9): e_ZOH <= v / f."""
     return speed / rate_hz
 
 
 def m3_required_rate(speed: float, tolerance: float) -> float:
-    """Eq. (6) inverted: f >= v / epsilon."""
+    """Eq. (9) inverted: f >= v / epsilon."""
     return speed / tolerance
 
 
 def m3_bounded_jitter_rate(tau_w: float, j_max: float) -> float:
-    """Eq. (4): f > 1 / (tau_w - J_max)."""
+    """Eq. (7): f > 1 / (tau_w - J_max)."""
     if tau_w <= j_max:
         return math.inf
     return 1.0 / (tau_w - j_max)

@@ -69,6 +69,20 @@ python validation/analyze.py validation/results                   # tables + fig
 `validation/results/` in this repository holds the archived outputs of the run reported in the
 paper (`meta.json` records the commit, interpreter and platform).
 
+## Equation numbering
+
+Equation numbers in source comments and docstrings follow the manuscript: (1) positional error, (2) two-sided
+bound, (3) operator-norm upper bound, (4) axis decomposition, (5) incremental error (left-composed translational
+increment), (6) unit-scale error, (7) bounded-jitter rate, (8) Gaussian rate margin, (9) zero-order-hold lag,
+(10) composition. Strings emitted into report JSON (`decision_basis`: "eq. (3)", "eq. (4)", "eq. 6", "eq. (M2.1)")
+retain the draft numbering used at the time of the archived validation run and map to manuscript (3), (7), (9)
+and (6) respectively; they are deliberately unchanged so that `validation/results/` reproduces byte for byte.
+
+The `RateSensitivityProbe` "effective rate" sub-probe reports the *observable* rate at which distinct executed
+setpoints appear on `measured_cp` (JSON key `effective_rate_hz`); it is bounded by the client's achieved send
+rate, the execution rate and the publish rate, and does not identify the internal execution rate. See CHANGELOG
+"Known issues" for the flag criterion limitation.
+
 ## Mock presets
 
 `crtk-mock --list-presets`. Each preset is an *emulation of documented behaviour* assembled from

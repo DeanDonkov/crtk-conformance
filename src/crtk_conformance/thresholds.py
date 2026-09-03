@@ -49,5 +49,5 @@ class Tolerance:
         return self.speed_m_s / rate_hz if rate_hz > 0 else float("inf")
 
     def liveness_ok(self, tau_w_s: float) -> bool:
-        """Eq. (4): the client's period plus its jitter bound must stay below the timeout."""
+        """Eq. (7) of the manuscript: the client's period plus its jitter bound must stay below the timeout."""
         return (1.0 / self.client_rate_hz + self.jitter_max_s) < tau_w_s

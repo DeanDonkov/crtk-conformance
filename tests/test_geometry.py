@@ -36,7 +36,8 @@ def test_average_pose_recovers_constant():
 
 
 def test_m1_bounds_never_violated():
-    """Eq. (2) two-sided bound and eq. (3) upper bound hold on random inputs (paper Sec. 5.1)."""
+    """Eq. (2) two-sided bound and eq. (3) upper bound hold on random inputs (paper Sec. 5.1).
+    Attainment is not asserted: with (R - I) p orthogonal to the rotation axis, equality in (2) needs t in that plane."""
     for _ in range(5000):
         R = rand_rot(); t = rng.normal(size=3) * 0.2; p = rng.normal(size=3) * 0.2
         e = G.m1_positional_error(R, t, p)

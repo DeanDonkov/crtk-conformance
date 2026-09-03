@@ -14,9 +14,17 @@ Sub-probes, each reported separately:
                           second through measured_cp. The observation is bounded by the measured_cp
                           publish rate, which is also measured and reported.
 
-Decision (temporal): the client's stated rate and jitter bound must satisfy eq. (4) against the
-estimated tau_w (if any), and the effective command rate must reach the rate eq. (6) requires for
-the stated tolerance and speed. The state-precondition finding is compared with what the user
+Decision (temporal): the client's stated rate and jitter bound must satisfy eq. (7) of the manuscript
+(bounded-jitter liveness) against the estimated tau_w (if any), and the observable effective command rate
+must reach the rate eq. (9) (zero-order-hold lag) requires for the stated tolerance and speed. NOTE: the
+decision_basis strings emitted at run time say "eq. (4)" and "eq. 6" -- the draft numbering in force when
+the archived validation (commit 5393272c) was run; they are left unchanged so that the archive reproduces
+byte for byte. Sub-probe C estimates the *observable* rate at which distinct executed setpoints appear on
+measured_cp: it is bounded by the client's achieved send rate, the execution rate and the publish rate, and
+the internal execution rate is not identifiable from the interface. Known limitation of this release: the
+`observation_bounded_by_publish_rate` criterion (eff >= 0.9 * publish rate) does not flag a run whose
+observable rate is reduced well below the publish rate by the send loop and sampling coincidence (see the
+manuscript, Section 7, and CHANGELOG "Known issues"). The state-precondition finding is compared with what the user
 declares the client expects (--expect-state-machine yes|no|any).
 """
 from __future__ import annotations

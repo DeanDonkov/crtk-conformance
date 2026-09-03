@@ -99,6 +99,7 @@ class RateSensitivityProbe:
         self.response_timeout = 0.4
         self.sigma_hat = 0.0
         self.hold_tol = 0.5 * step_if
+        self.probe_axis, self.probe_sign = 2, 1  # replaced by the best-tracked direction in measure_resolution()
 
     # ------------------------------------------------------------------ helpers
     def _executed(self, buf, goal_T, timeout: Optional[float] = None, tol=None) -> Tuple[bool, float]:
@@ -212,22 +213,33 @@ class RateSensitivityProbe:
         self.step = max(self.step, 20.0 * self.sigma_hat)
         out["step_used_m"] = self.step
         self.hold_tol = max(4.0 * self.sigma_hat, 0.5 * self.step)
-        # response latency: small command -> first reflecting sample
+        # response latency: small command -> first reflecting sample; also pick the probe direction (axis and sign)
+        # that the implementation tracks best, so that gap and state trials are not defeated by a joint limit or a
+        # poorly tracked axis (found on the live SRC v1.0.0 instance, whose insertion joint sat at its limit)
         lat = []
         att = 0
-        for k in range(10):
+        ratios: Dict[str, List[float]] = {}
+        dirs = [(ax, sg) for ax in (0, 1, 2) for sg in (1, -1)]
+        for k in range(12):
+            ax, sg = dirs[k % len(dirs)]
             cur = self.a.latest_pose(buf, 1.0)
             goal = (cur if cur is not None else base_T).copy()
-            goal[1, 3] += self.step * (1 if k % 2 == 0 else -1)
+            goal[ax, 3] += self.step * sg
             self.a.servo_cp(goal)
             r = self._response(buf, goal, timeout=max(1.0, 5 * self.response_timeout))
             if r["responded"] and not math.isnan(r["time_to_respond_s"]):
                 lat.append(r["time_to_respond_s"])
             att += r["attained"]
+            if r["initial_distance_m"]:
+                ratios.setdefault(f"{ax}{'+' if sg > 0 else '-'}", []).append(float(r["reduction_m"] / r["initial_distance_m"]))
             self.a.servo_cp(base_T)
             self._response(buf, base_T, timeout=max(1.0, 5 * self.response_timeout))
         out["latency_probes_attained"] = att
         out["latency_probes_responded"] = len(lat)
+        out["tracking_ratio_by_direction"] = {k: float(np.mean(v)) for k, v in ratios.items()}
+        best = max(out["tracking_ratio_by_direction"].items(), key=lambda kv: kv[1])[0] if ratios else "2+"
+        self.probe_axis, self.probe_sign = int(best[0]), (1 if best[1] == "+" else -1)
+        out["probe_direction"] = best
         if lat:
             lat.sort()
             out["response_latency_median_s"] = float(statistics.median(lat))
@@ -263,7 +275,7 @@ class RateSensitivityProbe:
             st = self.a.operating_state(0.5)
             out["state_after_disable"] = None if st is None else st.state
             goal = pose.copy()
-            goal[0, 3] += self.step
+            goal[self.probe_axis, 3] += self.step * self.probe_sign
             self.a.servo_cp(goal)
             r = self._response(buf, goal, timeout=max(0.5, self.response_timeout), p_ref=pose[:3, 3])
             out["executed_when_disabled"] = r["responded"]
@@ -273,7 +285,7 @@ class RateSensitivityProbe:
             info = ensure_enabled(self.a)
             out["enable"] = info
             goal = pose.copy()
-            goal[1, 3] += self.step
+            goal[self.probe_axis, 3] += self.step * self.probe_sign
             self.a.servo_cp(goal)
             r = self._response(buf, goal, timeout=max(0.5, self.response_timeout), p_ref=pose[:3, 3])
             out["executed_when_enabled"] = r["responded"]
@@ -282,7 +294,7 @@ class RateSensitivityProbe:
             time.sleep(0.1)
         else:
             goal = pose.copy()
-            goal[0, 3] += self.step
+            goal[self.probe_axis, 3] += self.step * self.probe_sign
             self.a.servo_cp(goal)
             r = self._response(buf, goal, timeout=max(0.5, self.response_timeout), p_ref=pose[:3, 3])
             out["executed_without_state_machine"] = r["responded"]
@@ -305,7 +317,7 @@ class RateSensitivityProbe:
                 break
             time.sleep(min(remaining, 0.001))
         goal = base_T.copy()
-        goal[2, 3] += self.step
+        goal[self.probe_axis, 3] += self.step * self.probe_sign
         t_send = time.monotonic()
         gap_samples = buf.since(t_last)
         p_pre = pose_msg_to_matrix(gap_samples[-1][1])[:3, 3] if gap_samples else p_last

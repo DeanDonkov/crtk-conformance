@@ -107,9 +107,13 @@ class RateSensitivityProbe:
         return r["attained"], r["time_to_attain_s"]
 
     def _response(self, buf, goal_T, timeout: Optional[float] = None, tol=None, p_ref=None) -> dict:
-        """Observe the response to a command: attained (within tol of the goal), responded (moved toward the goal
-        by more than the hold tolerance, or halved its distance to it), closest approach and time to attain.
-        A tracking error is not a rejection: `responded` and `attained` are reported separately."""
+        """Observe the response to a command.
+
+        attained: some sample came within tol of the goal.  responded: attained, or the distance to the goal, taken
+        at the mean of the last 0.1 s (or last 5 samples) of the observation window, decreased by more than
+        max(3 sigma_hat, 0.2 x initial distance) — i.e. the implementation acted on the command even if it did not
+        reach it (tracking error, gravity sag, clipping).  A tracking error is not a rejection.
+        """
         tol = tol or self.step * 0.25
         timeout = self.response_timeout if timeout is None else timeout
         t0 = time.monotonic()
@@ -118,21 +122,37 @@ class RateSensitivityProbe:
         d0 = None if p_ref is None else float(np.linalg.norm(p_ref - g))
         closest = float("inf")
         moved = 0.0
-        attained, t_att = False, float("nan")
+        attained, t_att, t_resp = False, float("nan"), float("nan")
+        thr = None if d0 is None else max(3.0 * self.sigma_hat, 0.2 * d0)
+        hist: List[Tuple[float, np.ndarray]] = []
         while time.monotonic() < deadline:
             msg = self.a.wait_for(buf, min(0.05, max(0.0, deadline - time.monotonic())))
             if msg is None:
                 continue
+            now = time.monotonic()
             p = pose_msg_to_matrix(msg)[:3, 3]
+            hist.append((now, p))
             d = float(np.linalg.norm(p - g))
             closest = min(closest, d)
             if p_ref is not None:
                 moved = max(moved, float(np.linalg.norm(p - p_ref)))
+                if math.isnan(t_resp) and thr is not None:
+                    recent = [q for (tq, q) in hist if tq >= now - 0.1][-5:] or [p]
+                    if d0 - float(np.linalg.norm(np.mean(recent, axis=0) - g)) > thr:
+                        t_resp = now - t0
             if d < tol:
-                attained, t_att = True, time.monotonic() - t0
+                attained, t_att = True, now - t0
+                if math.isnan(t_resp):
+                    t_resp = t_att
                 break
-        responded = attained or (p_ref is not None and (moved > self.hold_tol or (d0 is not None and closest < 0.5 * d0)))
-        return {"attained": attained, "responded": bool(responded), "closest_m": closest, "moved_m": moved, "time_to_attain_s": t_att}
+        settled_d = float("nan")
+        if hist:
+            last = [q for (tq, q) in hist if tq >= hist[-1][0] - 0.1][-5:] or [hist[-1][1]]
+            settled_d = float(np.linalg.norm(np.mean(last, axis=0) - g))
+        reduction = float("nan") if d0 is None or math.isnan(settled_d) else d0 - settled_d
+        responded = attained or (thr is not None and not math.isnan(reduction) and reduction > thr)
+        return {"attained": attained, "responded": bool(responded), "closest_m": closest, "moved_m": moved, "settled_distance_m": settled_d,
+                "initial_distance_m": d0, "reduction_m": reduction, "time_to_attain_s": t_att, "time_to_respond_s": t_resp}
 
     def _stream(self, buf, base_T) -> Tuple[float, np.ndarray]:
         """Stream small oscillating commands to keep any liveness policy fed; return (t_last, last setpoint)."""
@@ -191,18 +211,24 @@ class RateSensitivityProbe:
         self.hold_tol = max(4.0 * self.sigma_hat, 0.5 * self.step)
         # response latency: small command -> first reflecting sample
         lat = []
+        att = 0
         for k in range(10):
             goal = base_T.copy()
             goal[1, 3] += self.step * (1 if k % 2 == 0 else -1)
-            ok, dt = self._executed(buf, goal, timeout=max(1.0, 5 * self.response_timeout))
-            if ok:
-                lat.append(dt)
+            r = self._response(buf, goal, timeout=max(1.0, 5 * self.response_timeout), p_ref=base_T[:3, 3])
+            if r["responded"] and not math.isnan(r["time_to_respond_s"]):
+                lat.append(r["time_to_respond_s"])
+            att += r["attained"]
             self.a.servo_cp(base_T)
-            self._executed(buf, base_T, timeout=max(1.0, 5 * self.response_timeout))
+            self._response(buf, base_T, timeout=max(1.0, 5 * self.response_timeout), p_ref=goal[:3, 3])
+        out["latency_probes_attained"] = att
+        out["latency_probes_responded"] = len(lat)
         if lat:
             lat.sort()
             out["response_latency_median_s"] = float(statistics.median(lat))
             out["response_latency_p95_s"] = float(lat[int(0.95 * (len(lat) - 1))])
+            # settling takes longer than the first response; the timeout must cover it
+            out["settle_hint_s"] = float(max(lat)) * 3.0
         else:
             out["response_latency_median_s"] = float("nan")
             out["response_latency_p95_s"] = float("nan")
@@ -210,7 +236,7 @@ class RateSensitivityProbe:
         # response timeout: user value or 5 x p95 latency, at least 0.2 s
         lat_p95 = out["response_latency_p95_s"]
         auto = 5.0 * lat_p95 if not math.isnan(lat_p95) else 0.4
-        self.response_timeout = max(self.user_response_timeout or 0.0, auto, 0.2)
+        self.response_timeout = max(self.user_response_timeout or 0.0, auto, 0.3)
         out["response_timeout_s"] = self.response_timeout
         out["hold_tolerance_m"] = self.hold_tol
         self.resolution = out
@@ -300,6 +326,7 @@ class RateSensitivityProbe:
         self._executed(buf, base_T, timeout=max(0.5, self.response_timeout))
         return {"gap_requested_s": gap_s, "gap_s": actual_gap, "below_resolution": gap_s < self.resolution.get("resolution_floor_s", 0.0),
                 "executed": ok, "responded": resp["responded"], "closest_approach_m": resp["closest_m"], "moved_m": resp["moved_m"],
+                "initial_distance_m": resp["initial_distance_m"], "settled_distance_m": resp["settled_distance_m"], "reduction_m": resp["reduction_m"],
                 "time_to_execute_s": t_exec, "drift_m": drift, "samples_in_gap": n_gap, "class": cls, "state": state}
 
     @staticmethod

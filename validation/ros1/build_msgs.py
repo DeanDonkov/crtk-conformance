@@ -1,6 +1,10 @@
-"""Generate Python message modules for a set of ROS 1 packages using genpy (no catkin)."""
+"""Generate Python message modules for a set of ROS 1 packages using genpy (no catkin).
+
+Run inside the directory that holds the cloned ROS source repositories (see docs/ros1-stack.md), or pass it
+as the first argument; crtk_msgs is expected as a sibling clone named `crtk_msgs`.
+"""
 import os, sys, subprocess, glob
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.getcwd()
 sys.path.insert(0, os.path.join(ROOT, "genmsg/src")); sys.path.insert(0, os.path.join(ROOT, "genpy/src"))
 PKGS = {
  "std_msgs": "std_msgs/msg",
@@ -9,7 +13,7 @@ PKGS = {
  "sensor_msgs": "common_msgs/sensor_msgs/msg",
  "tf2_msgs": "geometry2/tf2_msgs/msg",
  "actionlib_msgs": "common_msgs/actionlib_msgs/msg",
- "crtk_msgs": "../primary/crtk_msgs/msg",
+ "crtk_msgs": "crtk_msgs/msg",
  "std_srvs": None,
 }
 OUT = os.path.join(ROOT, "site")

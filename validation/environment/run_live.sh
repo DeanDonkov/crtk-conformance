@@ -30,17 +30,17 @@ python3 /rc3/live/live_aux.py --version "$VER" --out "$OUT/live_aux.json" > "$OU
 tail -5 "$OUT/logs/live_aux.log"
 log "crtk-conformance run A: discover-only (no expectations)"
 python3 -m crtk_conformance.cli run --namespace /CRTK/psm1 --tolerance-mm 1.0 --workspace-radius-m 0.10 --speed-mm-s 50 --client-rate-hz 100 --jitter-max-ms 5 \
-  --trials 10 --temporal-trials 5 --gap-max-s 2.0 --settle-s 2.0 --still-tol-mm 0.05 --rates-hz 50,100,200,500 \
+  --trials 10 --temporal-trials 5 --gap-max-s 2.0 --settle-s 2.0 --still-tol-mm 0.05 --rates-hz 50,100,200,500 --rate-max-step-mm 100 \
   --out "$OUT/report_discover_only.json" > "$OUT/logs/run_discover_only.log" 2>&1
 tail -12 "$OUT/logs/run_discover_only.log"
 log "crtk-conformance run B: SRC-authored client expectation (expectations_src_client.yaml)"
 python3 -m crtk_conformance.cli run --namespace /CRTK/psm1 --tolerance-mm 1.0 --workspace-radius-m 0.10 --speed-mm-s 50 --client-rate-hz 100 --jitter-max-ms 5 \
-  --trials 10 --temporal-trials 5 --gap-max-s 2.0 --settle-s 2.0 --still-tol-mm 0.05 --rates-hz 50,100,200,500 \
+  --trials 10 --temporal-trials 5 --gap-max-s 2.0 --settle-s 2.0 --still-tol-mm 0.05 --rates-hz 50,100,200,500 --rate-max-step-mm 100 \
   --expectations /rc3/live/expectations_src_client.yaml --out "$OUT/report_src_client.json" > "$OUT/logs/run_src_client.log" 2>&1
 tail -12 "$OUT/logs/run_src_client.log"
 log "crtk-conformance run C: dVRK-authored client expectation (expectations_dvrk_client.yaml)"
 python3 -m crtk_conformance.cli run --namespace /CRTK/psm1 --tolerance-mm 1.0 --workspace-radius-m 0.10 --speed-mm-s 50 --client-rate-hz 100 --jitter-max-ms 5 \
-  --trials 10 --temporal-trials 5 --gap-max-s 2.0 --settle-s 2.0 --still-tol-mm 0.05 --rates-hz 50,100,200,500 \
+  --trials 10 --temporal-trials 5 --gap-max-s 2.0 --settle-s 2.0 --still-tol-mm 0.05 --rates-hz 50,100,200,500 --rate-max-step-mm 100 \
   --expectations /rc3/live/expectations_dvrk_client.yaml --out "$OUT/report_dvrk_client.json" > "$OUT/logs/run_dvrk_client.log" 2>&1
 tail -12 "$OUT/logs/run_dvrk_client.log"
 log "done"

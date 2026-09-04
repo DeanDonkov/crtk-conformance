@@ -139,15 +139,22 @@ def test_scale_probe_undetermined_without_anchor(master):
 
 
 def test_scale_probe_dropped_commands_are_no_response_not_zero_motion(master):
+    # 50 % drops: the streamed goal gets through, every responded trial is a full step (never a zero-motion r_int = 0)
     with mock_node("reference", {"drop_prob": 0.5, "seed": 7}):
         a = adapter()
         r = ScalingUnitsProbe(a, TOL, trials=6, settle_s=0.4, expectations=Expectations.from_dict({"dimensional": {"mode": "si"}})).run()
         a.close()
-    assert r.observations["no_response_trials"] >= 1
     for t in r.observations["trials"]:
         if t.get("ok"):
-            assert t["r_int"] > 0.5  # a responded trial is a full step, never a zero-motion measurement
+            assert t["r_int"] > 0.5
     assert r.outcome != Outcome.DIVERGENT
+    # every command dropped: no-response trials are counted, not recorded as zero displacements; < 3 valid -> undetermined
+    with mock_node("reference", {"drop_prob": 1.0, "seed": 7}):
+        a = adapter()
+        r = ScalingUnitsProbe(a, TOL, trials=6, settle_s=0.4, expectations=Expectations.from_dict({"dimensional": {"mode": "si"}})).run()
+        a.close()
+    assert r.observations["no_response_trials"] == 6 and r.observations["valid_trials"] == 0
+    assert r.outcome == Outcome.UNDETERMINED
 
 
 # ------------------------------------------------------------------ temporal (M4, M5, M6)
@@ -314,3 +321,14 @@ def test_liveness_short_release_with_drift_is_detected(master):
     assert L["stop_class"] == "release"
     assert r.observations["resolution"]["resting_noise_sigma_m"] < 0.001
     assert r.outcome == Outcome.DIVERGENT
+
+
+def test_scale_probe_streams_goals_so_a_release_policy_does_not_corrupt_the_estimate(master):
+    # AMBF-watchdog emulation: release after 0.5 s of silence with 20 mm/s drift; the scale probe must keep its
+    # command stream alive during settle and measurement (first v0.1.1 campaign: anchored s_hat = 1.91 for a unit of 1)
+    with mock_node("emul-ambf-object-watchdog", {}):
+        a = adapter()
+        r = ScalingUnitsProbe(a, TOL, trials=6, settle_s=0.6, expectations=Expectations.from_dict({"dimensional": {"mode": "si"}})).run()
+        a.close()
+    s = r.estimates["scale_anchored"]
+    assert abs(s["mean"] - 1.0) < 0.02 and r.outcome == Outcome.CONFORMANT

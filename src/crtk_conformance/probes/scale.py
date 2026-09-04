@@ -34,7 +34,7 @@ from ..stats import estimate
 from ..thresholds import Tolerance
 from ..expectations import Expectations
 from .base import Outcome, ProbeResult, decide
-from .common import ensure_enabled, step_and_measure
+from .common import ensure_enabled, step_and_measure, stream_goal
 
 MIN_VALID_TRIALS = 3
 
@@ -93,16 +93,17 @@ class ScalingUnitsProbe:
         latencies: List[float] = []
         trial_log = []
         no_response = 0
+        hold = self.a.latest_pose(buf, 1.0)
         for k in range(self.trials):
             ax = k % 3
             delta = step_used * axes[ax] * (1 if (k // 3) % 2 == 0 else -1)
             pa0 = None
             if anchor_buf is not None:
-                t0a = time.monotonic(); time.sleep(0.3)
+                t0a = time.monotonic(); stream_goal(self.a, hold, t0a + 0.3, self.tol.client_rate_hz)
                 A0 = [pose_msg_to_matrix(m)[:3, 3] for _, m in anchor_buf.since(t0a)]
                 if A0:
                     pa0 = np.eye(4); pa0[:3, 3] = np.mean(A0, axis=0)
-            r = step_and_measure(self.a, buf, delta, self.settle, still_tol=still_tol)
+            r = step_and_measure(self.a, buf, delta, self.settle, still_tol=still_tol, stream_hz=self.tol.client_rate_hz, hold=hold)
             if not r["ok"]:
                 trial_log.append({"trial": k, "ok": False, "reason": r["reason"]})
                 continue
@@ -129,10 +130,10 @@ class ScalingUnitsProbe:
                     entry["delta_anchor_m"] = d_anc.tolist()
                     entry["s_anchored"] = s
             trial_log.append(entry)
-            # return to start
+            # return to start (streamed, as a servo client would); the start pose is then held during the next pre-window
             back = r["p0"]
-            self.a.servo_cp(back)
-            time.sleep(self.settle * 0.5)
+            stream_goal(self.a, back, time.monotonic() + self.settle * 0.5, self.tol.client_rate_hz)
+            hold = back
         res.observations["trials"] = trial_log
         res.observations["no_response_trials"] = no_response
         res.observations["valid_trials"] = len(r_int)

@@ -43,11 +43,11 @@ temporal:
 |---|---|
 | ROS 1 (`rospy`) transport; discovery through the ROS master API | ROS 2 (no `rclpy` backend) |
 | `FrameSemanticsProbe` — binding of the unqualified `measured_cp` relative to `local/measured_cp`, decided against a declared expected transform; **passive** (never publishes `servo_cp`) | inferring the binding when `local/` is absent (undetermined by construction); TF beyond a one-hop `/tf` lookup |
-| `ScalingUnitsProbe` — internal command/measurement ratio, and a unit estimate **only with an out-of-band anchor topic**; noise-adaptive step; no-response accounting | detecting a uniform unit scale without an anchor (impossible; paper Sec. 5.2) |
+| `ScalingUnitsProbe` — internal command/measurement ratio, and a unit estimate **only with an out-of-band anchor topic**; noise-adaptive step; goals streamed at the client rate; no-response accounting | detecting a uniform unit scale without an anchor (impossible; paper Sec. 5.2) |
 | `RateSensitivityProbe` — operating-state precondition; liveness / stop-behaviour probe with measured timing resolution and stop classes (hold / release / rejected / fault / not observable / no policy within range); noise-robust observable-rate estimator with achieved-client-rate and publish-rate measurement | identifying the internal controller rate (not identifiable through the interface); measuring the platform's own jitter |
 | JSON report validated against `schema/report.schema.json`; text summary; every outcome-affecting constant recorded | PDF reports |
 | `crtk-mock` with presets emulating *documented* behaviours (built from cited configuration values) | any emulation of dVRK/AMBF/SRC *code* |
-| Unit tests (no ROS; 39) + integration tests (ROS 1; 22) | hardware tests of any kind |
+| Unit tests (no ROS; 39) + integration tests (ROS 1; 23) | hardware tests of any kind |
 
 Three probe families, one per binding class; the temporal probe has three sub-probes. There are no others.
 

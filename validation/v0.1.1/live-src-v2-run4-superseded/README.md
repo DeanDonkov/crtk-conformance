@@ -1,4 +1,15 @@
-# Live run against the released Surgical Robotics Challenge v2.0.0 CRTK interface (reported run)
+# Live run 4 against SRC v2.0.0 (superseded by `../live-src-v2/`; kept as data)
+
+This run was taken on probe commit d8ef24cb and was complete and internally consistent; it was superseded because the
+first v0.1.1 mock campaign (`../mock-run1-superseded/`) then exposed a defect in how the temporal probe measures its
+resting feedback noise (during command silence, so that a short release policy fires inside the window). The SRC
+interfaces hold position on silence, so this run's results are not expected to differ from the reported run except by
+run-to-run timing variation; the reported run was nevertheless repeated on the fixed commit so that every reported
+number comes from one probe version. Nothing in this directory was edited after the run except this README.
+
+Original README follows.
+
+---
 
 This is the run reported in the manuscript (RC3, Section 7, [M-live]) for SRC v2.0.0. Nothing in this
 directory was edited after the run; the earlier attempts are kept as `../live-src-v2-run1-home-pose/`

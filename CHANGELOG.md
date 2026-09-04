@@ -42,7 +42,9 @@ Surgical Robotics Challenge software).
 - Probe steps scale with the measured resting noise of the feedback channel (scale probe: step >= 20 sigma,
   displacement measured as the difference of averaged windows; temporal probe: step >= 20 sigma).
 - Scale probe: a trial with no detected motion is `no_response` and excluded; fewer than 3 valid trials
-  gives `undetermined` (minor 3). Frame probe: pairing window exposed; unpaired samples counted; passive
+  gives `undetermined` (minor 3). The probe streams its goal at the client rate during settling and measurement and holds the
+  start pose under a stream before each step, as a servo client would; a single command followed by silence let the
+  AMBF-watchdog emulation's release drift be measured as a unit scale of 1.9 in the first v0.1.1 campaign. Frame probe: pairing window exposed; unpaired samples counted; passive
   (documented).
 - Every implementation constant that affects an outcome is a CLI option and is recorded in the report
   (`parameters`); the README lists them (minor 2). `--temporal-trials` separates the liveness trial count
@@ -64,7 +66,7 @@ Surgical Robotics Challenge software).
   Noetic container recipe, pinned source manifests, wheel hashes, image ids). `meta.json` records numpy,
   scipy, jsonschema, matplotlib, container and ROS manifest.
 - Tests: `tests/test_rate_estimator.py` (synthetic feedback, 18 tests incl. the Reviewer #2 120-of-100
-  regression), `tests/test_expectations.py` (8), integration tests extended to 22 (identity / non-identity /
+  regression), `tests/test_expectations.py` (8), integration tests extended to 23 (identity / non-identity /
   missing expectation; required / forbidden / discover-only state machine; fault / release / hold /
   below-resolution liveness; noisy, interpolating, delayed, dropped rate cases).
 

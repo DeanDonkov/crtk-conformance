@@ -221,8 +221,9 @@ def main():
                           "tau_upper_bound_s": tau.get("upper_bound_s") if isinstance(tau, dict) else None, "n": tau.get("n") if isinstance(tau, dict) else None,
                           "trials_below_resolution": L.get("trials_below_resolution"), "outcome": res["outcome"], "finding": L.get("finding")})
             # a run whose injected stop policy is not the declared one must not be conformant (L_release_000, first campaign)
-            inj = {"fault": "fault", "release": "release", "none": "no_policy_within_range"}.get(tr.get("mode") or "none")
-            if res["outcome"] == "conformant" and (L.get("stop_class") != inj):
+            # (fault and rejected are one group for the verdict: a trip whose state message was not seen is 'rejected')
+            inj = {"fault": ("fault", "rejected"), "release": ("release",), "none": ("no_policy_within_range",)}.get(tr.get("mode") or "none")
+            if res["outcome"] == "conformant" and L.get("stop_class") not in inj:
                 false_conformant.append(name)
     write_csv(os.path.join(tdir, "L_liveness.csv"), lrows)
     md += ["## Liveness / stop behaviour (%d runs)" % len(lrows), "", "| run | injected τ_w (s) | mode | floor (ms) | stop class | τ̂_w (s) | 95 % CI | status | n | outcome |", "|---|---|---|---|---|---|---|---|---|---|"]

@@ -57,16 +57,37 @@ def wait_settled(a: PlatformAdapter, buf: Buffer, timeout_s: float, still_tol: f
     return last, first_motion
 
 
-def step_and_measure(a: PlatformAdapter, buf: Buffer, delta: np.ndarray, settle_s: float = 1.0, still_tol: float = 1e-5, window_s: float = 0.3) -> dict:
+def stream_goal(a: PlatformAdapter, goal, until: float, hz: float) -> None:
+    """Publish `goal` on servo_cp at `hz` until the monotonic time `until` (servo commands are streamed; a single
+    servo_cp followed by silence is not how a client uses them and would trigger any silence-triggered stop policy)."""
+    if goal is None or hz <= 0:
+        time.sleep(max(0.0, until - time.monotonic()))
+        return
+    period = 1.0 / hz
+    while True:
+        a.servo_cp(goal)
+        nxt = time.monotonic() + period
+        if nxt >= until:
+            time.sleep(max(0.0, until - time.monotonic()))
+            return
+        time.sleep(period)
+
+
+def step_and_measure(a: PlatformAdapter, buf: Buffer, delta: np.ndarray, settle_s: float = 1.0, still_tol: float = 1e-5, window_s: float = 0.3,
+                     stream_hz: float = 0.0, hold=None) -> dict:
     """Command measured_cp + delta (in interface units, unqualified frame) and measure the response.
 
     0.1.1: noise-robust form.  The start pose p0 is the mean of the feedback samples in a window_s window before
     the command; after the command the probe waits settle_s and takes p1 as the mean of the samples in the last
     window_s.  The first-motion time is the first sample farther than still_tol from p0 (the caller passes a
     noise-scaled still_tol).  A trial with no sample beyond still_tol is a 'no response' (first_motion_s = nan).
+    With stream_hz > 0 the goal is streamed at that rate from the command until the end of the measurement window,
+    and `hold` (a pose) is streamed during the pre-command window, as a servo client would: a single command
+    followed by silence lets a silence-triggered stop policy fire inside the settle window (found in the v0.1.1 mock
+    campaign on the AMBF-watchdog emulation, where the release drift was measured as a unit scale of 1.9).
     """
     t0 = time.monotonic()
-    time.sleep(window_s)
+    stream_goal(a, hold, t0 + window_s, stream_hz)
     pre = buf.since(t0)
     if not pre:
         msg = a.wait_for(buf, 1.0)
@@ -80,10 +101,15 @@ def step_and_measure(a: PlatformAdapter, buf: Buffer, delta: np.ndarray, settle_
     goal[:3, 3] += delta
     t_cmd = time.monotonic()
     a.servo_cp(goal)
+    next_pub = t_cmd + (1.0 / stream_hz if stream_hz > 0 else float("inf"))
     deadline = t_cmd + settle_s + window_s
     first_motion = float("nan")
     while time.monotonic() < deadline:
-        msg = a.wait_for(buf, min(0.05, max(0.0, deadline - time.monotonic())))
+        now = time.monotonic()
+        if now >= next_pub:
+            a.servo_cp(goal)
+            next_pub = now + 1.0 / stream_hz
+        msg = a.wait_for(buf, min(0.05, max(0.0, min(deadline, next_pub) - time.monotonic())))
         if msg is None:
             continue
         if np.isnan(first_motion) and np.linalg.norm(pose_msg_to_matrix(msg)[:3, 3] - p0[:3, 3]) > still_tol:

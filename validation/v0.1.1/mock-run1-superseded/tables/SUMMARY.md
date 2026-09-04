@@ -251,3 +251,5 @@ Tolerance sweep: max FP 0, max FN 0, max undetermined 4 of 27.
 Max |executed − predicted| = 0.000 mm over 19 points.
 
 ## False conformant (general definition): 1 run(s): L_release_000
+
+## False divergent (presets with authored expectations, unit known): 1 run(s): PRESET_emul-ambf-object-watchdog_authored (dimensional divergent, unit_m 1.0)

@@ -92,6 +92,7 @@ def main():
               f"Python {meta['python'].split()[0]}, numpy {meta['numpy']}, scipy {meta['scipy']}, container {meta.get('container_image')} ({str(meta.get('container_digest'))[:19]}).")
     md.append("")
     false_conformant = []
+    false_divergent = []
 
     # ------------------------------------------------------------------ F identity grid
     frows, frec = [], []
@@ -275,6 +276,15 @@ def main():
         md.append(f"| {row['preset']} | {row['label']} | {s['spatial']} | {s['dimensional']} | {s['temporal']} | {fmt(row['t_hat_mm'], 1)} / {fmt(row['theta_hat_deg'], 1)} | {fmt(row['s_hat'], 4)} | {row['stop_class']} |")
         if row["label"] == "discover" and "conformant" in s.values():
             false_conformant.append(name)
+        if row["label"] == "authored":
+            # the authored expectation declares SI units and (for the reference/JHU presets) the preset's own binding and
+            # stop policy: a dimensional 'divergent' on a preset whose unit is 1 m is a false divergent (second campaign,
+            # emul-ambf-object-watchdog: s_hat 1.91 from release drift inside the silent settle window)
+            from crtk_mock.presets import get as _get_preset
+            cfg = _get_preset(rep["parameters"]["preset"])
+            expect_dim = "divergent" if abs(cfg.unit_m - 1.0) > 1e-9 else "conformant"
+            if s["dimensional"] not in (expect_dim, "undetermined"):
+                false_divergent.append(name + f" (dimensional {s['dimensional']}, unit_m {cfg.unit_m})")
     write_csv(os.path.join(tdir, "PRESETS.csv"), xrows)
     md.append("")
 
@@ -293,7 +303,8 @@ def main():
         md.append(f"\nMax |executed − predicted| = {max(r['abs_diff_mm'] for r in mrows):.3f} mm over {len(mrows)} points.")
         md.append("")
 
-    md += [f"## False conformant (general definition): {len(false_conformant)} run(s)" + (": " + ", ".join(false_conformant) if false_conformant else ""), ""]
+    md += [f"## False conformant (general definition): {len(false_conformant)} run(s)" + (": " + ", ".join(false_conformant) if false_conformant else ""), "",
+           f"## False divergent (presets with authored expectations, unit known): {len(false_divergent)} run(s)" + (": " + ", ".join(false_divergent) if false_divergent else ""), ""]
 
     # ------------------------------------------------------------------ live
     for ld in args.live:
@@ -384,7 +395,7 @@ def main():
     ax.plot([r["eps_mm"] for r in ssweep], [r["FPR"] for r in ssweep], color=C_ORANGE, lw=1.5, label="scale false-conformant")
     ax.plot([r["eps_mm"] for r in ssweep], [r["FNR"] for r in ssweep], color=C_ORANGE, lw=1.5, ls="--", label="scale false-divergent")
     ax.plot([r["eps_mm"] for r in ssweep], [r["undetermined_rate"] for r in ssweep], color=C_ORANGE, lw=1, ls=":", label="scale undetermined")
-    ax.set_xscale("log"); ax.set_xlabel("tolerance ε (mm)"); ax.set_ylabel("rate"); ax.set_ylim(-0.02, 1.02); ax.set_title("(d) decision rates vs. tolerance (identity declared)", loc="left"); ax.legend(fontsize=6.5, ncol=2)
+    ax.set_xscale("log"); ax.set_xlabel("tolerance ε (mm)"); ax.set_ylabel("rate"); ax.set_ylim(-0.02, 1.02); ax.set_title("(d) decision rates vs. tolerance", loc="left"); ax.legend(fontsize=6.5, ncol=2)
     fig.tight_layout()
     fig.savefig(os.path.join(figdir, "fig05_validation.pdf")); fig.savefig(os.path.join(figdir, "fig05_validation.png"), dpi=200)
 

@@ -16,4 +16,8 @@ definition in `analyze_v011.py` now also covers liveness runs whose classified s
 one (this directory's `tables/SUMMARY.md` was regenerated with that definition and reports the run).
 The campaign was rerun in full on the fixed code; the live runs were repeated on the same commit.
 
+The same campaign also contains the scale-probe defect found later in the second campaign
+(`PRESET_emul-ambf-object-watchdog_authored.json`: dimensional `divergent`, ŝ far from 1, for an emulated unit of 1;
+see `../mock-run2-superseded/README.md`); the regenerated `tables/SUMMARY.md` lists it under "False divergent".
+
 Nothing in this directory was edited after the run except the regenerated `tables/` (analysis output).

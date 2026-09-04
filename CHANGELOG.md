@@ -36,6 +36,9 @@ Surgical Robotics Challenge software).
   policy. The tau_w estimate needs n >= 3 bisections with a CI lower bound above the floor, otherwise
   `undetermined` (M5.4). A command counts as `rejected` only when no motion toward it is observed; a tracking
   error is reported as `not attained`, not as a rejection (found on the live SRC v1.0.0 instance).
+  The resting feedback noise is measured while holding the pose under a command stream at the client rate, so
+  that a silence-triggered release policy cannot fire inside the noise window and inflate the hold tolerance
+  (found in the first v0.1.1 mock campaign, `validation/v0.1.1/mock-run1-superseded/`).
 - Probe steps scale with the measured resting noise of the feedback channel (scale probe: step >= 20 sigma,
   displacement measured as the difference of averaged windows; temporal probe: step >= 20 sigma).
 - Scale probe: a trial with no detected motion is `no_response` and excluded; fewer than 3 valid trials
@@ -61,7 +64,7 @@ Surgical Robotics Challenge software).
   Noetic container recipe, pinned source manifests, wheel hashes, image ids). `meta.json` records numpy,
   scipy, jsonschema, matplotlib, container and ROS manifest.
 - Tests: `tests/test_rate_estimator.py` (synthetic feedback, 18 tests incl. the Reviewer #2 120-of-100
-  regression), `tests/test_expectations.py` (8), integration tests extended to 21 (identity / non-identity /
+  regression), `tests/test_expectations.py` (8), integration tests extended to 22 (identity / non-identity /
   missing expectation; required / forbidden / discover-only state machine; fault / release / hold /
   below-resolution liveness; noisy, interpolating, delayed, dropped rate cases).
 

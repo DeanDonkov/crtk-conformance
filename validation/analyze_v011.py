@@ -197,7 +197,7 @@ def main():
                 viol += row["transitions"] > row["commands_sent"]
                 trows.append({"run": name, "truth": json.dumps(tr), "requested_hz": row["command_rate_requested_hz"], "commands": row["commands_sent"], "transitions": row["transitions"],
                               "observable_hz": row["observable_rate_hz"], "client_achieved_hz": row["client_rate_achieved_hz"], "publish_hz": row["publish_rate_hz"],
-                              "unmatched_fraction": row["unmatched_fraction"], "match_tol_mm": row["match_tolerance_m"] * 1e3, "step_mm": row.get("step_used_m", float("nan")) * 1e3,
+                              "unmatched_fraction": row["unmatched_fraction"], "match_tol_mm": row["match_tolerance_m"] * 1e3, "step_mm": (row.get("step_used_m") if row.get("step_used_m") is not None else float("nan")) * 1e3,
                               "bounded_by": row["observation_bounded_by"], "status": row["status"], "note": row.get("note", ""), "outcome": res["outcome"]})
     write_csv(os.path.join(tdir, "T_rate_rows.csv"), trows)
     md += ["## Observable-rate sub-probe (%d rows; invariant transitions ≤ commands violated in %d rows)" % (len(trows), viol), "",
@@ -220,6 +220,10 @@ def main():
                           "tau_status": (tau.get("status") if isinstance(tau, dict) and "status" in tau else ("upper_bound" if isinstance(tau, dict) and "upper_bound_s" in tau else "none")),
                           "tau_upper_bound_s": tau.get("upper_bound_s") if isinstance(tau, dict) else None, "n": tau.get("n") if isinstance(tau, dict) else None,
                           "trials_below_resolution": L.get("trials_below_resolution"), "outcome": res["outcome"], "finding": L.get("finding")})
+            # a run whose injected stop policy is not the declared one must not be conformant (L_release_000, first campaign)
+            inj = {"fault": "fault", "release": "release", "none": "no_policy_within_range"}.get(tr.get("mode") or "none")
+            if res["outcome"] == "conformant" and (L.get("stop_class") != inj):
+                false_conformant.append(name)
     write_csv(os.path.join(tdir, "L_liveness.csv"), lrows)
     md += ["## Liveness / stop behaviour (%d runs)" % len(lrows), "", "| run | injected τ_w (s) | mode | floor (ms) | stop class | τ̂_w (s) | 95 % CI | status | n | outcome |", "|---|---|---|---|---|---|---|---|---|---|"]
     for r in lrows:
@@ -323,7 +327,7 @@ def main():
                     md.append(f"  - resolution floor {R['resolution_floor_s']*1e3:.1f} ms, feedback period {R['feedback_period_s']*1e3:.2f} ms, resting noise σ̂ {R['resting_noise_sigma_m']:.2e} (interface units), response timeout {R['response_timeout_s']:.2f} s; state topic {o['state_precondition'].get('operating_state_present')}, executed without state machine {o['state_precondition'].get('executed_without_state_machine')} (attained {o['state_precondition'].get('attained_without_state_machine')})")
                     md.append(f"  - liveness: {o['liveness'].get('finding')}")
                     for row in o["effective_rate"]["per_rate"]:
-                        md.append(f"  - rate {row['command_rate_requested_hz']:.0f} Hz: {row['transitions']}/{row['commands_sent']} transitions, observable {row['observable_rate_hz']:.1f} Hz, client {row['client_rate_achieved_hz']:.1f} Hz, publish {row['publish_rate_hz']:.1f} Hz, unmatched {row['unmatched_fraction']:.2f}, δ {row['match_tolerance_m']:.4g}, step {row.get('step_used_m', float('nan')):.4g}, {row['status']} ({row.get('reason') or row['observation_bounded_by']})")
+                        md.append(f"  - rate {row['command_rate_requested_hz']:.0f} Hz: {row['transitions']}/{row['commands_sent']} transitions, observable {row['observable_rate_hz']:.1f} Hz, client {row['client_rate_achieved_hz']:.1f} Hz, publish {row['publish_rate_hz']:.1f} Hz, unmatched {row['unmatched_fraction']:.2f}, δ {row['match_tolerance_m']:.4g}, step {(row.get('step_used_m') if row.get('step_used_m') is not None else float('nan')):.4g}, {row['status']} ({row.get('reason') or row['observation_bounded_by']})")
                 if pr["binding_class"] == "dimensional":
                     o = pr["observations"]
                     e = pr["estimates"]
@@ -373,13 +377,13 @@ def main():
     ax.plot([0.015, 1.2], [0.015, 1.2], color=C_GREY, lw=0.8, ls=":")
     ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected τ_w (s)"); ax.set_ylabel("estimated τ̂_w (s)"); ax.set_title("(c) liveness timeout estimate", loc="left"); ax.legend(fontsize=6.5)
     ax = axs[1, 1]
-    ax.plot([r["eps_mm"] for r in fsweep], [r["FPR"] for r in fsweep], color=C_BLUE, lw=1.5, label="frame FPR")
-    ax.plot([r["eps_mm"] for r in fsweep], [r["FNR"] for r in fsweep], color=C_BLUE, lw=1.5, ls="--", label="frame FNR")
+    ax.plot([r["eps_mm"] for r in fsweep], [r["FPR"] for r in fsweep], color=C_BLUE, lw=1.5, label="frame false-conformant")
+    ax.plot([r["eps_mm"] for r in fsweep], [r["FNR"] for r in fsweep], color=C_BLUE, lw=1.5, ls="--", label="frame false-divergent")
     ax.plot([r["eps_mm"] for r in fsweep], [r["undetermined_rate"] for r in fsweep], color=C_BLUE, lw=1, ls=":", label="frame undetermined")
-    ax.plot([r["eps_mm"] for r in ssweep], [r["FPR"] for r in ssweep], color=C_ORANGE, lw=1.5, label="scale FPR")
-    ax.plot([r["eps_mm"] for r in ssweep], [r["FNR"] for r in ssweep], color=C_ORANGE, lw=1.5, ls="--", label="scale FNR")
+    ax.plot([r["eps_mm"] for r in ssweep], [r["FPR"] for r in ssweep], color=C_ORANGE, lw=1.5, label="scale false-conformant")
+    ax.plot([r["eps_mm"] for r in ssweep], [r["FNR"] for r in ssweep], color=C_ORANGE, lw=1.5, ls="--", label="scale false-divergent")
     ax.plot([r["eps_mm"] for r in ssweep], [r["undetermined_rate"] for r in ssweep], color=C_ORANGE, lw=1, ls=":", label="scale undetermined")
-    ax.set_xscale("log"); ax.set_xlabel("tolerance ε (mm)"); ax.set_ylabel("rate"); ax.set_ylim(-0.02, 1.02); ax.set_title("(d) decision rates vs. tolerance", loc="left"); ax.legend(fontsize=6.5, ncol=2)
+    ax.set_xscale("log"); ax.set_xlabel("tolerance ε (mm)"); ax.set_ylabel("rate"); ax.set_ylim(-0.02, 1.02); ax.set_title("(d) decision rates vs. tolerance (identity declared)", loc="left"); ax.legend(fontsize=6.5, ncol=2)
     fig.tight_layout()
     fig.savefig(os.path.join(figdir, "fig05_validation.pdf")); fig.savefig(os.path.join(figdir, "fig05_validation.png"), dpi=200)
 

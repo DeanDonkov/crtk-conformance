@@ -300,3 +300,17 @@ def test_rate_reduced_targets_keep_the_requested_rate(master):
     assert row["commands_sent"] == 5 and "window shortened" in row.get("note", "")
     assert 70.0 <= row["client_rate_achieved_hz"] <= 130.0
     assert row["transitions"] <= row["commands_sent"]
+
+
+def test_liveness_short_release_with_drift_is_detected(master):
+    # release at 0.1 s with drift: the resting-noise window must not let the policy fire, otherwise the drift
+    # inflates the hold tolerance and the policy is missed (first v0.1.1 mock campaign, L_release_000)
+    with mock_node("reference", {"watchdog_s": 0.1, "watchdog_mode": "release", "release_drift_m_s": 0.02}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=3, gap_max_s=1.0, bisection_steps=5, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "hold"}})).run()
+        a.close()
+    L = r.observations["liveness"]
+    assert L["stop_class"] == "release"
+    assert r.observations["resolution"]["resting_noise_sigma_m"] < 0.001
+    assert r.outcome == Outcome.DIVERGENT

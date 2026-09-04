@@ -47,7 +47,7 @@ temporal:
 | `RateSensitivityProbe` — operating-state precondition; liveness / stop-behaviour probe with measured timing resolution and stop classes (hold / release / rejected / fault / not observable / no policy within range); noise-robust observable-rate estimator with achieved-client-rate and publish-rate measurement | identifying the internal controller rate (not identifiable through the interface); measuring the platform's own jitter |
 | JSON report validated against `schema/report.schema.json`; text summary; every outcome-affecting constant recorded | PDF reports |
 | `crtk-mock` with presets emulating *documented* behaviours (built from cited configuration values) | any emulation of dVRK/AMBF/SRC *code* |
-| Unit tests (no ROS; 39) + integration tests (ROS 1; 21) | hardware tests of any kind |
+| Unit tests (no ROS; 39) + integration tests (ROS 1; 22) | hardware tests of any kind |
 
 Three probe families, one per binding class; the temporal probe has three sub-probes. There are no others.
 
@@ -97,6 +97,7 @@ where the decision boundary lies). All are CLI options with these defaults and a
 | largest rate-sweep excursion | 0.05 interface units | `--rate-max-step-mm` |
 | smallest requested gap / bisection steps | measured floor / 7 | `--gap-min-s`, `--bisection-steps` |
 | liveness stream | 0.3 s at 100 Hz | constructor only |
+| resting-noise window | 1 s, holding under a stream at the client rate | — |
 | channel-bounded flag | observable ≥ 0.9 × min(client, publish) | `rate_estimator.BOUND_FRACTION` |
 | unmatched-fraction limit | 0.5 | `rate_estimator.UNMATCHED_UNDETERMINED_FRACTION` |
 | fewest separable rate targets | 5 | `probes/rate.MIN_RATE_TARGETS` |

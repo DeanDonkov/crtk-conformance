@@ -202,12 +202,23 @@ class RateSensitivityProbe:
         d = sorted(np.diff(ts).tolist())
         out["send_interval_median_s"] = float(statistics.median(d))
         out["send_interval_p95_s"] = float(d[int(0.95 * (len(d) - 1))])
-        # feedback period and resting noise
+        # feedback period and resting noise, measured while HOLDING the current pose under a command stream at the
+        # client rate: a silence-triggered stop policy (release with drift) must not be allowed to fire during the noise
+        # window, otherwise the drift is mistaken for measurement noise and the hold tolerance inflates (found in the
+        # v0.1.1 mock campaign, first run: a 0.1 s release policy was missed for exactly this reason).
         buf.clear()
         t0 = time.monotonic()
-        time.sleep(1.0)
+        period = 1.0 / max(1.0, self.tol.client_rate_hz)
+        k = 0
+        while time.monotonic() - t0 < 1.0:
+            self.a.servo_cp(base_T)
+            k += 1
+            dt = t0 + k * period - time.monotonic()
+            if dt > 0:
+                time.sleep(dt)
         samples = buf.since(t0)
         out["feedback_period_s"] = (time.monotonic() - t0) / max(1, len(samples))
+        out["resting_noise_measured_under_hold_stream_hz"] = float(self.tol.client_rate_hz)
         P = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in samples]) if samples else np.zeros((0, 3))
         self.sigma_hat = estimate_noise_sigma(P) if len(P) >= 3 else 0.0
         out["resting_noise_sigma_m"] = self.sigma_hat

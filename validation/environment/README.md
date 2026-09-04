@@ -15,8 +15,8 @@ content digests of the images actually used are in `image_ids.txt`.
 | 3 | `Dockerfile.3-runtime` (cp38 wheels: numpy 1.24.4, scipy 1.10.1, jsonschema 4.17.3, matplotlib 3.7.5, pytest 7.4.4, PyYAML 6.0.1) | `focal-crtk:rc3` |
 | 4 | `4-build_ambf_src.sh`: `crtk_msgs` @ 14b04fcf (catkin), AMBF branch `ambf-2.0` @ 16a8151816407dfedff6785748ae72323c280f67 with submodules (cmake, finds catkin), SRC scripts installed with `pip -e` | `ambf_simulator` binary, `ambf_client` Python package |
 | 5 | `env.sh` (sourced in every run: ROS, `crtk_msgs`, `PYTHONPATH` → `src/`, `ROS_IP=127.0.0.1`) | — |
-| 6 | `run_live.sh v1|v2 <outdir>` with `live_aux.py` and the two expectation files | `validation/v0.1.1/live-src-v1`, `live-src-v2` |
-| 7 | `python3 validation/run_validation_v011.py --out validation/v0.1.1/mock` inside `focal-crtk:rc3` | `validation/v0.1.1/mock` |
+| 6 | `run_live.sh v1|v2 <outdir>` with `live_aux.py` and the two expectation files | `validation/v0.1.1/live-src-v1`, `live-src-v2` (earlier attempts kept as `live-src-v*-run*-{preliminary,home-pose,failed-startup,superseded}`) |
+| 7 | `run_mock.sh` (`python3 validation/run_validation_v011.py --out validation/v0.1.1/mock` inside `focal-crtk:rc3`, then `analyze_v011.py` for `tables/` and the figures) | `validation/v0.1.1/mock` (superseded campaigns: `mock-run1-superseded`, `mock-run2-superseded`) |
 
 Live targets: `surgical_robotics_challenge` v1.0.0 = 158b554e1a3e7cd618eadedf0505865891e25f27 and v2.0.0 =
 03befbf1028d22b0a6495059af51e397646570cf, each on the AMBF `ambf-2.0` commit above (both READMEs require the

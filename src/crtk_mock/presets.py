@@ -8,7 +8,7 @@ VALIDATION PARAMETER: they exist so that a behaviour class can be exercised, and
 """
 from __future__ import annotations
 
-from .node import MockConfig
+from .config import MockConfig
 
 PRESETS = {
     # CRTK read literally: operating-state machine present, arm-base binding, SI, no liveness timeout.

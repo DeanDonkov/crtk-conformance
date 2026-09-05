@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.1.2 — 2026-09-05 (branch `rc4-decision-semantics`)
+
+Response to the adversarial review of the RC3 manuscript (`preprint/rc4/RC3_ADVERSARIAL_REVIEW.md`; the
+reviewer's counterexample script is kept verbatim under `tests/adversarial/`). Executable behaviour changed
+in the three decision procedures; the v0.1.0 and v0.1.1 validation archives are unchanged and a new archive
+was produced under `validation/v0.1.2/`.
+
+### Decision semantics
+- **Spatial** (`spatial.py`, `probes/frame.py`; review findings 1 and 4). The verdict is taken on the *exact*
+  maximum positional error of the residual binding over the command ball, eq. (3')
+  `e_max = sqrt(t_par^2 + (t_perp + 2 sin(theta/2) r_ws)^2)`, not on the eq. (3) upper bound (which 0.1.1
+  used as if exceeding it proved a violation; the reviewer's case t_par = 0.7 mm, theta = 0.3 deg, r_ws = 0.1 m
+  is now conformant at 1 mm, as it should be). Its uncertainty is propagated from Hotelling T^2 confidence
+  regions of the translation and rotation-vector residuals (Bonferroni, Lipschitz bounds) instead of a
+  re-centred Student-t half-width of per-trial norms (~45 % coverage at zero residual). The interval is
+  conservative; its coverage is measured (`tests/test_spatial.py`, and the v0.1.2 campaign). Fewer than four
+  trials is `undetermined` by construction. The verdict is positional; `spatial.orientation_tolerance_deg`
+  adds a separate orientation verdict. The translation of a declared expected transform is interpreted in
+  the unit the client declares (`dimensional.expected_unit_m`, recorded as an assumption in the report).
+- **Rate** (`rate_estimator.py`, `probes/rate.py`; finding 2). Feedback target crossings are no longer
+  evidence of executed commands (a controller that executes only the final command produces every crossing).
+  The rate expectation is decided on an *accepted-command channel*: the implementation's `setpoint_cp`, with
+  the criterion that the longest stale interval between accepted commands does not exceed the required
+  period (a mean rate does not bound the stale interval). Without `setpoint_cp` the expectation is
+  `undetermined` (both SRC releases). The crossings statistic is kept as a diagnostic
+  (`feedback_target_crossings_hz`, `feedback_count_is_evidence_of_execution: false`).
+- **Liveness** (`probes/rate.py`; findings 3 and 6). The timeout is reported as an interval built from the
+  per-trial bounds under a deterministic-timeout model with explicit allowances for transport latency (L),
+  the implementation's evaluation granularity (G, one feedback period, an assumption stated in the report) and
+  the detection delay of a drift (hold tolerance / drift speed); drift onsets and speeds are estimated inside
+  the gap (no fixed 0.2 s window); an inconsistent set of bounds is reported as `inconsistent`. Eq. (7)
+  margins are decided against the interval (`undetermined` when the client's period + J_max lies inside it).
+  Stop classes are observational: `held`, `drifted`, `rejected`, `faulted`, `not_observable`, and
+  `held_through_range` for the whole probe; "no liveness policy" is not a class. A `hold` expectation is
+  claimed up to `temporal.horizon_s` (default: the tested range) and is `undetermined` beyond what was tested;
+  a `release` expectation is `undetermined` from the pose alone; `drift` is a declarable expectation.
+- **Mock** (`crtk_mock`): publishes `setpoint_cp` (last accepted goal) and can accept every k-th command
+  (`accept_every_k`); the SRC and AMBF-watchdog emulations do not publish `setpoint_cp` (live inventories).
+
+### Packaging
+- `MockConfig` moved to the ROS-free `crtk_mock/config.py`; `crtk_mock` imports the node lazily, so analysis
+  scripts read preset parameters without `rospy`.
+- Version 0.1.2. `validation/run_validation_v012.py` / `analyze_v012.py` (labels derived from eq. (3'), spatial
+  interval coverage, accepted-channel rate cases, liveness interval coverage against injected timeouts,
+  Fig. 5(d) rate labels: FPR = false divergent, FNR = false conformant). `analyze_v011.py` is kept as it was
+  used for the v0.1.1 archive (its Fig. 5(d) legend had the two labels swapped; corrected in v012).
+
 ## 0.1.1 — 2026-09-03 (branch `rc3-major-revision`)
 
 Response to the external review of the RC2 manuscript (Reviewer #2, M3–M6 and minor issues). Executable

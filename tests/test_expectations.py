@@ -99,7 +99,15 @@ def test_yaml_loading_and_validation():
         with pytest.raises(ExpectationError):
             Expectations.load(p)
         with open(p, "w") as f:
-            f.write("temporal:\n  stop_behaviour: drift\n")
+            f.write("temporal:\n  stop_behaviour: drift\n  horizon_s: 1.0\n")
+        e = Expectations.load(p)  # 0.1.2: drift and release are declarable stop behaviours; horizon_s is optional
+        assert e.temporal.stop_behaviour == "drift" and e.temporal.horizon_s == 1.0
+        with open(p, "w") as f:
+            f.write("temporal:\n  stop_behaviour: explode\n")
+        with pytest.raises(ExpectationError):
+            Expectations.load(p)
+        with open(p, "w") as f:
+            f.write("temporal:\n  stop_behaviour: hold\n  horizon_s: -1\n")
         with pytest.raises(ExpectationError):
             Expectations.load(p)
 

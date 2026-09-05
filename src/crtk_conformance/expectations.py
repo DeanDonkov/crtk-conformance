@@ -12,13 +12,31 @@ The expectations are read from a small YAML file (``--expectations expectations.
       mode: expected_transform        # identity | expected_transform | discover_only (default)
       translation_m: [0.0, 0.0, 0.0]  # T_expected = (R, t): coordinates of a point in the frame of the
       quaternion_xyzw: [0, 0, 0, 1]   # unqualified topics map to the local/ (arm-base) frame as R p + t
+      orientation_tolerance_deg: 2.0  # optional (0.1.2): checked on the residual rotation angle; otherwise the
+                                      # spatial verdict is POSITIONAL only (orientation enters through eq. 3')
     dimensional:
       mode: si                        # si | discover_only (default). 'si' needs --anchor-topic.
-      expected_unit_m: 1.0            # metres per interface unit the client assumes (default 1.0)
+      expected_unit_m: 1.0            # metres per interface unit the client assumes (default 1.0).  0.1.2: the
+                                      # spatial probe also uses it to convert the quotient translation to metres;
+                                      # a spatial verdict therefore ASSUMES this unit and says so in the report
     temporal:
       state_machine: required         # required | forbidden | any (default)
-      stop_behaviour: hold            # hold | release | fault | any (default)
-      rate: required                  # required | any (default): the client needs f >= v/epsilon at its rate
+      stop_behaviour: hold            # hold | fault | drift | release | any (default), see below
+      horizon_s: 2.0                  # 0.1.2: the silence (s) up to which the stop expectation is claimed; the
+                                      # probe tests silences up to its --gap-max-s and cannot decide beyond it
+      rate: required                  # required | any (default): the client needs f >= v/epsilon at its rate;
+                                      # 0.1.2: decided on the accepted-command channel (setpoint_cp) by the longest
+                                      # stale interval; undetermined when the interface has no setpoint_cp
+
+Stop-behaviour semantics (0.1.2, RC3 adversarial review finding 6).  What the probe can OBSERVE through the pose
+and state topics is: `held` (the pose stays within the hold tolerance during the silence and a later command
+is acted on), `drifted` (the pose leaves the hold tolerance during the silence), `rejected` (a later command
+is not acted on), `faulted` (rejected and the operating state shows FAULT/DISABLED).  The expectations map to
+these observations: `hold` <-> held through the horizon; `fault` <-> faulted or rejected within the horizon;
+`drift` <-> drifted within the horizon.  `release` (actuation released) is a physical mode that the pose
+alone does not identify -- a released, balanced or friction-held mechanism can stay still, and a held one
+can drift -- so a `release` expectation is always `undetermined` through this interface; the report states
+the drift observation beside it.  A silence longer than the tested horizon is never decided.
 
 The default file (no file given) is discover-only in every class.
 
@@ -39,7 +57,7 @@ import numpy as np
 SPATIAL_MODES = ("identity", "expected_transform", "discover_only")
 DIMENSIONAL_MODES = ("si", "discover_only")
 STATE_MACHINE = ("required", "forbidden", "any")
-STOP_BEHAVIOUR = ("hold", "release", "fault", "any")
+STOP_BEHAVIOUR = ("hold", "fault", "drift", "release", "any")
 RATE = ("required", "any")
 
 
@@ -52,6 +70,7 @@ class SpatialExpectation:
     mode: str = "discover_only"
     translation_m: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
     quaternion_xyzw: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0, 1.0])
+    orientation_tolerance_deg: Optional[float] = None  # 0.1.2: optional; without it the verdict is positional only
 
     @property
     def declared(self) -> bool:
@@ -87,6 +106,7 @@ class TemporalExpectation:
     state_machine: str = "any"
     stop_behaviour: str = "any"
     rate: str = "any"
+    horizon_s: Optional[float] = None  # 0.1.2: the silence up to which the stop expectation is claimed; None = the probe's tested maximum gap
 
     @property
     def declared(self) -> bool:
@@ -118,9 +138,13 @@ class Expectations:
             mode = sp.get("mode", "discover_only")
             if mode not in SPATIAL_MODES:
                 raise ExpectationError(f"spatial.mode must be one of {SPATIAL_MODES}, got {mode!r}")
+            ot = sp.get("orientation_tolerance_deg")
+            if ot is not None and float(ot) <= 0:
+                raise ExpectationError("spatial.orientation_tolerance_deg must be positive")
             e.spatial = SpatialExpectation(mode=mode,
                                            translation_m=[float(v) for v in sp.get("translation_m", [0.0, 0.0, 0.0])],
-                                           quaternion_xyzw=[float(v) for v in sp.get("quaternion_xyzw", [0.0, 0.0, 0.0, 1.0])])
+                                           quaternion_xyzw=[float(v) for v in sp.get("quaternion_xyzw", [0.0, 0.0, 0.0, 1.0])],
+                                           orientation_tolerance_deg=(float(ot) if ot is not None else None))
             if len(e.spatial.translation_m) != 3 or len(e.spatial.quaternion_xyzw) != 4:
                 raise ExpectationError("spatial.translation_m needs 3 values and spatial.quaternion_xyzw 4")
             if mode == "expected_transform":
@@ -140,7 +164,10 @@ class Expectations:
             for v, allowed, name in ((sm, STATE_MACHINE, "state_machine"), (sb, STOP_BEHAVIOUR, "stop_behaviour"), (ra, RATE, "rate")):
                 if v not in allowed:
                     raise ExpectationError(f"temporal.{name} must be one of {allowed}, got {v!r}")
-            e.temporal = TemporalExpectation(state_machine=sm, stop_behaviour=sb, rate=ra)
+            hz = te.get("horizon_s")
+            if hz is not None and float(hz) <= 0:
+                raise ExpectationError("temporal.horizon_s must be positive")
+            e.temporal = TemporalExpectation(state_machine=sm, stop_behaviour=sb, rate=ra, horizon_s=(float(hz) if hz is not None else None))
         return e
 
     @staticmethod

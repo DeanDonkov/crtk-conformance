@@ -9,9 +9,13 @@ The probe is PASSIVE: it never publishes servo_cp, so it observes the binding of
 servo_cp shares the binding is supported for the dVRK and SRC by primary evidence (paper Sec. 4.1), not
 by this probe.
 
-Decision (0.1.1): only against a declared client expectation (expectations.py):
-  identity / expected_transform  -> residual E = T_hat * T_expected^-1; predicted worst-case absolute-command
-                                    error ||t_E|| + 2 sin(theta_E/2) r_ws (eq. 3) with its CI vs epsilon.
+Decision (0.1.2): only against a declared client expectation (expectations.py):
+  identity / expected_transform  -> residual E = T_hat * T_expected^-1; EXACT maximum positional error over the
+                                    ball ||p|| <= r_ws (eq. 3', spatial.py) with an interval propagated from
+                                    Hotelling T^2 regions of the per-trial residual parameters, vs epsilon.
+                                    The translation is converted from interface units with the client's declared
+                                    unit (an assumption the report states).  Positional only unless
+                                    spatial.orientation_tolerance_deg is declared.
   discover_only (default)        -> T_hat reported, outcome UNDETERMINED (no expectation, no verdict).
 When `local/` does not exist the binding cannot be verified through the interface: the probe reports the
 frame_id strings, any `T_b_w` transform and any /tf chain it can find, and returns UNDETERMINED whatever
@@ -82,7 +86,6 @@ class FrameSemanticsProbe:
                 return res
             frame_ids["local/measured_cp"] = ml.header.frame_id
             trial_T: List[np.ndarray] = []
-            trial_pred: List[float] = []
             trial_tnorm: List[float] = []
             trial_theta: List[float] = []
             unpaired = 0
@@ -110,11 +113,16 @@ class FrameSemanticsProbe:
                 th = G.rotation_angle(T[:3, :3])
                 trial_tnorm.append(tn)
                 trial_theta.append(th)
-                trial_pred.append(self.tol.spatial_error(tn, th))
             if not trial_T:
                 res.notes.append("could not pair measured_cp with local/measured_cp samples")
                 res.decision_basis = "no paired data"
             else:
+                # 0.1.2: the quotient's translation is in INTERFACE units; the client's declared unit converts it to
+                # metres.  A spatial verdict therefore assumes that unit (recorded), it does not establish it.
+                unit = float(self.exp.dimensional.expected_unit_m)
+                trial_T = [T.copy() for T in trial_T]
+                for T in trial_T:
+                    T[:3, 3] *= unit
                 T_hat = G.average_pose(trial_T)
                 e_t = estimate(trial_tnorm)
                 e_th = estimate([math.degrees(x) for x in trial_theta])
@@ -124,37 +132,53 @@ class FrameSemanticsProbe:
                     "binding_rotation_deg": e_th.to_dict(),
                     "binding_matrix": T_hat.tolist(),
                     "unpaired_samples": unpaired,
+                    "assumed_interface_unit_m": unit,
                 }
+                res.observations["assumptions"] = [
+                    f"translations interpreted with the declared interface unit {unit} m per unit (dimensional.expected_unit_m); not established by this probe",
+                    "the probe is passive: it observes the binding of measured_cp relative to local/measured_cp; that servo_cp is interpreted in the same frame is not tested here",
+                    "the verdict is positional (maximum positional error over the ball ||p|| <= r_ws); orientation is decided only if spatial.orientation_tolerance_deg is declared",
+                ]
                 if T_exp is None:
                     res.decision_basis = "no spatial expectation declared (discover-only): binding T_hat reported, no conformance verdict"
                     res.notes.append("observed binding of measured_cp relative to local/measured_cp: ||t_hat|| = %.3f mm, theta_hat = %.3f deg" % (float(np.linalg.norm(T_hat[:3, 3])) * 1e3, math.degrees(G.rotation_angle(T_hat[:3, :3]))))
                 else:
-                    # residual between the observed binding and the client's expected binding, per trial
-                    from ..stats import Estimate
+                    from ..spatial import spatial_decision, rotation_angle_interval
                     T_exp_inv = G.invert(T_exp)
-                    trial_pred = []
-                    for T in trial_T:
-                        E = T @ T_exp_inv
-                        trial_pred.append(self.tol.spatial_error(float(np.linalg.norm(E[:3, 3])), G.rotation_angle(E[:3, :3])))
-                    E_hat = T_hat @ T_exp_inv
-                    e_tr = estimate(trial_pred)
-                    # predicted error at the *mean* residual; CI half-width from the trial-to-trial spread of the
-                    # per-trial predictions (Student t).  Centring on the mean avoids the upward bias of averaging
-                    # norms when the true residual is near zero.
-                    centre = self.tol.spatial_error(float(np.linalg.norm(E_hat[:3, 3])), G.rotation_angle(E_hat[:3, :3]))
-                    hw = e_tr.half_width if e_tr.n > 1 else float("inf")
-                    e_pred = Estimate(e_tr.n, centre, e_tr.std, max(0.0, centre - hw), centre + hw, e_tr.alpha)
+                    residuals = [T @ T_exp_inv for T in trial_T]
+                    sd = spatial_decision(residuals, self.tol.workspace_radius_m)
                     res.estimates["expected_binding_matrix"] = T_exp.tolist()
-                    res.estimates["residual_translation_norm_m"] = float(np.linalg.norm(E_hat[:3, 3]))
-                    res.estimates["residual_rotation_deg"] = math.degrees(G.rotation_angle(E_hat[:3, :3]))
-                    res.estimates["predicted_abs_error_at_workspace_edge_m"] = e_pred.to_dict()
-                    res.predicted_error_m = e_pred.mean
-                    res.predicted_error_ci = [e_pred.ci_low, e_pred.ci_high]
-                    res.outcome = decide(e_pred.ci_low, e_pred.ci_high, self.tol.epsilon_m)
-                    res.decision_basis = (
-                        f"eq. (3) on the residual T_hat * T_expected^-1 ({self.exp.spatial.mode}): ||t_E|| + 2 sin(theta_E/2) r_ws = {e_pred.mean*1e3:.3f} mm "
-                        f"(95% CI {e_pred.ci_low*1e3:.3f}..{e_pred.ci_high*1e3:.3f}) vs epsilon = {self.tol.epsilon_m*1e3:.3f} mm"
-                    )
+                    res.estimates["residual_translation_norm_m"] = float(np.linalg.norm(sd.residual_translation_m))
+                    res.estimates["residual_rotation_deg"] = sd.residual_rotation_deg
+                    res.estimates["spatial_decision"] = sd.to_dict()
+                    # kept for readers of 0.1.1 reports: same keys, now carrying the exact maximum error and its
+                    # propagated interval (not eq. (3) and not the re-centred Student-t half-width)
+                    res.estimates["predicted_abs_error_at_workspace_edge_m"] = {"n": sd.n, "mean": sd.e_max_m, "std": None, "ci_low": sd.ci_low_m, "ci_high": sd.ci_high_m, "alpha": sd.alpha,
+                                                                                "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"}
+                    res.predicted_error_m = sd.e_max_m
+                    res.predicted_error_ci = [sd.ci_low_m, sd.ci_high_m]
+                    pos = decide(sd.ci_low_m, sd.ci_high_m, self.tol.epsilon_m)
+                    if not math.isfinite(sd.ci_high_m):
+                        res.notes.append("n = %d trials <= 3: the Hotelling T^2 region is undefined; at least 4 trials are needed for a verdict" % sd.n)
+                    basis = (f"eq. (3') on the residual T_hat * T_expected^-1 ({self.exp.spatial.mode}): exact max positional error over ||p|| <= r_ws = {sd.e_max_m*1e3:.3f} mm "
+                             f"(>= 95% region {sd.ci_low_m*1e3:.3f}..{sd.ci_high_m*1e3:.3f} mm; eq. (3) bound would be {sd.bound_eq3_m*1e3:.3f} mm) vs epsilon = {self.tol.epsilon_m*1e3:.3f} mm")
+                    ot = self.exp.spatial.orientation_tolerance_deg
+                    if ot is not None:
+                        th, th_lo, th_hi = rotation_angle_interval(residuals)
+                        res.estimates["residual_rotation_interval_deg"] = [math.degrees(th_lo), math.degrees(th_hi)]
+                        ori = decide(math.degrees(th_lo), math.degrees(th_hi), float(ot))
+                        basis += f"; orientation: residual angle {math.degrees(th):.3f} deg ({math.degrees(th_lo):.3f}..{math.degrees(th_hi):.3f}) vs {ot} deg"
+                        res.estimates["orientation_outcome"] = ori.value
+                        if ori == Outcome.DIVERGENT or pos == Outcome.DIVERGENT:
+                            res.outcome = Outcome.DIVERGENT
+                        elif ori == Outcome.CONFORMANT and pos == Outcome.CONFORMANT:
+                            res.outcome = Outcome.CONFORMANT
+                        else:
+                            res.outcome = Outcome.UNDETERMINED
+                    else:
+                        res.outcome = pos
+                        basis += "; positional verdict only (no orientation tolerance declared)"
+                    res.decision_basis = basis
                 if frame_ids["measured_cp"] == frame_ids["local/measured_cp"] and e_t.mean > 3 * max(e_t.std, 1e-9):
                     res.notes.append("measured_cp and local/measured_cp carry the same frame_id but differ by a non-zero transform: frame_id does not disambiguate the binding")
         else:

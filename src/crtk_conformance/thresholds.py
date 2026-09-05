@@ -5,8 +5,8 @@ epsilon (metres), a workspace radius r_ws (metres, the largest ||p_c|| the clien
 in the interface frame) and a nominal end-effector speed v (m/s). The decision thresholds follow
 from the error model of the paper (Section 5):
 
-  spatial      predicted worst-case absolute-command error of the residual binding (observed vs expected)
-                                                              e_hat = ||t_E|| + 2 sin(theta_E/2) r_ws     (eq. 3)
+  spatial      exact maximum absolute-command error of the residual binding (observed vs expected) over the ball
+                                                              e_max = sqrt(t_par^2 + (t_perp + 2 sin(theta_E/2) r_ws)^2)  (eq. 3', spatial.py)
   dimensional  predicted error at the workspace edge          e_hat = |1 - s_hat/u| r_ws                  (eq. 6)
   temporal     required command rate                          f_req = v / epsilon                         (eq. 9)
                required liveness period                       1/f_client + J_max < tau_w_hat             (eq. 7)
@@ -24,6 +24,8 @@ Equation numbers refer to the manuscript: (3) spatial bound, (6) unit-scale erro
 (9) zero-order-hold lag.
 
 0.1.1: a decision is only taken against a *declared* client expectation (see expectations.py).
+0.1.2: the spatial decision uses the exact maximum error and a propagated joint confidence region (spatial.py);
+the temporal decisions use the accepted-command channel and bracket intervals (rate.py).
 """
 from __future__ import annotations
 
@@ -49,9 +51,18 @@ class Tolerance:
         return self.speed_m_s / self.epsilon_m
 
     def spatial_error(self, t_norm: float, theta_rad: float) -> float:
+        """Eq. (3): an UPPER BOUND on the positional error over the ball.  0.1.2: no longer used for decisions
+        (exceeding an upper bound does not prove a violation; RC3 adversarial review, finding 1); kept for the
+        validation labels of the v0.1.0/v0.1.1 archives and for comparison in reports."""
         import math
 
         return t_norm + 2.0 * math.sin(theta_rad / 2.0) * self.workspace_radius_m
+
+    def spatial_error_exact(self, R, t) -> float:
+        """Eq. (3'): the exact maximum positional error of the residual (R, t) over ||p|| <= r_ws (spatial.py)."""
+        from .spatial import exact_max_error
+
+        return exact_max_error(R, t, self.workspace_radius_m)
 
     def dimensional_error(self, s: float) -> float:
         return abs(1.0 - s) * self.workspace_radius_m

@@ -250,3 +250,35 @@ def test_acceptance_channel_must_be_piecewise_constant():
     sp2 = np.zeros((400, 3)); sp2[:, 0] = np.repeat(targets[:, 0], 20)  # piecewise constant
     acc2 = estimate_acceptance(targets, sp2, t_sp, np.arange(20) * 0.01, 1e-5, 0.4)
     assert acc2.status == "ok" and acc2.accepted == 20 and acc2.channel_unmatched_fraction == 0.0
+
+
+def test_client_send_stall_is_not_attributed_to_the_implementation():
+    # the client itself pauses for 60 ms in the middle of its stream; the channel follows every command as sent,
+    # so the longest stale interval is the client's own gap: undetermined, not violated (v0.1.2 campaign, T_rate_004)
+    from crtk_conformance.rate_estimator import estimate_acceptance, rate_subverdict
+    targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.001
+    send = np.arange(100) * 0.01; send[50:] += 0.06
+    st = np.arange(0, 1.2, 0.002)
+    sp = np.zeros((len(st), 3))
+    for k, t in enumerate(st):
+        j = int(np.searchsorted(send, t, side="right")) - 1
+        sp[k, 0] = targets[j, 0] if j >= 0 else 0.0
+    acc = estimate_acceptance(targets, sp, st, send, 1e-5, 1.2)
+    assert acc.accepted == 100 and acc.max_stale_s > 0.06 and acc.client_max_send_gap_s > 0.06
+    assert rate_subverdict(acc, 50.0) == "undetermined"
+    send2 = np.arange(100) * 0.01  # the same channel behaviour with a steady client is satisfied
+    sp2 = np.zeros((len(st), 3))
+    for k, t in enumerate(st):
+        j = int(np.searchsorted(send2, t, side="right")) - 1
+        sp2[k, 0] = targets[j, 0] if j >= 0 else 0.0
+    acc2 = estimate_acceptance(targets, sp2, st, send2, 1e-5, 1.2)
+    assert rate_subverdict(acc2, 50.0) == "satisfied"
+
+
+def test_channel_constant_at_a_non_target_value_is_a_zero_acceptance_not_an_interpolator():
+    from crtk_conformance.rate_estimator import estimate_acceptance, rate_subverdict
+    targets = np.zeros((50, 3)); targets[:, 0] = np.arange(1, 51) * 0.001
+    st = np.arange(0, 1.0, 0.002); sp = np.full((len(st), 3), -0.5)  # a stale goal from before the window
+    acc = estimate_acceptance(targets, sp, st, np.arange(50) * 0.02, 1e-5, 1.0)
+    assert acc.status == "ok" and acc.accepted == 0 and acc.max_stale_s >= 0.9
+    assert rate_subverdict(acc, 50.0) == "violated"

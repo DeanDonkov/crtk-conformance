@@ -1,0 +1,16 @@
+crtk-conformance 0.1.2 — namespace /CRTK/psm1 — 2026-09-05T03:15:49.365158+00:00
+tolerance epsilon = 1.000 mm, r_ws = 0.100 m, v = 50 mm/s, client 100 Hz, J_max 5.0 ms
+expectations (/rc3/live/expectations_src_client.yaml): spatial identity, dimensional si, temporal state_machine=forbidden stop_behaviour=hold rate=required
+[spatial    ] FrameSemanticsProbe      -> UNDETERMINED (0.0 s)
+    basis: no local/ reference available -> undetermined by construction (whatever the declared expectation)
+    note : no local/measured_cp topic: the binding of the unqualified topics relative to the arm base cannot be verified through the interface
+    note : T_b_w present: interface exposes base-in-world, which suggests (but does not prove) an arm-base binding of measured_cp
+[dimensional] ScalingUnitsProbe        -> UNDETERMINED (37.0 s)
+    basis: no unit anchor: uniform scale is invariant under every interface ratio (Section 5.2) -> undetermined by construction
+    note : internal consistency ratio 0.9996 (n=10) says nothing about the unit; supply --anchor-topic to test units
+[temporal   ] RateSensitivityProbe     -> UNDETERMINED (27.5 s)
+    basis: held within 1.00 mm for silences up to 2.0 s (claimed horizon 2.0 s) and responded afterwards; rate expectation cannot be decided: no_accepted_command_channel: the interface publishes no setpoint_cp
+    note : held within 1.00 mm for silences up to 2.0 s (claimed horizon 2.0 s) and responded afterwards
+    note : rate expectation cannot be decided: no_accepted_command_channel: the interface publishes no setpoint_cp
+summary: spatial=undetermined dimensional=undetermined temporal=undetermined
+report written to /rc3/preprint/crtk-conformance/validation/v0.1.2/live-src-v2/report_src_client.json

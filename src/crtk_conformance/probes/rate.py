@@ -449,7 +449,7 @@ class RateSensitivityProbe:
         if n_trip == 0:
             out["stop_class"] = "not_observable" if all(c == "not_observable" for c in classes) else "held_through_range"
             out["tau_w_estimate_s"] = None
-            out["finding"] = (f"held within {self.hold_tol*1e3:.2f} mm for silences up to {self.gap_max} s and responded afterwards (n={len(big)}); "
+            out["finding"] = (f"held within {self.hold_tol:.4g} interface units for silences up to {self.gap_max} s and responded afterwards (n={len(big)}); "
                               f"a stop policy with a longer timeout is not excluded"
                               if out["stop_class"] == "held_through_range" else "stop behaviour not observable (measured_cp too sparse during the gap)")
             return out
@@ -626,7 +626,8 @@ class RateSensitivityProbe:
                 acc = estimate_acceptance(targets, SP, np.array([t for t, _ in sps]), np.array(send_times), delta, t_end)
             else:
                 acc = AcceptanceEstimate("none", int(len(send_times)), 0, 0.0, float("nan"), float("nan"), 0.0, float("nan"),
-                                         row["client_rate_achieved_hz"], "undetermined", "no_accepted_command_channel: the interface publishes no setpoint_cp")
+                                         row["client_rate_achieved_hz"], "undetermined", "no_accepted_command_channel: the interface publishes no setpoint_cp",
+                                         0.0, float(np.max(np.diff(send_times))) if len(send_times) > 1 else float("nan"))
             row["acceptance"] = acc.to_dict()
             if acc.status == "ok" and acc.accepted > 0 and not math.isnan(acc.max_stale_s):
                 row["zoh_error_bound_m"] = self.tol.speed_m_s * acc.max_stale_s
@@ -708,7 +709,7 @@ class RateSensitivityProbe:
             elif te.stop_behaviour == "hold":
                 if stop_class == "held_through_range":
                     sub["stop_behaviour"] = "satisfied"
-                    notes.append(f"held within {self.hold_tol*1e3:.2f} mm for silences up to {tested_to} s (claimed horizon {horizon} s) and responded afterwards")
+                    notes.append(f"held within {self.hold_tol:.4g} interface units for silences up to {tested_to} s (claimed horizon {horizon} s) and responded afterwards")
                 else:
                     # a trip observed: violated if the policy is evidenced within the horizon (trip evidence time
                     # + L is an upper bound of tau_w); satisfied only if the interval's lower end is beyond it
@@ -777,7 +778,9 @@ class RateSensitivityProbe:
             elif sub["rate"] == "satisfied":
                 notes.append(f"longest stale interval between accepted commands {acc.max_stale_s*1e3:.1f} ms <= required period {1e3/f_req:.0f} ms (setpoint_cp channel, {acc.accepted} of {acc.commands_sent} accepted)")
             elif sub["rate"] == "undetermined" and at_client is not None:
-                why = (acc.reason if acc is not None and acc.reason else None) or at_client.get("reason") or "client rate below the required rate: the client, not the implementation, is the limit"
+                why = (acc.reason if acc is not None and acc.reason else None) or at_client.get("reason") or (
+                    "the client's own stream did not meet the requirement (achieved %.0f Hz, longest send gap %.0f ms): the client, not the implementation, is the limit"
+                    % (acc.client_rate_achieved_hz, (acc.client_max_send_gap_s or float('nan')) * 1e3) if acc is not None else "client rate below the required rate")
                 notes.append("rate expectation cannot be decided: " + why)
         res.estimates["sub_verdicts"] = sub
         res.outcome = Outcome(combine(sub))

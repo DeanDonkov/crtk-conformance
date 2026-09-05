@@ -1,0 +1,504 @@
+{
+ "preset": "reference",
+ "overrides": {
+  "loop_rate_hz": 120,
+  "publish_rate_hz": 120,
+  "noise_m": 0.0002,
+  "seed": 10302
+ },
+ "expectation": {
+  "spatial": {
+   "mode": "discover_only",
+   "translation_m": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "orientation_tolerance_deg": null,
+   "declared": false
+  },
+  "dimensional": {
+   "mode": "discover_only",
+   "expected_unit_m": 1.0,
+   "declared": false
+  },
+  "temporal": {
+   "state_machine": "any",
+   "stop_behaviour": "any",
+   "rate": "required",
+   "horizon_s": null,
+   "declared": true
+  },
+  "source": "dict"
+ },
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.0032112480002979282,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": true,
+    "type": "crtk_msgs/OperatingState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": true,
+    "type": "crtk_msgs/StringStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/local/measured_cp",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/operating_state",
+   "/PSM1/servo_cp",
+   "/PSM1/setpoint_cp",
+   "/PSM1/state_command"
+  ]
+ },
+ "result": {
+  "probe": "RateSensitivityProbe",
+  "binding_class": "temporal",
+  "outcome": "conformant",
+  "estimates": {
+   "required_rate_hz_from_tolerance": 50.0,
+   "stop_class": "held_through_range",
+   "tau_w_estimate_s": null,
+   "stop_horizon_s": 0.3,
+   "feedback_target_crossings_at_client_rate_hz": 99.81446736360046,
+   "client_rate_achieved_hz": 99.81446736360046,
+   "publish_rate_hz": 120.19704885599663,
+   "zoh_error_at_client_rate_m": 0.0008243454499734072,
+   "accepted_commands_at_client_rate": {
+    "channel": "setpoint_cp",
+    "commands_sent": 13,
+    "accepted": 13,
+    "accepted_fraction": 1.0,
+    "first_acceptance_delay_s": 0.007921462999547657,
+    "max_stale_s": 0.01648690899946814,
+    "mean_acceptance_rate_hz": 104.49058328888263,
+    "channel_period_s": 0.008322958999997354,
+    "client_rate_achieved_hz": 99.81446736360046,
+    "status": "ok",
+    "reason": "",
+    "channel_unmatched_fraction": 0.0
+   },
+   "sub_verdicts": {
+    "state_machine": null,
+    "stop_behaviour": null,
+    "rate": "satisfied"
+   }
+  },
+  "predicted_error_m": null,
+  "predicted_error_ci": null,
+  "decision_basis": "every declared temporal expectation satisfied: rate",
+  "observations": {
+   "expectation": {
+    "state_machine": "any",
+    "stop_behaviour": "any",
+    "rate": "required",
+    "horizon_s": null,
+    "declared": true
+   },
+   "state_precondition": {
+    "operating_state_present": true,
+    "state_command_present": true,
+    "state_after_disable": "DISABLED",
+    "executed_when_disabled": false,
+    "attained_when_disabled": false,
+    "enable": {
+     "operating_state_present": true,
+     "state_before": {
+      "state": "DISABLED",
+      "is_homed": true,
+      "is_busy": false
+     },
+     "state_after": {
+      "state": "ENABLED",
+      "is_homed": true,
+      "is_busy": false
+     },
+     "enable_latency_s": 0.02172182599952066
+    },
+    "executed_when_enabled": true,
+    "attained_when_enabled": true
+   },
+   "resolution": {
+    "sleep_error_median_s": 0.00010981199946763802,
+    "sleep_error_p95_s": 0.00018128899977455128,
+    "send_interval_median_s": 4.5173000216891523e-05,
+    "send_interval_p95_s": 6.399999983841553e-05,
+    "feedback_period_s": 0.008335013458334591,
+    "resting_noise_measured_under_hold_stream_hz": 100.0,
+    "resting_noise_sigma_m": 0.00019218093462611795,
+    "step_requested_m": 0.002,
+    "step_used_m": 0.003843618692522359,
+    "latency_probes_attained": 12,
+    "latency_probes_responded": 12,
+    "tracking_ratio_by_direction": {
+     "0+": 0.9249238351363799,
+     "0-": 0.9227718411063397,
+     "1+": 0.9105303390735354,
+     "1-": 0.9198475253586318,
+     "2+": 0.9359604902717049,
+     "2-": 0.9209915923253422
+    },
+    "probe_direction": "2+",
+    "response_latency_median_s": 0.007938465500046732,
+    "response_latency_p95_s": 0.008180593000361114,
+    "settle_hint_s": 0.02508729300006962,
+    "resolution_floor_s": 0.008825591457560525,
+    "response_timeout_s": 0.3,
+    "hold_tolerance_m": 0.0019218093462611795
+   },
+   "liveness": {
+    "gap_max_s": 0.3,
+    "resolution_floor_s": 0.008825591457560525,
+    "response_timeout_s": 0.3,
+    "hold_tolerance_m": 0.0019218093462611795,
+    "latency_allowance_s": 0.008180593000361114,
+    "granularity_allowance_s": 0.008335013458334591,
+    "trials": [
+     {
+      "gap_requested_s": 0.3,
+      "gap_s": 0.30009782900015125,
+      "below_resolution": false,
+      "executed": true,
+      "responded": true,
+      "closest_approach_m": 0.000625801276934575,
+      "moved_m": 0.004246265526829034,
+      "initial_distance_m": 0.003944047937966177,
+      "settled_distance_m": 0.000625801276934575,
+      "reduction_m": 0.003318246661031602,
+      "time_to_execute_s": 0.006478695999248885,
+      "drift_m": 0.0009576723725643299,
+      "drift_onset_s": null,
+      "drift_speed_m_s": null,
+      "onset_threshold_m": 0.0005765428038783538,
+      "reference_window_motion": false,
+      "reference_window_s": 0.1,
+      "samples_in_gap": 36,
+      "class": "held",
+      "state": "ENABLED"
+     }
+    ],
+    "tripped_at_gap_max": {
+     "count": 0,
+     "total": 1,
+     "p": 0.0,
+     "ci_low": 0.0,
+     "ci_high": 0.7934506856227626
+    },
+    "drift_during_gap_max_m": {
+     "n": 1,
+     "mean": 0.0009576723725643299,
+     "std": null,
+     "ci_low": null,
+     "ci_high": null,
+     "alpha": 0.05
+    },
+    "stop_class": "held_through_range",
+    "tau_w_estimate_s": null,
+    "finding": "held within 1.92 mm for silences up to 0.3 s and responded afterwards (n=1); a stop policy with a longer timeout is not excluded"
+   },
+   "effective_rate": {
+    "per_rate": [
+     {
+      "command_rate_requested_hz": 50.0,
+      "commands_sent": 13,
+      "client_rate_achieved_hz": 49.94433183967331,
+      "window_s": 0.26028979708310845,
+      "publish_rate_hz": 120.29521230179314,
+      "samples_total": 38,
+      "samples_matched": 38,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 13,
+      "transitions": 13,
+      "observable_rate_hz": 49.94433183967332,
+      "match_tolerance_m": 0.0009609046731305897,
+      "match_tolerance_source": "5 x resting noise sigma_hat (1.92e-04 m), floor 1e-6 m",
+      "target_spacing_m": 0.003843618692522352,
+      "observation_bounded_by": "client",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.049967043002790666,
+      "command_window_s": 0.2601078730003792,
+      "note": "targets reduced to 13 (spacing 4 delta) at the requested rate: window shortened to 0.26 s to stay within the excursion 0.05",
+      "zoh_error_bound_m": 0.0012610774000222592,
+      "feedback_target_crossings_hz": 49.94433183967332,
+      "feedback_count_is_evidence_of_execution": false,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 13,
+       "accepted": 13,
+       "accepted_fraction": 1.0,
+       "first_acceptance_delay_s": 0.007026276000033249,
+       "max_stale_s": 0.025221548000445182,
+       "mean_acceptance_rate_hz": 52.256496834190486,
+       "channel_period_s": 0.008321175499986566,
+       "client_rate_achieved_hz": 49.94433183967331,
+       "status": "ok",
+       "reason": "",
+       "channel_unmatched_fraction": 0.02564102564102564
+      }
+     },
+     {
+      "command_rate_requested_hz": 100.0,
+      "commands_sent": 13,
+      "client_rate_achieved_hz": 99.81446736360046,
+      "window_s": 0.13024164074977307,
+      "publish_rate_hz": 120.19704885599663,
+      "samples_total": 22,
+      "samples_matched": 22,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 13,
+      "transitions": 13,
+      "observable_rate_hz": 99.81446736360046,
+      "match_tolerance_m": 0.0009609046731305897,
+      "match_tolerance_source": "5 x resting noise sigma_hat (1.92e-04 m), floor 1e-6 m",
+      "target_spacing_m": 0.003843618692522352,
+      "observation_bounded_by": "client",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.049967043002790666,
+      "command_window_s": 0.1301222530000814,
+      "note": "targets reduced to 13 (spacing 4 delta) at the requested rate: window shortened to 0.13 s to stay within the excursion 0.05",
+      "zoh_error_bound_m": 0.0008243454499734072,
+      "feedback_target_crossings_hz": 99.81446736360046,
+      "feedback_count_is_evidence_of_execution": false,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 13,
+       "accepted": 13,
+       "accepted_fraction": 1.0,
+       "first_acceptance_delay_s": 0.007921462999547657,
+       "max_stale_s": 0.01648690899946814,
+       "mean_acceptance_rate_hz": 104.49058328888263,
+       "channel_period_s": 0.008322958999997354,
+       "client_rate_achieved_hz": 99.81446736360046,
+       "status": "ok",
+       "reason": "",
+       "channel_unmatched_fraction": 0.0
+      }
+     },
+     {
+      "command_rate_requested_hz": 200.0,
+      "commands_sent": 13,
+      "client_rate_achieved_hz": 199.37836484157523,
+      "window_s": 0.06604327800050669,
+      "publish_rate_hz": 120.12412116563848,
+      "samples_total": 14,
+      "samples_matched": 14,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 8,
+      "transitions": 8,
+      "observable_rate_hz": 121.13269120195129,
+      "match_tolerance_m": 0.0009609046731305897,
+      "match_tolerance_source": "5 x resting noise sigma_hat (1.92e-04 m), floor 1e-6 m",
+      "target_spacing_m": 0.003843618692522352,
+      "observation_bounded_by": "publish",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.049967043002790666,
+      "command_window_s": 0.06517182900006446,
+      "note": "targets reduced to 13 (spacing 4 delta) at the requested rate: window shortened to 0.065 s to stay within the excursion 0.05",
+      "zoh_error_bound_m": 0.0004405687999678776,
+      "feedback_target_crossings_hz": 121.13269120195129,
+      "feedback_count_is_evidence_of_execution": false,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 13,
+       "accepted": 8,
+       "accepted_fraction": 0.6153846153846154,
+       "first_acceptance_delay_s": 0.007705767000516062,
+       "max_stale_s": 0.008811375999357551,
+       "mean_acceptance_rate_hz": 121.42003278010344,
+       "channel_period_s": 0.008331231999363808,
+       "client_rate_achieved_hz": 199.37836484157523,
+       "status": "ok",
+       "reason": "",
+       "channel_unmatched_fraction": 0.0
+      }
+     },
+     {
+      "command_rate_requested_hz": 500.0,
+      "commands_sent": 13,
+      "client_rate_achieved_hz": 495.7506526276406,
+      "window_s": 0.03288152299955982,
+      "publish_rate_hz": 119.89492360943763,
+      "samples_total": 10,
+      "samples_matched": 10,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 4,
+      "transitions": 4,
+      "observable_rate_hz": 121.64886644859934,
+      "match_tolerance_m": 0.0009609046731305897,
+      "match_tolerance_source": "5 x resting noise sigma_hat (1.92e-04 m), floor 1e-6 m",
+      "target_spacing_m": 0.003843618692522352,
+      "observation_bounded_by": "publish",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.049967043002790666,
+      "command_window_s": 0.02616260900049383,
+      "note": "targets reduced to 13 (spacing 4 delta) at the requested rate: window shortened to 0.026 s to stay within the excursion 0.05",
+      "zoh_error_bound_m": 0.000428471150007681,
+      "feedback_target_crossings_hz": 121.64886644859934,
+      "feedback_count_is_evidence_of_execution": false,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 13,
+       "accepted": 4,
+       "accepted_fraction": 0.3076923076923077,
+       "first_acceptance_delay_s": 0.00786716000038723,
+       "max_stale_s": 0.00856942300015362,
+       "mean_acceptance_rate_hz": 121.11686096555717,
+       "channel_period_s": 0.00834110599998894,
+       "client_rate_achieved_hz": 495.7506526276406,
+       "status": "ok",
+       "reason": "",
+       "channel_unmatched_fraction": 0.09090909090909091
+      }
+     },
+     {
+      "command_rate_requested_hz": 1000.0,
+      "commands_sent": 13,
+      "client_rate_achieved_hz": 990.3585296480574,
+      "window_s": 0.016145544999744743,
+      "publish_rate_hz": 120.29563434142918,
+      "samples_total": 8,
+      "samples_matched": 8,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 2,
+      "transitions": 2,
+      "observable_rate_hz": 123.87317987913195,
+      "match_tolerance_m": 0.0009609046731305897,
+      "match_tolerance_source": "5 x resting noise sigma_hat (1.92e-04 m), floor 1e-6 m",
+      "target_spacing_m": 0.003843618692522352,
+      "observation_bounded_by": "publish",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.049967043002790666,
+      "command_window_s": 0.01314363100027549,
+      "note": "targets reduced to 13 (spacing 4 delta) at the requested rate: window shortened to 0.013 s to stay within the excursion 0.05",
+      "zoh_error_bound_m": 0.0004363657499652618,
+      "feedback_target_crossings_hz": 123.87317987913195,
+      "feedback_count_is_evidence_of_execution": false,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 13,
+       "accepted": 2,
+       "accepted_fraction": 0.15384615384615385,
+       "first_acceptance_delay_s": 0.0077732839999953285,
+       "max_stale_s": 0.008727314999305236,
+       "mean_acceptance_rate_hz": 121.20772100969043,
+       "channel_period_s": 0.008388493999518687,
+       "client_rate_achieved_hz": 990.3585296480574,
+       "status": "ok",
+       "reason": "",
+       "channel_unmatched_fraction": 0.0
+      }
+     }
+    ],
+    "match_tolerance_m": 0.0009609046731305897,
+    "match_tolerance_source": "5 x resting noise sigma_hat (1.92e-04 m), floor 1e-6 m"
+   }
+  },
+  "notes": [
+   "longest stale interval between accepted commands 16.5 ms <= required period 20 ms (setpoint_cp channel, 13 of 13 accepted)"
+  ],
+  "started_at": 1788575644.4311955,
+  "duration_s": 6.333728313446045
+ },
+ "wall_s": 6.333782196044922,
+ "truth": {
+  "loop_rate_hz": 120,
+  "publish_rate_hz": 120,
+  "noise_m": 0.0002,
+  "accept_every_k": 1,
+  "setpoint_channel": true
+ }
+}

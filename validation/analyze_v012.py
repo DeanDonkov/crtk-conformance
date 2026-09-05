@@ -26,6 +26,7 @@ from crtk_conformance import geometry as G  # noqa: E402
 from crtk_conformance.probes.base import decide as _decide, Outcome  # noqa: E402
 
 C_BLUE, C_ORANGE, C_GREEN, C_PINK, C_GREY = "#0072B2", "#E69F00", "#009E73", "#CC79A7", "#6e6e6e"
+TOL_M = 1e-9  # containment is judged with a 1 nm tolerance: at zero noise the interval collapses to a point and the truth is the same number up to floating-point rounding
 
 
 def load(d, prefix):
@@ -112,7 +113,7 @@ def main():
                "e_max_hat_mm": sd.get("e_max_m", float("nan")) * 1e3 if sd else float("nan"),
                "ci_low_mm": sd.get("ci_low_m", float("nan")) * 1e3 if sd else float("nan"), "ci_high_mm": sd.get("ci_high_m", float("nan")) * 1e3 if sd else float("nan"),
                "delta_t_mm": sd.get("delta_t_m", float("nan")) * 1e3 if sd else float("nan"), "delta_rho_deg": math.degrees(sd.get("delta_rho_rad", float("nan"))) if sd else float("nan"),
-               "contains_truth": (sd.get("ci_low_m") <= tr["exact_max_error_m"] <= sd.get("ci_high_m")) if sd else None,
+               "contains_truth": (sd.get("ci_low_m") - TOL_M <= tr["exact_max_error_m"] <= sd.get("ci_high_m") + TOL_M) if sd else None,
                "outcome": res["outcome"], "unpaired": est.get("unpaired_samples")}
         frows.append(row)
         frec.append((tr["exact_max_error_m"], sd.get("ci_low_m"), sd.get("ci_high_m")))
@@ -147,8 +148,9 @@ def main():
         reps = r["replicates"]
         sds = [x["spatial_decision"] for x in reps if x["spatial_decision"]]
         widths = [(x["ci_high_m"] - x["ci_low_m"]) * 1e3 for x in sds if math.isfinite(x["ci_high_m"])]
+        hits = sum(1 for x in sds if x["ci_low_m"] - TOL_M <= tr["exact_max_error_m"] <= x["ci_high_m"] + TOL_M)
         crows.append({"config": name[6:], "true_e_max_mm": tr["exact_max_error_m"] * 1e3, "noise_mm": tr["noise_m"] * 1e3, "orientation_noise_deg": tr.get("orientation_noise_deg", 0.0), "replicates": len(reps), "trials_per_replicate": tr["trials"],
-                      "coverage": r["coverage"], "median_width_mm": float(np.median(widths)) if widths else float("nan"),
+                      "coverage": hits / len(reps), "median_width_mm": float(np.median(widths)) if widths else float("nan"),
                       "conformant": sum(x["outcome"] == "conformant" for x in reps), "divergent": sum(x["outcome"] == "divergent" for x in reps), "undetermined": sum(x["outcome"] == "undetermined" for x in reps),
                       "false_divergent": sum(1 for x in reps if x["outcome"] == "divergent" and tr["exact_max_error_m"] <= 0.001), "false_conformant": sum(1 for x in reps if x["outcome"] == "conformant" and tr["exact_max_error_m"] > 0.001)})
     if crows:
@@ -171,7 +173,7 @@ def main():
                    "residual_mm": est.get("residual_translation_norm_m", float("nan")) * 1e3 if "residual_translation_norm_m" in est else float("nan"),
                    "e_max_hat_mm": sd.get("e_max_m", float("nan")) * 1e3 if sd else float("nan"),
                    "ci_mm": f"{sd['ci_low_m']*1e3:.3f}..{sd['ci_high_m']*1e3:.3f}" if sd else "—", "true_e_max_mm": truth_e * 1e3 if truth_e is not None else float("nan"),
-                   "contains_truth": (sd["ci_low_m"] <= truth_e <= sd["ci_high_m"]) if (sd and truth_e is not None) else None,
+                   "contains_truth": (sd["ci_low_m"] - TOL_M <= truth_e <= sd["ci_high_m"] + TOL_M) if (sd and truth_e is not None) else None,
                    "orientation_outcome": est.get("orientation_outcome"), "unpaired": est.get("unpaired_samples"), "basis": res["decision_basis"][:80]}
             fx.append(row)
             md.append(f"| {name} | {row['truth'][:60]} | {row['expectation']} | {res['outcome']} | {fmt(row['t_hat_mm'])} | {fmt(row['theta_hat_deg'])} | {fmt(row['residual_mm'])} | {fmt(row['e_max_hat_mm'])} | {row['ci_mm']} | {fmt(row['true_e_max_mm'])} | {row['basis'][:60]} |")
@@ -239,7 +241,7 @@ def main():
                 # truth for this window: stale interval of an every-k-th acceptor at the achieved client rate
                 fa = row["client_rate_achieved_hz"] or f
                 true_stale = k / fa if fa else float("nan")
-                trows.append({"run": name, "truth": json.dumps(tr), "requested_hz": f, "client_achieved_hz": row["client_rate_achieved_hz"], "commands": row["commands_sent"],
+                trows.append({"run": name, "truth": json.dumps(tr), "requested_hz": f, "client_achieved_hz": row["client_rate_achieved_hz"], "client_max_send_gap_ms": ((acc.get("client_max_send_gap_s") if acc.get("client_max_send_gap_s") is not None else float("nan")) * 1e3), "commands": row["commands_sent"],
                               "crossings": row["transitions"], "crossings_hz": row["observable_rate_hz"], "accepted": acc.get("accepted"), "accepted_fraction": acc.get("accepted_fraction"),
                               "max_stale_ms": (acc.get("max_stale_s") or float("nan")) * 1e3, "true_stale_ms": true_stale * 1e3, "channel_period_ms": (acc.get("channel_period_s") or float("nan")) * 1e3,
                               "first_delay_ms": (acc.get("first_acceptance_delay_s") if acc.get("first_acceptance_delay_s") is not None else float("nan")) * 1e3,
@@ -249,10 +251,16 @@ def main():
             sv = res["estimates"].get("sub_verdicts", {}).get("rate")
             at = min(res["observations"]["effective_rate"]["per_rate"], key=lambda x: abs(x["command_rate_requested_hz"] - 100.0))
             fa = at["client_rate_achieved_hz"] or 100.0
+            acc_at = at.get("acceptance") or {}
+            gap = acc_at.get("client_max_send_gap_s")
             if not tr.get("setpoint_channel", True):
                 expected = "undetermined"
-            elif at["status"] != "ok" and not (at.get("acceptance") or {}).get("status") == "ok":
+            elif at["status"] != "ok" and not acc_at.get("status") == "ok":
                 expected = "undetermined"
+            elif gap is not None and not (isinstance(gap, float) and math.isnan(gap)) and gap > 1.0 / f_req * (1 + 1e-6):
+                expected = "undetermined"  # the client's own stream stalled beyond the required period: not the implementation's stale interval
+            elif tr.get("drop_prob"):
+                expected = "boundary"  # commands are dropped by the implementation at random: the stale interval depends on the realised drop sequence (violated is right whenever two consecutive commands were dropped)
             elif k / fa <= 1.0 / f_req:
                 expected = "satisfied"
             elif k / fa > 1.0 / f_req + 2 * ((at.get("acceptance") or {}).get("channel_period_s") or 0.0):
@@ -266,11 +274,11 @@ def main():
                 false_conformant.append(name)
     write_csv(os.path.join(tdir, "T_rate_rows.csv"), trows)
     md += ["## Rate sub-probe on the accepted-command channel (%d rows; invariant crossings ≤ commands violated in %d rows)" % (len(trows), viol), "",
-           "| run | condition | requested (Hz) | client achieved (Hz) | crossings / commands | accepted | longest stale (ms) | true stale k/f (ms) | channel period (ms) | acceptance status | outcome |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+           "| run | condition | requested (Hz) | client achieved (Hz) / max send gap (ms) | crossings / commands | accepted | longest stale (ms) | true stale k/f (ms) | channel period (ms) | acceptance status | outcome |", "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in trows:
-        md.append(f"| {r['run']} | {r['truth'][:45]} | {r['requested_hz']:.0f} | {r['client_achieved_hz']:.1f} | {r['crossings']} / {r['commands']} | {r['accepted']} | {fmt(r['max_stale_ms'], 1)} | {fmt(r['true_stale_ms'], 1)} | {fmt(r['channel_period_ms'], 2)} | {r['acc_status']} {r['acc_reason'][:30]} | {r['outcome']} |")
+        md.append(f"| {r['run']} | {r['truth'][:45]} | {r['requested_hz']:.0f} | {r['client_achieved_hz']:.1f} / {fmt(r['client_max_send_gap_ms'], 1)} | {r['crossings']} / {r['commands']} | {r['accepted']} | {fmt(r['max_stale_ms'], 1)} | {fmt(r['true_stale_ms'], 1)} | {fmt(r['channel_period_ms'], 2)} | {r['acc_status']} {r['acc_reason'][:30]} | {r['outcome']} |")
     md.append("")
-    md.append(f"Rate verdict at the client rate versus the injected acceptor: {len(t_wrong)} disagreement(s)" + (": " + "; ".join(t_wrong) if t_wrong else "") + ". (A boundary case, k / f within two channel periods of the required period, accepts any verdict.)")
+    md.append(f"Rate verdict at the client rate versus the injected acceptor: {len(t_wrong)} disagreement(s)" + (": " + "; ".join(t_wrong) if t_wrong else "") + ". (A boundary case -- k / f within two channel periods of the required period, or commands dropped at random by the implementation -- accepts any verdict; a window in which the client's own longest send gap exceeded the required period expects undetermined.)")
     md.append("")
 
     # ------------------------------------------------------------------ L liveness (interval containment; eq. (7) against the interval)

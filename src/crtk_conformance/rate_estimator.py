@@ -189,7 +189,8 @@ class AcceptanceEstimate:
     client_rate_achieved_hz: float
     status: str  # 'ok' | 'undetermined'
     reason: str = ""
-    channel_unmatched_fraction: float = 0.0  # setpoint samples matching no commanded target: a low-level interpolator would show many
+    channel_unmatched_fraction: float = 0.0  # setpoint samples matching no commanded target (from the first acceptance on): a low-level interpolator would show many
+    client_max_send_gap_s: float = float("nan")  # longest interval between the client's own consecutive sends: a client stall is not the implementation's
 
     def to_dict(self) -> Dict:
         return asdict(self)
@@ -205,15 +206,11 @@ def estimate_acceptance(targets: np.ndarray, setpoint_positions: np.ndarray, set
     st = np.asarray(setpoint_times, dtype=float)
     send = np.asarray(send_times, dtype=float)
     achieved = (len(send) - 1) / (send[-1] - send[0]) if len(send) > 1 and send[-1] > send[0] else float("nan")
+    send_gap = float(np.max(np.diff(send))) if len(send) > 1 else float("nan")
     if S.shape[0] < 2:
-        return AcceptanceEstimate("setpoint_cp", n, 0, 0.0, float("nan"), float("nan"), 0.0, float("nan"), achieved, "undetermined", "no_setpoint_samples")
+        return AcceptanceEstimate("setpoint_cp", n, 0, 0.0, float("nan"), float("nan"), 0.0, float("nan"), achieved, "undetermined", "no_setpoint_samples", 0.0, send_gap)
     period = float(np.median(np.diff(st))) if S.shape[0] > 1 else float("nan")
     idx = classify_samples(S, G, max(delta, 1e-9))
-    # the channel must be piecewise constant on the commanded targets (CRTK: the current setpoint to the low-level
-    # controller); a channel that reports intermediate values is an interpolating low-level controller, on which
-    # an acceptance cannot be told from a pass-through, exactly as for feedback crossings -> undetermined
-    in_window = st >= float(send[0]) if len(send) else np.ones(len(st), dtype=bool)
-    unmatched = float(np.mean(idx[in_window] < 0)) if in_window.any() else 0.0
     # acceptance event = first sample whose classification moves to a new target index (monotone, as sent)
     events = []
     last = -1
@@ -222,12 +219,19 @@ def estimate_acceptance(targets: np.ndarray, setpoint_positions: np.ndarray, set
             events.append((float(st[k]), int(j)))
             last = int(j)
     accepted = len(events)
+    if accepted == 0:
+        # the channel never reported any commanded target: stale for at least the whole command window
+        return AcceptanceEstimate("setpoint_cp", n, 0, 0.0, float("nan"), float(send[-1] - send[0]) if len(send) > 1 else float("nan"), 0.0, period, achieved,
+                                  "ok", "no commanded target was ever reported on setpoint_cp", 1.0, send_gap)
+    # from the first acceptance on, the channel must be piecewise constant on the commanded targets (CRTK: the
+    # current setpoint to the low-level controller); a channel that reports intermediate values is an
+    # interpolating low-level controller, on which an acceptance cannot be told from a pass-through, exactly as
+    # for feedback crossings -> undetermined
+    after_first = st >= events[0][0]
+    unmatched = float(np.mean(idx[after_first] < 0)) if after_first.any() else 0.0
     if unmatched > UNMATCHED_UNDETERMINED_FRACTION:
         return AcceptanceEstimate("setpoint_cp", n, accepted, accepted / n, float("nan"), float("nan"), 0.0, period, achieved, "undetermined",
-                                  "setpoint_cp is not piecewise constant on the commanded targets (%.0f%% of samples match none): an interpolating low-level controller cannot be told from a partial acceptor" % (100 * unmatched), unmatched)
-    if accepted == 0:
-        return AcceptanceEstimate("setpoint_cp", n, 0, 0.0, float("nan"), float(window_end - send[0]) if len(send) else float("nan"), 0.0, period, achieved,
-                                  "ok", "no commanded target was ever reported on setpoint_cp", unmatched)
+                                  "setpoint_cp is not piecewise constant on the commanded targets (%.0f%% of samples match none): an interpolating low-level controller cannot be told from a partial acceptor" % (100 * unmatched), unmatched, send_gap)
     times = [t for t, _ in events]
     gaps = [times[0] - float(send[0])] + [b - a for a, b in zip(times[:-1], times[1:])]
     # commands not accepted after the last acceptance leave the channel stale until the last command was sent: that
@@ -237,7 +241,7 @@ def estimate_acceptance(targets: np.ndarray, setpoint_positions: np.ndarray, set
     max_stale = max(gaps + ([tail] if (accepted < n and tail > 0) else []))
     span = times[-1] - float(send[0])
     rate = accepted / span if span > 0 else float("nan")
-    return AcceptanceEstimate("setpoint_cp", n, accepted, accepted / n, gaps[0], float(max_stale), float(rate) if not math.isnan(rate) else 0.0, period, achieved, "ok", "", unmatched)
+    return AcceptanceEstimate("setpoint_cp", n, accepted, accepted / n, gaps[0], float(max_stale), float(rate) if not math.isnan(rate) else 0.0, period, achieved, "ok", "", unmatched, send_gap)
 
 
 def rate_subverdict(acc: Optional[AcceptanceEstimate], f_required_hz: float) -> str:
@@ -245,20 +249,23 @@ def rate_subverdict(acc: Optional[AcceptanceEstimate], f_required_hz: float) -> 
 
     Decided on the accepted-command channel only.  satisfied: the longest stale interval is within the required
     period 1/f_req (allowing one channel publication period of quantisation).  violated: the longest stale
-    interval exceeds the period by more than the quantisation AND the client itself sustained the required rate
-    (otherwise the client, not the implementation, is the limit).  Without a setpoint channel: undetermined
-    (feedback target crossings are reported as a diagnostic, never as a verdict)."""
+    interval exceeds the period by more than the quantisation AND the client itself sustained the required rate,
+    both on average and in its longest send gap (otherwise the client, not the implementation, is the limit).
+    Without a setpoint channel: undetermined (feedback target crossings are reported as a diagnostic, never as a
+    verdict)."""
     if acc is None or acc.channel != "setpoint_cp" or acc.status != "ok":
         return "undetermined"
     req_period = 1.0 / f_required_hz
     q = acc.channel_period_s if not math.isnan(acc.channel_period_s) else 0.0
+    client_ok = (not math.isnan(acc.client_rate_achieved_hz) and acc.client_rate_achieved_hz >= f_required_hz
+                 and not (not math.isnan(acc.client_max_send_gap_s) and acc.client_max_send_gap_s > req_period * (1 + 1e-6)))
     if acc.accepted == 0:
-        return "violated" if (not math.isnan(acc.client_rate_achieved_hz) and acc.client_rate_achieved_hz >= f_required_hz) else "undetermined"
+        return "violated" if client_ok else "undetermined"
     if acc.max_stale_s <= req_period + q:
         return "satisfied"
-    if not math.isnan(acc.client_rate_achieved_hz) and acc.client_rate_achieved_hz >= f_required_hz:
+    if client_ok:
         return "violated"
-    return "undetermined"
+    return "undetermined"  # the client's own stream (mean rate or its longest send gap) did not meet the requirement
 
 
 def crossing_subverdict_legacy(est: Optional[RateEstimate], f_required_hz: float) -> str:

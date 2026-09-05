@@ -253,7 +253,7 @@ def exp_rate(out, quick):
     for k, sp in enumerate([0.05, 0.2] if not quick else [0.05]):
         extra.append((f"T_interp_{k}", {"max_speed_m_s": sp, "publish_rate_hz": 500, "loop_rate_hz": 1000, "seed": SEED0 + 320 + k}, {"max_speed_m_s": sp, "accept_every_k": 1, "setpoint_channel": True}))
     for k, dp in enumerate([0.1, 0.5]):
-        extra.append((f"T_drop_{k}", {"drop_prob": dp, "seed": SEED0 + 330 + k}, {"drop_prob": dp, "accept_every_k": 1, "setpoint_channel": True, "note": "drops are of feedback messages, not of commands"}))
+        extra.append((f"T_drop_{k}", {"drop_prob": dp, "seed": SEED0 + 330 + k}, {"drop_prob": dp, "accept_every_k": 1, "setpoint_channel": True, "note": "commands are dropped at random in the implementation callback"}))
     for k, jit in enumerate([0.005, 0.02]):
         extra.append((f"T_delay_{k}", {"response_delay_s": 0.05, "response_jitter_s": jit, "seed": SEED0 + 340 + k}, {"response_delay_s": 0.05, "response_jitter_s": jit, "accept_every_k": 1, "setpoint_channel": True}))
     for name, over, truth in extra:

@@ -409,7 +409,8 @@ def exp_model_check(out, quick):
                 a.servo_cp(G.make_pose(None, p_c)); time.sleep(0.15); wait_settled(a, buf, 0.5)
                 ex = a.latest_pose(truth, 1.0)[:3, 3]
                 cases.append({"kind": "absolute_" + kind, "p_c_norm_m": pc, "measured_error_m": float(np.linalg.norm(ex - p_c)),
-                              "predicted_error_m": G.m1_positional_error(R, t, p_c), "upper_bound_m": G.m1_upper_bound(R, t, pc), "lower_bound_exact_m": G.m1_lower_bound_exact(R, t)})
+                              "predicted_error_m": G.m1_positional_error(R, t, p_c), "upper_bound_m": G.m1_upper_bound(R, t, pc), "lower_bound_exact_m": G.m1_lower_bound_exact(R, t),
+                              "exact_max_over_ball_m": exact_max_error(R, t, pc)})
         for step in ([0.001, 0.005, 0.02] if not quick else [0.005]):
             for vec in (np.array([0, 0, 1.0]), np.array([1.0, 0, 0])):
                 a.servo_cp(G.make_pose(None, [0, 0, 0])); time.sleep(0.15); wait_settled(a, buf, 0.5)

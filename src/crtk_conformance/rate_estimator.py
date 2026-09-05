@@ -189,6 +189,7 @@ class AcceptanceEstimate:
     client_rate_achieved_hz: float
     status: str  # 'ok' | 'undetermined'
     reason: str = ""
+    channel_unmatched_fraction: float = 0.0  # setpoint samples matching no commanded target: a low-level interpolator would show many
 
     def to_dict(self) -> Dict:
         return asdict(self)
@@ -208,6 +209,11 @@ def estimate_acceptance(targets: np.ndarray, setpoint_positions: np.ndarray, set
         return AcceptanceEstimate("setpoint_cp", n, 0, 0.0, float("nan"), float("nan"), 0.0, float("nan"), achieved, "undetermined", "no_setpoint_samples")
     period = float(np.median(np.diff(st))) if S.shape[0] > 1 else float("nan")
     idx = classify_samples(S, G, max(delta, 1e-9))
+    # the channel must be piecewise constant on the commanded targets (CRTK: the current setpoint to the low-level
+    # controller); a channel that reports intermediate values is an interpolating low-level controller, on which
+    # an acceptance cannot be told from a pass-through, exactly as for feedback crossings -> undetermined
+    in_window = st >= float(send[0]) if len(send) else np.ones(len(st), dtype=bool)
+    unmatched = float(np.mean(idx[in_window] < 0)) if in_window.any() else 0.0
     # acceptance event = first sample whose classification moves to a new target index (monotone, as sent)
     events = []
     last = -1
@@ -216,9 +222,12 @@ def estimate_acceptance(targets: np.ndarray, setpoint_positions: np.ndarray, set
             events.append((float(st[k]), int(j)))
             last = int(j)
     accepted = len(events)
+    if unmatched > UNMATCHED_UNDETERMINED_FRACTION:
+        return AcceptanceEstimate("setpoint_cp", n, accepted, accepted / n, float("nan"), float("nan"), 0.0, period, achieved, "undetermined",
+                                  "setpoint_cp is not piecewise constant on the commanded targets (%.0f%% of samples match none): an interpolating low-level controller cannot be told from a partial acceptor" % (100 * unmatched), unmatched)
     if accepted == 0:
         return AcceptanceEstimate("setpoint_cp", n, 0, 0.0, float("nan"), float(window_end - send[0]) if len(send) else float("nan"), 0.0, period, achieved,
-                                  "ok", "no commanded target was ever reported on setpoint_cp")
+                                  "ok", "no commanded target was ever reported on setpoint_cp", unmatched)
     times = [t for t, _ in events]
     gaps = [times[0] - float(send[0])] + [b - a for a, b in zip(times[:-1], times[1:])]
     # commands not accepted after the last acceptance leave the channel stale until the last command was sent: that
@@ -228,7 +237,7 @@ def estimate_acceptance(targets: np.ndarray, setpoint_positions: np.ndarray, set
     max_stale = max(gaps + ([tail] if (accepted < n and tail > 0) else []))
     span = times[-1] - float(send[0])
     rate = accepted / span if span > 0 else float("nan")
-    return AcceptanceEstimate("setpoint_cp", n, accepted, accepted / n, gaps[0], float(max_stale), float(rate) if not math.isnan(rate) else 0.0, period, achieved, "ok", "")
+    return AcceptanceEstimate("setpoint_cp", n, accepted, accepted / n, gaps[0], float(max_stale), float(rate) if not math.isnan(rate) else 0.0, period, achieved, "ok", "", unmatched)
 
 
 def rate_subverdict(acc: Optional[AcceptanceEstimate], f_required_hz: float) -> str:

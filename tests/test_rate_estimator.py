@@ -236,3 +236,17 @@ def test_acceptance_stale_interval_not_mean_rate():
         sp[k, 0] = targets[j, 0] if j >= 0 else 0.0
     acc2 = estimate_acceptance(targets, sp, sp_t, send, 1e-4, 1.2)
     assert rate_subverdict(acc2, 50.0) == "satisfied"
+
+
+def test_acceptance_channel_must_be_piecewise_constant():
+    # a low-level controller that interpolates its setpoint towards each goal reports intermediate setpoints; an
+    # acceptance cannot then be told from a pass-through, so the channel yields undetermined (0.1.2)
+    from crtk_conformance.rate_estimator import estimate_acceptance
+    targets = np.zeros((20, 3)); targets[:, 0] = np.arange(1, 21) * 0.001
+    t_sp = np.arange(400) * 0.001
+    sp = np.zeros((400, 3)); sp[:, 0] = np.linspace(0.0, 0.020, 400)  # ramps through the targets
+    acc = estimate_acceptance(targets, sp, t_sp, np.arange(20) * 0.01, 1e-5, 0.4)
+    assert acc.status == "undetermined" and acc.channel_unmatched_fraction > 0.5
+    sp2 = np.zeros((400, 3)); sp2[:, 0] = np.repeat(targets[:, 0], 20)  # piecewise constant
+    acc2 = estimate_acceptance(targets, sp2, t_sp, np.arange(20) * 0.01, 1e-5, 0.4)
+    assert acc2.status == "ok" and acc2.accepted == 20 and acc2.channel_unmatched_fraction == 0.0

@@ -30,11 +30,13 @@ PRESETS = {
     "emul-src-v1": MockConfig(
         publish_local=False, publish_T_b_w=True, measured_frame_id="psm1/baselink",
         unit_m=0.1, state_machine=False, require_enabled=False, watchdog_s=0.0, loop_rate_hz=120.0, publish_rate_hz=120.0,
+        publish_setpoint_cp=False,  # no setpoint_cp on the SRC interface (live inventory, ML101)
     ),
     # Same as above with SI units (v2.0.0: units_conversion.py l.6, psm_400006.json l.32; CHANGELOG.md l.29).
     "emul-src-v2": MockConfig(
         publish_local=False, publish_T_b_w=True, measured_frame_id="psm1/baselink",
         unit_m=1.0, state_machine=False, require_enabled=False, watchdog_s=0.0, loop_rate_hz=120.0, publish_rate_hz=120.0,
+        publish_setpoint_cp=False,  # no setpoint_cp on the SRC interface (live inventory, ML201)
     ),
     # Emulation of the AMBF object-layer command watchdog (ledger P32, P33: ambf d816d708 ObjectCommPlugin.cpp l.100 timeOut = 0.5;
     # RigidBodyRosCom.cpp l.69-84 reset to zero effort). Exposed here directly on the CRTK topics so that the liveness
@@ -44,7 +46,7 @@ PRESETS = {
     "emul-ambf-object-watchdog": MockConfig(
         publish_local=False, publish_T_b_w=True, measured_frame_id="psm1/baselink",
         state_machine=False, require_enabled=False, watchdog_s=0.5, watchdog_mode="release", release_drift_m_s=0.02,
-        loop_rate_hz=120.0, publish_rate_hz=120.0,
+        loop_rate_hz=120.0, publish_rate_hz=120.0, publish_setpoint_cp=False,
     ),
 }
 

@@ -68,6 +68,8 @@ class MockConfig:
     stamp_skew_s: float = 0.0  # header.stamp offset applied to local/measured_cp relative to measured_cp (0.1.1)
     max_speed_m_s: float = 0.0  # 0 = setpoints are attained instantaneously; >0 = move toward the goal at this speed (0.1.1)
     anchor_noise_m: float = 0.0  # Gaussian noise added to the out-of-band ground-truth (anchor) topic, validation only (0.1.1)
+    accept_every_k: int = 1  # 0.1.2: accept only every k-th received servo_cp (the others are silently ignored); 1 = all
+    publish_setpoint_cp: bool = True  # 0.1.2: publish the last ACCEPTED goal on setpoint_cp (the dVRK does; the SRC does not)
     # misc
     publish_measured_cp: bool = True  # False emulates a missing topic
     publish_measured_js: bool = True
@@ -113,6 +115,9 @@ class MockCRTKNode:
         self.pub_tbw = rospy.Publisher(f"{self.ns}/T_b_w", PoseStamped, queue_size=q) if cfg.publish_T_b_w else None
         self.pub_js = rospy.Publisher(f"{self.ns}/measured_js", JointState, queue_size=q) if cfg.publish_measured_js else None
         self.pub_truth = rospy.Publisher(f"{self.ns}/mock/ground_truth_cp", PoseStamped, queue_size=q)
+        self.pub_setpoint = rospy.Publisher(f"{self.ns}/setpoint_cp", PoseStamped, queue_size=q) if cfg.publish_setpoint_cp else None
+        self.accepted_goal_if: Optional[np.ndarray] = None  # last accepted goal, interface frame/units (what setpoint_cp reports)
+        self.accept_counter = 0
         self.pub_state = rospy.Publisher(f"{self.ns}/operating_state", OperatingState, queue_size=q, latch=True) if cfg.state_machine else None
         self.pub_tf = rospy.Publisher("/tf", TFMessage, queue_size=q) if cfg.publish_tf else None
         self.sub_servo = rospy.Subscriber(f"{self.ns}/servo_cp", PoseStamped, self._servo_cp_cb, queue_size=1)
@@ -129,7 +134,11 @@ class MockCRTKNode:
             if self.cfg.require_enabled and not (self.state == "ENABLED" and self.homed):
                 self.rejected += 1
                 return
+            self.accept_counter += 1
+            if self.cfg.accept_every_k > 1 and (self.accept_counter % self.cfg.accept_every_k) != 0:
+                return  # silently ignored (0.1.2: counterexample of the RC3 review, finding 2)
             T_if = pose_msg_to_matrix(msg)  # interface units, bound frame
+            self.accepted_goal_if = T_if.copy()
             T_if[:3, 3] *= self.cfg.unit_m  # -> metres
             T_local = self.T_bind_inv @ T_if  # -> arm-base frame
             delay = self.cfg.response_delay_s + self.rng.uniform(0.0, self.cfg.response_jitter_s)
@@ -246,6 +255,13 @@ class MockCRTKNode:
                 m = matrix_to_pose_msg(T_if, self.cfg.measured_frame_id)
                 m.header.stamp = stamp
                 self.pub_measured.publish(m)
+            if self.pub_setpoint is not None:
+                with self.lock:
+                    sp = self.accepted_goal_if
+                if sp is not None:
+                    m = matrix_to_pose_msg(sp, self.cfg.measured_frame_id)
+                    m.header.stamp = stamp
+                    self.pub_setpoint.publish(m)
             if self.pub_local is not None:
                 T_loc = pose.copy()
                 if self.cfg.noise_m > 0:
@@ -301,7 +317,7 @@ class MockCRTKNode:
         for s in (self.sub_servo, self.sub_state):
             if s is not None:
                 s.unregister()
-        for p in (self.pub_measured, self.pub_local, self.pub_tbw, self.pub_js, self.pub_truth, self.pub_state, self.pub_tf):
+        for p in (self.pub_measured, self.pub_local, self.pub_tbw, self.pub_js, self.pub_truth, self.pub_state, self.pub_tf, self.pub_setpoint):
             if p is not None:
                 p.unregister()
 

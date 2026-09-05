@@ -12,9 +12,13 @@ rises above every index seen before (monotone progress).  Consequences:
   * a large unmatched fraction yields `undetermined` rather than a number.
 
 This module is pure Python/numpy and is unit-tested with synthetic feedback (tests/test_rate_estimator.py).
-The quantity estimated is the *observable effective command/state rate* through the feedback channel; it
-is bounded by the client's achieved rate, the execution rate and the feedback publish rate, and it does not
-identify the internal controller rate.
+
+0.1.2 (RC3 adversarial review, finding 2): the feedback-based count is a DIAGNOSTIC -- the *feedback
+target-crossing rate* -- and is never the basis of a verdict.  A controller moving continuously towards one
+late command crosses every earlier target, so crossings do not identify accepted commands.  The verdict uses
+the accepted-command channel `setpoint_cp` (AcceptanceEstimate) and the longest stale interval between
+acceptances, which is the quantity the zero-order-hold bound (eq. 9) needs; an interface without
+`setpoint_cp` gets no rate verdict (undetermined) because the outside observer cannot tell.
 """
 from __future__ import annotations
 
@@ -162,11 +166,95 @@ def estimate_rate(
                         reached, transitions, rate, delta, delta_source, spacing, bounded, status, reason)
 
 
-def rate_subverdict(est: Optional[RateEstimate], f_required_hz: float) -> str:
-    """'satisfied' | 'violated' | 'undetermined' for the rate part of a declared rate expectation."""
+@dataclass
+class AcceptanceEstimate:
+    """0.1.2: what the ACCEPTED-command channel (setpoint_cp) shows for one command window.
+
+    The feedback-based RateEstimate counts target crossings of measured_cp; a controller that moves continuously
+    to a late command crosses the earlier targets without having accepted them (RC3 adversarial review,
+    finding 2), so crossings are not evidence of execution.  setpoint_cp reports the goal the implementation
+    is currently tracking, so a change of setpoint_cp to a commanded target is an acceptance event.  The
+    quantity that bounds the zero-order-hold error is not the mean rate but the LONGEST STALE INTERVAL
+    between acceptances (including the interval from the first command to the first acceptance), which is
+    what the verdict uses: v * max_stale_s <= epsilon  <=>  max_stale_s <= 1 / f_required.
+    """
+    channel: str  # 'setpoint_cp' | 'none'
+    commands_sent: int
+    accepted: int  # distinct commanded targets that appeared on the channel, in order
+    accepted_fraction: float
+    first_acceptance_delay_s: float  # first command sent -> first acceptance seen
+    max_stale_s: float  # longest interval between consecutive acceptance events (incl. the first delay)
+    mean_acceptance_rate_hz: float
+    channel_period_s: float  # publication period of the channel: acceptance times are quantised to it
+    client_rate_achieved_hz: float
+    status: str  # 'ok' | 'undetermined'
+    reason: str = ""
+
+    def to_dict(self) -> Dict:
+        return asdict(self)
+
+
+def estimate_acceptance(targets: np.ndarray, setpoint_positions: np.ndarray, setpoint_times: np.ndarray, send_times: np.ndarray,
+                        delta: float, window_end: float) -> AcceptanceEstimate:
+    """Acceptance events from the setpoint_cp channel: the first sample at which the channel reports each
+    commanded target (within delta; targets are separated by > 2 delta by construction of the probe)."""
+    G = np.asarray(targets, dtype=float)
+    n = int(G.shape[0])
+    S = np.asarray(setpoint_positions, dtype=float).reshape(-1, 3)
+    st = np.asarray(setpoint_times, dtype=float)
+    send = np.asarray(send_times, dtype=float)
+    achieved = (len(send) - 1) / (send[-1] - send[0]) if len(send) > 1 and send[-1] > send[0] else float("nan")
+    if S.shape[0] < 2:
+        return AcceptanceEstimate("setpoint_cp", n, 0, 0.0, float("nan"), float("nan"), 0.0, float("nan"), achieved, "undetermined", "no_setpoint_samples")
+    period = float(np.median(np.diff(st))) if S.shape[0] > 1 else float("nan")
+    idx = classify_samples(S, G, max(delta, 1e-9))
+    # acceptance event = first sample whose classification moves to a new target index (monotone, as sent)
+    events = []
+    last = -1
+    for k, j in enumerate(idx):
+        if j >= 0 and j > last:
+            events.append((float(st[k]), int(j)))
+            last = int(j)
+    accepted = len(events)
+    if accepted == 0:
+        return AcceptanceEstimate("setpoint_cp", n, 0, 0.0, float("nan"), float(window_end - send[0]) if len(send) else float("nan"), 0.0, period, achieved,
+                                  "ok", "no commanded target was ever reported on setpoint_cp")
+    times = [t for t, _ in events]
+    gaps = [times[0] - float(send[0])] + [b - a for a, b in zip(times[:-1], times[1:])]
+    # the window closes at window_end: a stale tail after the last acceptance counts too (bounded by the tail wait)
+    tail = float(window_end - times[-1])
+    max_stale = max(gaps + ([tail] if accepted < n else []))
+    span = times[-1] - float(send[0])
+    rate = accepted / span if span > 0 else float("nan")
+    return AcceptanceEstimate("setpoint_cp", n, accepted, accepted / n, gaps[0], float(max_stale), float(rate) if not math.isnan(rate) else 0.0, period, achieved, "ok", "")
+
+
+def rate_subverdict(acc: Optional[AcceptanceEstimate], f_required_hz: float) -> str:
+    """'satisfied' | 'violated' | 'undetermined' for the rate part of a declared rate expectation (0.1.2).
+
+    Decided on the accepted-command channel only.  satisfied: the longest stale interval is within the required
+    period 1/f_req (allowing one channel publication period of quantisation).  violated: the longest stale
+    interval exceeds the period by more than the quantisation AND the client itself sustained the required rate
+    (otherwise the client, not the implementation, is the limit).  Without a setpoint channel: undetermined
+    (feedback target crossings are reported as a diagnostic, never as a verdict)."""
+    if acc is None or acc.channel != "setpoint_cp" or acc.status != "ok":
+        return "undetermined"
+    req_period = 1.0 / f_required_hz
+    q = acc.channel_period_s if not math.isnan(acc.channel_period_s) else 0.0
+    if acc.accepted == 0:
+        return "violated" if (not math.isnan(acc.client_rate_achieved_hz) and acc.client_rate_achieved_hz >= f_required_hz) else "undetermined"
+    if acc.max_stale_s <= req_period + q:
+        return "satisfied"
+    if not math.isnan(acc.client_rate_achieved_hz) and acc.client_rate_achieved_hz >= f_required_hz:
+        return "violated"
+    return "undetermined"
+
+
+def crossing_subverdict_legacy(est: Optional[RateEstimate], f_required_hz: float) -> str:
+    """The 0.1.1 rule, kept ONLY so that the archived v0.1.1 reports can be re-read; it credited feedback target
+    crossings as executed commands and is not used for any verdict in 0.1.2."""
     if est is None or est.status != "ok":
         return "undetermined"
     if est.observable_rate_hz >= f_required_hz:
-        return "satisfied"  # meeting f_req is sufficient even when the channel bounds the observation
-    # below the required rate: only decide 'violated' when the channel is not the limit
+        return "satisfied"
     return "violated" if est.observation_bounded_by == "none" else "undetermined"

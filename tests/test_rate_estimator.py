@@ -185,12 +185,54 @@ def test_classify_and_count_basics():
     assert c["transitions"] == 3 and c["targets_reached"] == 3
 
 
-def test_subverdict():
+def test_subverdict_legacy_crossing_rule():
+    # 0.1.1 rule on the feedback crossings statistic; kept only as a record (not used for verdicts since 0.1.2,
+    # see test_reviewer_final_command_only_counterexample)
+    from crtk_conformance.rate_estimator import crossing_subverdict_legacy
     e = run()
-    assert rate_subverdict(e, 50.0) == "satisfied"
-    assert rate_subverdict(e, 150.0) == "undetermined"  # the client itself only presented 100 Hz
+    assert crossing_subverdict_legacy(e, 50.0) == "satisfied"
+    assert crossing_subverdict_legacy(e, 150.0) == "undetermined"  # the client itself only presented 100 Hz
     e_slow = run(exec_hz=50.0, publish_hz=200.0)
-    assert rate_subverdict(e_slow, 80.0) == "violated"  # execution, not the channel, is the limit
+    assert crossing_subverdict_legacy(e_slow, 80.0) == "violated"
     e2 = run(publish_hz=30.0)
-    assert rate_subverdict(e2, 50.0) == "undetermined"
+    assert crossing_subverdict_legacy(e2, 50.0) == "undetermined"
+    assert crossing_subverdict_legacy(None, 50.0) == "undetermined"
+
+
+# ------------------------------------------------------------------ 0.1.2: accepted-command channel (RC3 review, finding 2)
+def test_reviewer_final_command_only_counterexample():
+    from crtk_conformance.rate_estimator import estimate_acceptance, rate_subverdict
+    targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.0005
+    samples = np.vstack([np.zeros((100, 3)), targets])
+    est = estimate_rate(targets, samples, np.arange(200) * 0.01, np.arange(100) * 0.01, 100.0, 5e-5, "synthetic", 0.0, 2.0)
+    assert est.transitions == 100  # the crossings statistic is fooled, by construction ...
+    # ... but the verdict comes from the accepted-command channel: only the final target ever appears there
+    sp = np.zeros((200, 3)); sp[99:, 0] = 0.05
+    acc = estimate_acceptance(targets, sp, np.arange(200) * 0.01, np.arange(100) * 0.01, 5e-5, 2.0)
+    assert acc.accepted == 1 and acc.max_stale_s > 0.9
+    assert rate_subverdict(acc, 50.0) == "violated"
     assert rate_subverdict(None, 50.0) == "undetermined"
+
+
+def test_acceptance_stale_interval_not_mean_rate():
+    from crtk_conformance.rate_estimator import estimate_acceptance, rate_subverdict
+    # 100 commands at 100 Hz; the channel accepts 50 in the first 0.25 s and 50 in the last 0.25 s: mean rate 100 Hz
+    # over the window but a 0.5 s stale interval in the middle -> violated for f_req = 50 Hz (period 20 ms)
+    targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.001
+    send = np.arange(100) * 0.01
+    t_acc = np.concatenate([np.arange(50) * 0.005, 0.75 + np.arange(50) * 0.005])
+    sp_t = np.arange(0, 1.2, 0.002)
+    sp = np.zeros((len(sp_t), 3))
+    for k, t in enumerate(sp_t):
+        j = int(np.searchsorted(t_acc, t, side="right")) - 1
+        sp[k, 0] = targets[j, 0] if j >= 0 else 0.0
+    acc = estimate_acceptance(targets, sp, sp_t, send, 1e-4, 1.2)
+    assert acc.accepted == 100 and acc.max_stale_s > 0.45
+    assert rate_subverdict(acc, 50.0) == "violated"
+    # the same 100 acceptances spread evenly at 100 Hz -> satisfied
+    t_acc2 = np.arange(100) * 0.01 + 0.002
+    for k, t in enumerate(sp_t):
+        j = int(np.searchsorted(t_acc2, t, side="right")) - 1
+        sp[k, 0] = targets[j, 0] if j >= 0 else 0.0
+    acc2 = estimate_acceptance(targets, sp, sp_t, send, 1e-4, 1.2)
+    assert rate_subverdict(acc2, 50.0) == "satisfied"

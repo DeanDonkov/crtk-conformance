@@ -80,7 +80,7 @@ def run(args) -> int:
                                             bisection_steps=args.bisection_steps, rates_hz=rates, expectations=exp,
                                             step_if=args.temporal_step_mm / 1000.0, response_timeout_s=args.response_timeout_s,
                                             rate_match_tolerance_m=(args.rate_match_tolerance_mm / 1000.0) if args.rate_match_tolerance_mm is not None else None,
-                                            rate_window_s=args.rate_window_s, rate_max_step_if=args.rate_max_step_mm / 1000.0).run())
+                                            rate_window_s=args.rate_window_s, rate_max_step_if=args.rate_max_step_mm / 1000.0, still_tol_m=args.still_tol_mm / 1000.0).run())
     params = {k: v for k, v in vars(args).items() if k not in ("cmd",)}
     rep = build_report(args.namespace, tol, disc, results, os.environ.get("ROS_MASTER_URI", ""), expectations=exp, parameters=params)
     with open(args.out, "w") as f:

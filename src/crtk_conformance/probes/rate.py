@@ -88,8 +88,10 @@ class RateSensitivityProbe:
         stream_rate_hz: float = 100.0,
         stream_duration_s: float = 0.3,
         expect_state_machine: Optional[str] = None,  # legacy alias: 'yes' | 'no' | 'any'
+        still_tol_m: float = 1e-5,
     ):
         self.a = adapter
+        self.still_tol = still_tol_m  # implementation constant: motion below max(this, 3 sigma_hat) is 'still' (drift onset threshold)
         self.tol = tol
         self.trials = trials
         self.gap_max = gap_max_s
@@ -243,6 +245,10 @@ class RateSensitivityProbe:
         att = 0
         ratios: Dict[str, List[float]] = {}
         dirs = [(ax, sg) for ax in (0, 1, 2) for sg in (1, -1)]
+        # 0.1.2: a stop policy may have fired during the silent settling before this call (every v0.1.1 fault case with
+        # tau_w < 1 s had no latency measurement for this reason); recover before the first probe and after any
+        # probe that did not respond, so that the latency allowance of the liveness interval is measured
+        self._recover(buf, base_T)
         for k in range(12):
             ax, sg = dirs[k % len(dirs)]
             cur = self.a.latest_pose(buf, 1.0)
@@ -252,6 +258,8 @@ class RateSensitivityProbe:
             r = self._response(buf, goal, timeout=max(1.0, 5 * self.response_timeout))
             if r["responded"] and not math.isnan(r["time_to_respond_s"]):
                 lat.append(r["time_to_respond_s"])
+            else:
+                self._recover(buf, base_T)
             att += r["attained"]
             if r["initial_distance_m"]:
                 ratios.setdefault(f"{ax}{'+' if sg > 0 else '-'}", []).append(float(r["reduction_m"] / r["initial_distance_m"]))
@@ -359,14 +367,16 @@ class RateSensitivityProbe:
         fp = self.resolution.get("feedback_period_s", 0.01)
         ref_len = max(0.1, float(self.resolution.get("settle_hint_s", 0.0) or 0.0))
         gap_pos = [(tq - t_last, pose_msg_to_matrix(m)[:3, 3]) for tq, m in gap_samples]
-        ref_pts = [q for tq, q in gap_pos if tq <= ref_len] or ([gap_pos[0][1]] if gap_pos else [])
+        # the reference is the settled pose at the END of the window (the last command's execution and the stream's
+        # tracking error land in its first part); motion across the window is flagged (settling or an early drift)
+        ref_pts = [q for tq, q in gap_pos if 0.5 * ref_len < tq <= ref_len] or [q for tq, q in gap_pos if tq <= ref_len] or ([gap_pos[0][1]] if gap_pos else [])
+        early_pts = [q for tq, q in gap_pos if tq <= 0.25 * ref_len]
         after = [(tq, q) for tq, q in gap_pos if tq > ref_len]
-        drift, onset, speed, ref_contaminated, thr = float("nan"), None, None, False, None
+        drift, onset, speed, ref_motion, thr = float("nan"), None, None, False, max(3.0 * self.sigma_hat, self.still_tol)
         if ref_pts and after:
             ref = np.mean(ref_pts, axis=0)
             d = [float(np.linalg.norm(q - ref)) for _, q in after]
             drift = max(d)
-            thr = max(3.0 * self.sigma_hat, self.still_tol if hasattr(self, "still_tol") else 0.0)
             # onset: first sample exceeding thr that is followed by two more exceedances (a spike is not a drift)
             for k in range(len(d) - 2):
                 if d[k] > thr and d[k + 1] > thr and d[k + 2] > thr:
@@ -377,11 +387,8 @@ class RateSensitivityProbe:
                 tt = np.array([tq for tq, _ in after[k:]]); dd = np.array(d[k:])
                 if len(tt) >= 2 and tt.ptp() > 0:
                     speed = float(np.polyfit(tt, dd, 1)[0])
-                # a drift that began inside the reference window contaminates the reference (its mean is then a
-                # moving point); detected as a trend across the window larger than thr
-                if len(ref_pts) >= 4:
-                    q = len(ref_pts) // 4
-                    ref_contaminated = float(np.linalg.norm(np.mean(ref_pts[-q:], axis=0) - np.mean(ref_pts[:q], axis=0))) > thr
+            if early_pts:
+                ref_motion = float(np.linalg.norm(np.mean(early_pts, axis=0) - ref)) > thr
         n_gap = len(gap_samples)
         if not resp["responded"]:
             cls = "faulted" if state in ("FAULT", "DISABLED") else "rejected"
@@ -397,7 +404,7 @@ class RateSensitivityProbe:
                 "executed": ok, "responded": resp["responded"], "closest_approach_m": resp["closest_m"], "moved_m": resp["moved_m"],
                 "initial_distance_m": resp["initial_distance_m"], "settled_distance_m": resp["settled_distance_m"], "reduction_m": resp["reduction_m"],
                 "time_to_execute_s": t_exec, "drift_m": drift, "drift_onset_s": onset, "drift_speed_m_s": speed, "onset_threshold_m": thr,
-                "reference_contaminated": ref_contaminated, "reference_window_s": ref_len,
+                "reference_window_motion": ref_motion, "reference_window_s": ref_len,
                 "samples_in_gap": n_gap, "class": cls, "state": state}
 
     @staticmethod
@@ -422,16 +429,16 @@ class RateSensitivityProbe:
         still below the hold tolerance when the next command arrived), with v_min the smallest drift speed
         estimated over the drifting trials.  The interval is the intersection of these bounds over all trials;
         a lower bound above an upper bound means the deterministic model does not describe the implementation
-        (status `inconsistent`, undetermined).  A drift that began inside the reference window cannot be timed
-        (its onset-based bound is not used).  The per-run brackets are kept for the record."""
+        (status `inconsistent`, undetermined).  A trial with motion inside the reference window (settling, or a drift
+        that began there) contributes no onset-based bound.  The per-run brackets are kept for the record."""
         r_floor = self.resolution.get("resolution_floor_s", 0.0)
         fp = float(self.resolution.get("feedback_period_s", 0.01) or 0.01)
-        L = float(self.resolution.get("response_latency_p95_s") or 0.0)
-        if not math.isfinite(L):
-            L = 0.0
+        L_raw = self.resolution.get("response_latency_p95_s")
+        L_known = L_raw is not None and math.isfinite(float(L_raw))
+        L = float(L_raw) if L_known else 0.0
         G = fp
         out = {"gap_max_s": self.gap_max, "resolution_floor_s": r_floor, "response_timeout_s": self.response_timeout,
-               "hold_tolerance_m": self.hold_tol, "latency_allowance_s": L, "granularity_allowance_s": G, "trials": []}
+               "hold_tolerance_m": self.hold_tol, "latency_allowance_s": (L if L_known else None), "granularity_allowance_s": G, "trials": []}
         big = [self._gap_trial(buf, base_T, self.gap_max) for _ in range(self.trials)]
         out["trials"] += big
         n_trip = sum(1 for b in big if self._tripped(b))
@@ -491,10 +498,15 @@ class RateSensitivityProbe:
         drifted = [t for t in tripping if t["class"] == "drifted"]
         speeds = [t["drift_speed_m_s"] for t in drifted if t.get("drift_speed_m_s") is not None and t["drift_speed_m_s"] > 0]
         v_min = min(speeds) if speeds else None
-        est = {"n": len(brackets), "brackets_s": brackets, "latency_allowance_s": L, "granularity_allowance_s": G, "feedback_period_s": fp,
+        est = {"n": len(brackets), "brackets_s": brackets, "latency_allowance_s": (L if L_known else None), "granularity_allowance_s": G, "feedback_period_s": fp,
                "drift_speed_min_m_s": v_min, "detection_delay_s": 0.0,
                "interval_semantics": ("intersection over trials of [passing gap - L - G - t_detect, trip evidence + L] and, for drifts, "
                                       "[onset - thr / v_min - fp - L, onset + L]; contains tau_w under a deterministic timeout evaluated at least once per feedback period")}
+        if not L_known:
+            est.update(status="undetermined", reason="response latency not measured (no latency probe responded): the latency allowance of the interval is unknown")
+            out["tau_w_estimate_s"] = est
+            out["finding"] = f"{out['stop_class']} observed but tau_w undetermined ({est['reason']}; n={len(brackets)})"
+            return out
         if out["stop_class"] == "drifted":
             if v_min is None:
                 est.update(status="undetermined", reason="drift speed not estimable (too few samples after the onset)")
@@ -506,10 +518,10 @@ class RateSensitivityProbe:
         highs = [hi_of(t) + L for t in tripping]
         onset_lows = []
         for t in drifted:
-            if t.get("drift_onset_s") is not None and not t.get("reference_contaminated") and v_min is not None and t.get("onset_threshold_m") is not None:
+            if t.get("drift_onset_s") is not None and not t.get("reference_window_motion") and v_min is not None and t.get("onset_threshold_m") is not None:
                 onset_lows.append(t["drift_onset_s"] - t["onset_threshold_m"] / v_min - fp - L)
         est["onset_based_lower_bounds_s"] = onset_lows
-        est["reference_contaminated_trials"] = sum(1 for t in drifted if t.get("reference_contaminated"))
+        est["reference_window_motion_trials"] = sum(1 for t in drifted if t.get("reference_window_motion"))
         lo_all = max(lows + onset_lows) if (lows or onset_lows) else 0.0
         hi_all = min(highs)
         est.update(interval_low_s=max(0.0, lo_all), interval_high_s=hi_all, point_s=0.5 * (max(0.0, lo_all) + hi_all),
@@ -562,7 +574,11 @@ class RateSensitivityProbe:
                                "status": "undetermined", "reason": "targets_not_separable",
                                "note": f"{n} targets at spacing >= 4 delta = {4 * delta:.3g} would need an excursion of {step:.3g} > max {self.rate_max_step:.3g}; "
                                        f"only {n_max} separable targets fit (minimum {MIN_RATE_TARGETS}); no commands sent",
-                               "step_used_m": None, "command_window_s": 0.0, "zoh_error_bound_m": None}
+                               "step_used_m": None, "command_window_s": 0.0, "zoh_error_bound_m": None,
+                               "feedback_target_crossings_hz": 0.0, "feedback_count_is_evidence_of_execution": False,
+                               "acceptance": AcceptanceEstimate(channel="setpoint_cp" if sp_buf is not None else "none", commands_sent=0, accepted=0, accepted_fraction=0.0,
+                                                                first_acceptance_delay_s=float("nan"), max_stale_s=None, mean_acceptance_rate_hz=0.0, channel_period_s=None,
+                                                                client_rate_achieved_hz=0.0, status="undetermined", reason="targets_not_separable").to_dict()}
                         out["per_rate"].append(row)
                         continue
                     n = n_max

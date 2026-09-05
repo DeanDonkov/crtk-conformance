@@ -221,9 +221,11 @@ def estimate_acceptance(targets: np.ndarray, setpoint_positions: np.ndarray, set
                                   "ok", "no commanded target was ever reported on setpoint_cp")
     times = [t for t, _ in events]
     gaps = [times[0] - float(send[0])] + [b - a for a, b in zip(times[:-1], times[1:])]
-    # the window closes at window_end: a stale tail after the last acceptance counts too (bounded by the tail wait)
-    tail = float(window_end - times[-1])
-    max_stale = max(gaps + ([tail] if accepted < n else []))
+    # commands not accepted after the last acceptance leave the channel stale until the last command was sent: that
+    # tail counts (up to the last send time, not to the end of the observation window, which includes the probe's
+    # own settling wait after the last command)
+    tail = float(send[-1] - times[-1]) if len(send) else 0.0
+    max_stale = max(gaps + ([tail] if (accepted < n and tail > 0) else []))
     span = times[-1] - float(send[0])
     rate = accepted / span if span > 0 else float("nan")
     return AcceptanceEstimate("setpoint_cp", n, accepted, accepted / n, gaps[0], float(max_stale), float(rate) if not math.isnan(rate) else 0.0, period, achieved, "ok", "")

@@ -1,6 +1,6 @@
 """RateSensitivityProbe — temporal binding class (state precondition, command liveness / stop behaviour, rate).
 
-Version 0.1.1 (designs: rc3/LIVENESS_PROBE_DESIGN.md, rc3/RATE_ESTIMATOR_DESIGN.md).
+Version 0.1.2 (designs: rc3/LIVENESS_PROBE_DESIGN.md, rc3/RATE_ESTIMATOR_DESIGN.md, both revised in rc4/).
 
 Sub-probes, each reported separately:
 
@@ -9,21 +9,28 @@ Sub-probes, each reported separately:
   B. liveness / stop      After streaming commands, stay silent for a gap g, then send one command.  The
      behaviour            probe first measures its own timing resolution (sleep, send, feedback period,
                           response latency) and reports a resolution floor r; gaps below r are
-                          `below_resolution`.  During the gap the pose is recorded and the stop behaviour
-                          is classified as hold / release / rejected|fault / not_observable (a command counts as
-                          rejected only when no motion toward it is observed; a tracking error is not a
-                          rejection: attained and responded are reported separately); the trip gap
-                          tau_w is estimated by bisection between realised gaps (monotonic clock) and is
-                          reported only with n >= 3 trials and a CI lower bound above the floor.
-  C. observable rate      Command distinct setpoints at f and classify feedback samples to the nearest
-                          commanded target within a matching tolerance (user-supplied or estimated from
-                          the resting noise); count monotone target transitions.  Reports the client's
-                          achieved rate, the feedback publish rate, matched/unmatched counts and whether
-                          the observation is channel-bounded.  Optional secondary channel on setpoint_cp.
+                          `below_resolution`.  During the gap the pose is recorded and the behaviour is
+                          classified OBSERVATIONALLY as held / drifted / rejected / faulted / not_observable
+                          (a command counts as rejected only when no motion toward it is observed; a tracking
+                          error is not a rejection).  For a tripping policy the timeout is bracketed by
+                          bisection between realised gaps (monotonic clock); the drift onset inside the gap
+                          tightens the bracket for a drift.  0.1.2: the timeout is reported as an interval
+                          that CONTAINS it under a deterministic-timeout model (union of the trial brackets
+                          widened by a transport-latency allowance), not as the repeatability of midpoints.
+  C. rate                 Command distinct setpoints at f.  Feedback samples are classified to the nearest
+                          commanded target and monotone target crossings counted -- a DIAGNOSTIC only, since a
+                          controller moving continuously to a late command crosses the earlier targets.
+                          0.1.2: the verdict uses the accepted-command channel setpoint_cp: acceptance events
+                          and the longest stale interval between them (what eq. (9) needs); an interface
+                          without setpoint_cp gets no rate verdict.
 
 Decision (temporal): only against the client's *declared* expectations (expectations.py):
-  state_machine required|forbidden, stop_behaviour hold|release|fault, rate required.  With no declared
-  temporal expectation the probe reports its observations and returns UNDETERMINED.
+  state_machine required|forbidden, stop_behaviour hold|fault|drift|release with a horizon, rate required.
+  With no declared temporal expectation the probe reports its observations and returns UNDETERMINED.
+  `hold` is decided as "held within the hold tolerance for silences up to the tested range and responded
+  afterwards"; a longer timeout is never excluded and the report says so.  `release` is undetermined from
+  the pose alone.  The eq. (7) timing margin is checked against the timeout INTERVAL (satisfied only below its
+  lower end, violated only above its upper end).
 
 Implementation constants (all exposed as constructor / CLI parameters; none is a task threshold):
   stream duration 0.3 s at 100 Hz, executed-tolerance 0.25 * step, resolution-sample counts (20 sleeps,
@@ -41,6 +48,8 @@ import numpy as np
 from ..adapter import PlatformAdapter, pose_msg_to_matrix
 from ..expectations import Expectations, TemporalExpectation, combine
 from ..rate_estimator import (
+    AcceptanceEstimate,
+    estimate_acceptance,
     RateEstimate,
     estimate_noise_sigma,
     estimate_rate,
@@ -52,7 +61,7 @@ from ..thresholds import Tolerance
 from .base import Outcome, ProbeResult
 from .common import ensure_enabled, wait_settled
 
-STOP_CLASSES = ("hold", "release", "rejected", "fault", "not_observable", "no_policy_within_range")
+STOP_CLASSES = ("held", "drifted", "rejected", "faulted", "not_observable", "held_through_range")  # 0.1.2: observational names
 
 
 MIN_RATE_TARGETS = 5  # fewest separable targets from which an observable rate is reported
@@ -320,7 +329,11 @@ class RateSensitivityProbe:
 
     # ------------------------------------------------------------------ B
     def _gap_trial(self, buf, base_T, gap_s: float) -> dict:
-        """Stream, stay silent for gap_s from the last command (no fixed sleep), send one command, classify."""
+        """Stream, stay silent for gap_s from the last command (no fixed sleep), send one command, classify.
+
+        0.1.2: observational classes `held` / `drifted` / `rejected` / `faulted` / `not_observable`; the drift
+        onset (first sustained departure from the settled pose by more than max(3 sigma_hat, still tolerance)) is
+        located inside the gap, so that a drift policy can be timed without the fixed 0.2 s window of 0.1.1."""
         self._recover(buf, base_T)
         t_last, p_last = self._stream(buf, base_T)
         buf.clear()
@@ -341,43 +354,84 @@ class RateSensitivityProbe:
         ok, t_exec = resp["attained"], resp["time_to_attain_s"]
         st = self.a.operating_state(0.2) if self.a.has("operating_state") else None
         state = None if st is None else st.state
-        # drift = motion *during* the gap: distance from where the pose settled at the start of the gap (mean of the
-        # first 0.1 s of gap samples) to the farthest sample after the first 0.2 s.  Measuring from the last streamed
-        # setpoint would confuse a steady-state tracking error with a release (found on the live SRC v1.0.0 instance).
-        gap_pos = [(tq, pose_msg_to_matrix(m)[:3, 3]) for tq, m in gap_samples]
-        ref_pts = [q for tq, q in gap_pos if tq <= t_last + 0.1] or ([gap_pos[0][1]] if gap_pos else [])
-        late = [q for tq, q in gap_pos if tq >= t_last + 0.2]
-        if ref_pts and late:
-            ref = np.mean(ref_pts, axis=0)
-            drifts = [float(np.linalg.norm(q - ref)) for q in late]
-        else:
-            drifts = []
-        drift = max(drifts) if drifts else float("nan")
-        n_gap = len(gap_samples)
+        # settled reference: samples in the first max(0.1 s, settle_hint) of the gap (the stream's tracking error
+        # settles there; measuring from the last streamed setpoint would confuse it with a drift -- live SRC v1.0.0)
         fp = self.resolution.get("feedback_period_s", 0.01)
+        ref_len = max(0.1, float(self.resolution.get("settle_hint_s", 0.0) or 0.0))
+        gap_pos = [(tq - t_last, pose_msg_to_matrix(m)[:3, 3]) for tq, m in gap_samples]
+        ref_pts = [q for tq, q in gap_pos if tq <= ref_len] or ([gap_pos[0][1]] if gap_pos else [])
+        after = [(tq, q) for tq, q in gap_pos if tq > ref_len]
+        drift, onset, speed, ref_contaminated, thr = float("nan"), None, None, False, None
+        if ref_pts and after:
+            ref = np.mean(ref_pts, axis=0)
+            d = [float(np.linalg.norm(q - ref)) for _, q in after]
+            drift = max(d)
+            thr = max(3.0 * self.sigma_hat, self.still_tol if hasattr(self, "still_tol") else 0.0)
+            # onset: first sample exceeding thr that is followed by two more exceedances (a spike is not a drift)
+            for k in range(len(d) - 2):
+                if d[k] > thr and d[k + 1] > thr and d[k + 2] > thr:
+                    onset = float(after[k][0])
+                    break
+            if onset is not None:
+                # drift speed: least-squares slope of the departure over the samples from the onset on (m/s)
+                tt = np.array([tq for tq, _ in after[k:]]); dd = np.array(d[k:])
+                if len(tt) >= 2 and tt.ptp() > 0:
+                    speed = float(np.polyfit(tt, dd, 1)[0])
+                # a drift that began inside the reference window contaminates the reference (its mean is then a
+                # moving point); detected as a trend across the window larger than thr
+                if len(ref_pts) >= 4:
+                    q = len(ref_pts) // 4
+                    ref_contaminated = float(np.linalg.norm(np.mean(ref_pts[-q:], axis=0) - np.mean(ref_pts[:q], axis=0))) > thr
+        n_gap = len(gap_samples)
         if not resp["responded"]:
-            cls = "fault" if state in ("FAULT", "DISABLED") else "rejected"
-        elif (n_gap < 2 and gap_s >= 2 * fp) or (not drifts and gap_s >= 0.3):
+            cls = "faulted" if state in ("FAULT", "DISABLED") else "rejected"
+        elif (n_gap < 2 and gap_s >= 2 * fp) or (not after and gap_s >= ref_len + 0.1):
             cls = "not_observable"
-        elif drifts and drift > self.hold_tol:
-            cls = "release"
+        elif after and drift > self.hold_tol:
+            cls = "drifted"
         else:
-            cls = "hold"
+            cls = "held"
         self.a.servo_cp(base_T)
         self._executed(buf, base_T, timeout=max(0.5, self.response_timeout))
         return {"gap_requested_s": gap_s, "gap_s": actual_gap, "below_resolution": gap_s < self.resolution.get("resolution_floor_s", 0.0),
                 "executed": ok, "responded": resp["responded"], "closest_approach_m": resp["closest_m"], "moved_m": resp["moved_m"],
                 "initial_distance_m": resp["initial_distance_m"], "settled_distance_m": resp["settled_distance_m"], "reduction_m": resp["reduction_m"],
-                "time_to_execute_s": t_exec, "drift_m": drift, "samples_in_gap": n_gap, "class": cls, "state": state}
+                "time_to_execute_s": t_exec, "drift_m": drift, "drift_onset_s": onset, "drift_speed_m_s": speed, "onset_threshold_m": thr,
+                "reference_contaminated": ref_contaminated, "reference_window_s": ref_len,
+                "samples_in_gap": n_gap, "class": cls, "state": state}
 
     @staticmethod
     def _tripped(r: dict) -> bool:
-        return r["class"] in ("rejected", "fault", "release")
+        return r["class"] in ("rejected", "faulted", "drifted")
 
     def probe_liveness(self, buf, base_T) -> dict:
+        """0.1.2: the timeout is reported as an INTERVAL that contains it under a deterministic-timeout model.
+
+        Every trial is evidence about tau_w:
+          * a passing trial (pose held, next command acted on) with realised silence g says the policy had not
+            fired, or had not yet become visible, by g:  tau_w >= g - L - G - t_detect;
+          * a tripping trial says the policy had fired by the time the trip became visible, h (the realised gap
+            for a rejection/fault, the drift onset for a drift):  tau_w <= h + L;
+          * a drift onset additionally bounds tau_w from below: the departure needs thr / v to exceed the onset
+            threshold plus one feedback period to be sampled:  tau_w >= onset - thr / v_min - fp - L.
+        Allowances (all recorded in the estimate): L = the measured p95 response latency (an upper bound on the
+        one-way transport latency the probe cannot observe); G = one feedback period, the assumed granularity at
+        which the implementation evaluates its policy (a polled watchdog cannot be resolved below its poll
+        period; the assumption is that it is evaluated at least once per feedback period); t_detect = 0 for a
+        rejection/fault and hold_tol / v_min + fp for a drift (a passing drift trial only says the departure was
+        still below the hold tolerance when the next command arrived), with v_min the smallest drift speed
+        estimated over the drifting trials.  The interval is the intersection of these bounds over all trials;
+        a lower bound above an upper bound means the deterministic model does not describe the implementation
+        (status `inconsistent`, undetermined).  A drift that began inside the reference window cannot be timed
+        (its onset-based bound is not used).  The per-run brackets are kept for the record."""
         r_floor = self.resolution.get("resolution_floor_s", 0.0)
+        fp = float(self.resolution.get("feedback_period_s", 0.01) or 0.01)
+        L = float(self.resolution.get("response_latency_p95_s") or 0.0)
+        if not math.isfinite(L):
+            L = 0.0
+        G = fp
         out = {"gap_max_s": self.gap_max, "resolution_floor_s": r_floor, "response_timeout_s": self.response_timeout,
-               "hold_tolerance_m": self.hold_tol, "trials": []}
+               "hold_tolerance_m": self.hold_tol, "latency_allowance_s": L, "granularity_allowance_s": G, "trials": []}
         big = [self._gap_trial(buf, base_T, self.gap_max) for _ in range(self.trials)]
         out["trials"] += big
         n_trip = sum(1 for b in big if self._tripped(b))
@@ -386,19 +440,24 @@ class RateSensitivityProbe:
         out["drift_during_gap_max_m"] = estimate(drifts).to_dict() if drifts else None
         classes = [b["class"] for b in big]
         if n_trip == 0:
-            out["stop_class"] = "not_observable" if all(c == "not_observable" for c in classes) else "no_policy_within_range"
+            out["stop_class"] = "not_observable" if all(c == "not_observable" for c in classes) else "held_through_range"
             out["tau_w_estimate_s"] = None
-            out["finding"] = (f"no stop policy detected up to {self.gap_max} s (n={len(big)}): post-gap commands executed, pose held"
-                              if out["stop_class"] == "no_policy_within_range" else f"stop behaviour not observable (measured_cp too sparse during the gap)")
+            out["finding"] = (f"held within {self.hold_tol*1e3:.2f} mm for silences up to {self.gap_max} s and responded afterwards (n={len(big)}); "
+                              f"a stop policy with a longer timeout is not excluded"
+                              if out["stop_class"] == "held_through_range" else "stop behaviour not observable (measured_cp too sparse during the gap)")
             return out
-        # majority class among tripped trials
         trip_classes = [b["class"] for b in big if self._tripped(b)]
         out["stop_class"] = max(set(trip_classes), key=trip_classes.count)
-        # bisection per trial between the resolution floor and gap_max
+        # bisection per run between the resolution floor and gap_max; each run yields a bracket of realised gaps
         lo0 = max(self.gap_min, r_floor)
-        taus: List[float] = []
-        widths: List[float] = []
+        brackets: List[List[float]] = []
         below = 0
+
+        def hi_of(r):
+            # the time by which the trip is evidenced: the realised gap, or the drift onset inside the gap
+            if r["class"] == "drifted" and r.get("drift_onset_s") is not None:
+                return min(r["gap_s"], r["drift_onset_s"])
+            return r["gap_s"]
         for _ in range(self.trials):
             r = self._gap_trial(buf, base_T, lo0)
             out["trials"].append(r)
@@ -406,31 +465,69 @@ class RateSensitivityProbe:
                 below += 1  # trips even at the smallest resolvable gap
                 continue
             lo, hi = lo0, self.gap_max
-            lo_real, hi_real = r["gap_s"], big[0]["gap_s"]
+            lo_real = r["gap_s"]
+            hi_real = min(hi_of(b) for b in big if self._tripped(b))
             for _ in range(self.bisect):
+                if hi_real - lo_real <= max(2 * fp, 0.5 * r_floor):
+                    break  # the bracket is already at the feedback resolution
                 mid = 0.5 * (lo + hi)
                 r = self._gap_trial(buf, base_T, mid)
                 out["trials"].append(r)
                 if self._tripped(r):
-                    hi, hi_real = mid, r["gap_s"]
+                    hi, hi_real = mid, min(hi_real, hi_of(r))
                 else:
-                    lo, lo_real = mid, r["gap_s"]
-            taus.append(0.5 * (lo_real + hi_real))
-            widths.append(hi_real - lo_real)
+                    lo, lo_real = mid, max(lo_real, r["gap_s"])
+            brackets.append([lo_real, hi_real])
         out["trials_below_resolution"] = below
-        if below > 0 and not taus:
-            out["tau_w_estimate_s"] = {"upper_bound_s": lo0, "n": below}
-            out["finding"] = f"{out['stop_class']} policy trips at every gap down to the resolution floor {lo0*1e3:.1f} ms: tau_w <= {lo0*1e3:.1f} ms (below resolution, n={below})"
+        out["brackets_s"] = brackets
+        if below > 0 and not brackets:
+            out["tau_w_estimate_s"] = {"upper_bound_s": lo0 + L, "n": below, "status": "upper_bound", "latency_allowance_s": L}
+            out["finding"] = f"{out['stop_class']} at every gap down to the resolution floor {lo0*1e3:.1f} ms: tau_w <= {(lo0 + L)*1e3:.1f} ms (below resolution, n={below})"
             return out
-        e = estimate(taus)
-        out["bisection_width_s"] = estimate(widths).to_dict() if widths else None
-        if e.n < 3 or not (e.ci_low > r_floor):
-            out["tau_w_estimate_s"] = dict(e.to_dict(), status="undetermined",
-                                           reason=("n < 3" if e.n < 3 else "CI lower bound not above the resolution floor"))
-            out["finding"] = f"{out['stop_class']} policy observed but tau_w undetermined ({out['tau_w_estimate_s']['reason']}; n={e.n})"
+        # ---- the interval from all trials
+        trials = out["trials"]
+        passing = [t for t in trials if t["class"] == "held"]
+        tripping = [t for t in trials if self._tripped(t)]
+        drifted = [t for t in tripping if t["class"] == "drifted"]
+        speeds = [t["drift_speed_m_s"] for t in drifted if t.get("drift_speed_m_s") is not None and t["drift_speed_m_s"] > 0]
+        v_min = min(speeds) if speeds else None
+        est = {"n": len(brackets), "brackets_s": brackets, "latency_allowance_s": L, "granularity_allowance_s": G, "feedback_period_s": fp,
+               "drift_speed_min_m_s": v_min, "detection_delay_s": 0.0,
+               "interval_semantics": ("intersection over trials of [passing gap - L - G - t_detect, trip evidence + L] and, for drifts, "
+                                      "[onset - thr / v_min - fp - L, onset + L]; contains tau_w under a deterministic timeout evaluated at least once per feedback period")}
+        if out["stop_class"] == "drifted":
+            if v_min is None:
+                est.update(status="undetermined", reason="drift speed not estimable (too few samples after the onset)")
+                out["tau_w_estimate_s"] = est
+                out["finding"] = f"drifted observed but tau_w undetermined ({est['reason']}; n={len(brackets)})"
+                return out
+            est["detection_delay_s"] = self.hold_tol / v_min + fp
+        lows = [t["gap_s"] - L - G - est["detection_delay_s"] for t in passing]
+        highs = [hi_of(t) + L for t in tripping]
+        onset_lows = []
+        for t in drifted:
+            if t.get("drift_onset_s") is not None and not t.get("reference_contaminated") and v_min is not None and t.get("onset_threshold_m") is not None:
+                onset_lows.append(t["drift_onset_s"] - t["onset_threshold_m"] / v_min - fp - L)
+        est["onset_based_lower_bounds_s"] = onset_lows
+        est["reference_contaminated_trials"] = sum(1 for t in drifted if t.get("reference_contaminated"))
+        lo_all = max(lows + onset_lows) if (lows or onset_lows) else 0.0
+        hi_all = min(highs)
+        est.update(interval_low_s=max(0.0, lo_all), interval_high_s=hi_all, point_s=0.5 * (max(0.0, lo_all) + hi_all),
+                   bracket_width_median_s=float(np.median([b[1] - b[0] for b in brackets])))
+        if lo_all > hi_all:
+            est.update(status="inconsistent", reason=f"lower bound {lo_all:.4f} s above upper bound {hi_all:.4f} s: the deterministic-timeout model does not describe the observations")
+            out["tau_w_estimate_s"] = est
+            out["finding"] = f"{out['stop_class']} observed but tau_w undetermined ({est['reason']}; n={len(brackets)})"
             return out
-        out["tau_w_estimate_s"] = dict(e.to_dict(), status="ok")
-        out["finding"] = f"{out['stop_class']} policy detected: tau_w ~ {e.mean:.3f} s (95% CI {e.ci_low:.3f}..{e.ci_high:.3f}, n={e.n})"
+        if len(brackets) < 3 or not (est["interval_low_s"] > r_floor):
+            est.update(status="undetermined", reason=("n < 3" if len(brackets) < 3 else "interval lower bound not above the resolution floor"))
+            out["tau_w_estimate_s"] = est
+            out["finding"] = f"{out['stop_class']} observed but tau_w undetermined ({est['reason']}; n={len(brackets)})"
+            return out
+        est["status"] = "ok"
+        out["tau_w_estimate_s"] = est
+        out["finding"] = (f"{out['stop_class']} policy detected: tau_w in [{est['interval_low_s']:.3f}, {est['interval_high_s']:.3f}] s "
+                          f"(midpoint {est['point_s']:.3f} s, n={len(brackets)}, allowances L {L*1e3:.0f} ms, G {G*1e3:.0f} ms, t_detect {est['detection_delay_s']*1e3:.0f} ms)")
         return out
 
     # ------------------------------------------------------------------ C
@@ -501,14 +598,22 @@ class RateSensitivityProbe:
             row["command_window_s"] = t_end_cmd - t_start
             if note:
                 row["note"] = note
-            row["zoh_error_bound_m"] = self.tol.zoh_error(est.observable_rate_hz) if est.observable_rate_hz > 0 else None
+            row["zoh_error_bound_m"] = None  # 0.1.2: set below from the longest stale interval of accepted commands (eq. 9 needs the max gap, not a mean rate)
+            # 0.1.2: the feedback count above is a DIAGNOSTIC (target crossings); the verdict uses the accepted-command
+            # channel setpoint_cp when the implementation exposes one, and is undetermined otherwise
+            row["feedback_target_crossings_hz"] = est.observable_rate_hz
+            row["feedback_count_is_evidence_of_execution"] = False
+            acc = None
             if sp_buf is not None:
                 sps = sp_buf.since(t_start)
-                if sps:
-                    SP = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in sps])
-                    est_sp = estimate_rate(targets, SP, np.array([t for t, _ in sps]), np.array(send_times), float(f), delta, src, t_start, t_end)
-                    row["setpoint_cp_accepted_rate_hz"] = est_sp.observable_rate_hz
-                    row["setpoint_cp_transitions"] = est_sp.transitions
+                SP = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in sps]) if sps else np.zeros((0, 3))
+                acc = estimate_acceptance(targets, SP, np.array([t for t, _ in sps]), np.array(send_times), delta, t_end)
+            else:
+                acc = AcceptanceEstimate("none", int(len(send_times)), 0, 0.0, float("nan"), float("nan"), 0.0, float("nan"),
+                                         row["client_rate_achieved_hz"], "undetermined", "no_accepted_command_channel: the interface publishes no setpoint_cp")
+            row["acceptance"] = acc.to_dict()
+            if acc.status == "ok" and acc.accepted > 0 and not math.isnan(acc.max_stale_s):
+                row["zoh_error_bound_m"] = self.tol.speed_m_s * acc.max_stale_s
             out["per_rate"].append(row)
             self.a.servo_cp(base_T)
             self._executed(buf, base_T, timeout=max(0.5, self.response_timeout))
@@ -572,27 +677,65 @@ class RateSensitivityProbe:
         tau = B.get("tau_w_estimate_s")
         res.estimates["stop_class"] = stop_class
         res.estimates["tau_w_estimate_s"] = tau
+        horizon = te.horizon_s if te.horizon_s is not None else self.gap_max
+        res.estimates["stop_horizon_s"] = horizon
+        tested_to = self.gap_max
         if te.stop_behaviour != "any":
-            if stop_class in (None, "not_observable"):
+            if horizon > tested_to + 1e-9:
                 sub["stop_behaviour"] = "undetermined"
+                notes.append(f"the client's stop expectation is claimed up to {horizon} s of silence but the probe tested silences only up to {tested_to} s")
+            elif stop_class in (None, "not_observable"):
+                sub["stop_behaviour"] = "undetermined"
+            elif te.stop_behaviour == "release":
+                sub["stop_behaviour"] = "undetermined"
+                notes.append(f"a 'release' (actuation released) expectation cannot be decided from the pose alone; observed stop behaviour: {stop_class}")
             elif te.stop_behaviour == "hold":
-                sub["stop_behaviour"] = "satisfied" if stop_class == "no_policy_within_range" else "violated"
-                if sub["stop_behaviour"] == "violated":
-                    notes.append(f"client expects the last setpoint to be held when commands stop; observed {stop_class}")
-            else:  # release | fault expected
-                want = ("release",) if te.stop_behaviour == "release" else ("fault", "rejected")
+                if stop_class == "held_through_range":
+                    sub["stop_behaviour"] = "satisfied"
+                    notes.append(f"held within {self.hold_tol*1e3:.2f} mm for silences up to {tested_to} s (claimed horizon {horizon} s) and responded afterwards")
+                else:
+                    # a trip observed: violated if the policy is evidenced within the horizon (trip evidence time
+                    # + L is an upper bound of tau_w); satisfied only if the interval's lower end is beyond it
+                    def _hi(t):
+                        return min(t["gap_s"], t["drift_onset_s"]) if t["class"] == "drifted" and t.get("drift_onset_s") is not None else t["gap_s"]
+                    trips = [t for t in B.get("trials", []) if self._tripped(t)]
+                    L_ = float(B.get("latency_allowance_s") or 0.0)
+                    trip_hi = min((_hi(t) + L_ for t in trips), default=None)
+                    tau_lo = tau.get("interval_low_s") if isinstance(tau, dict) and tau.get("status") == "ok" else None
+                    if trip_hi is not None and trip_hi <= horizon + 1e-9:
+                        sub["stop_behaviour"] = "violated"
+                        notes.append(f"client expects the pose to be held for silences up to {horizon} s; observed {stop_class} evidenced by {trip_hi:.3f} s of silence")
+                    elif tau_lo is not None and tau_lo > horizon:
+                        sub["stop_behaviour"] = "satisfied"
+                        notes.append(f"{stop_class} policy only beyond the claimed horizon {horizon} s (tau_w >= {tau_lo:.3f} s)")
+                    else:
+                        sub["stop_behaviour"] = "undetermined"
+                        notes.append(f"{stop_class} observed near the claimed horizon {horizon} s; whether the policy fires within it is undetermined")
+            else:  # fault | drift expected
+                want = ("faulted", "rejected") if te.stop_behaviour == "fault" else ("drifted",)
                 if stop_class in want:
                     ok_margin = True
                     if isinstance(tau, dict) and tau.get("status") == "ok":
-                        ok_margin = self.tol.liveness_ok(tau["ci_low"])
-                        if not ok_margin:
-                            notes.append(f"eq. (7) violated: client period 1/{self.tol.client_rate_hz} + J_max {self.tol.jitter_max_s} s >= tau_w CI low {tau['ci_low']:.3f} s")
-                    elif isinstance(tau, dict) and "upper_bound_s" in tau:
+                        # eq. (7) against the INTERVAL: satisfied only if the client's period + jitter is below the
+                        # lower end (which contains tau_w); violated only if it is above the upper end
+                        need = 1.0 / self.tol.client_rate_hz + self.tol.jitter_max_s
+                        if need < tau["interval_low_s"]:
+                            ok_margin = True
+                        elif need >= tau["interval_high_s"]:
+                            ok_margin = False
+                            notes.append(f"eq. (7) violated: client period + J_max = {need:.3f} s >= tau_w interval high {tau['interval_high_s']:.3f} s")
+                        else:
+                            ok_margin = None
+                            notes.append(f"eq. (7) undecided: client period + J_max = {need:.3f} s lies inside the tau_w interval [{tau['interval_low_s']:.3f}, {tau['interval_high_s']:.3f}] s")
+                    elif isinstance(tau, dict) and tau.get("status") == "upper_bound":
+                        need = 1.0 / self.tol.client_rate_hz + self.tol.jitter_max_s
+                        ok_margin = False if need >= tau["upper_bound_s"] else None
+                    elif isinstance(tau, dict):
                         ok_margin = None
                     sub["stop_behaviour"] = "satisfied" if ok_margin is True else ("violated" if ok_margin is False else "undetermined")
-                elif stop_class == "no_policy_within_range":
+                elif stop_class == "held_through_range":
                     sub["stop_behaviour"] = "violated"
-                    notes.append(f"client expects a {te.stop_behaviour} stop policy; none detected up to {self.gap_max} s")
+                    notes.append(f"client expects a {te.stop_behaviour} stop policy within {horizon} s of silence; the pose was held and commands acted on up to {tested_to} s")
                 else:
                     sub["stop_behaviour"] = "violated"
                     notes.append(f"client expects {te.stop_behaviour} stop behaviour; observed {stop_class}")
@@ -601,20 +744,25 @@ class RateSensitivityProbe:
         at_client = None
         if rows:
             at_client = min(rows, key=lambda r: abs(r["command_rate_requested_hz"] - self.tol.client_rate_hz))
-            res.estimates["observable_rate_at_client_rate_hz"] = at_client["observable_rate_hz"]
+            res.estimates["feedback_target_crossings_at_client_rate_hz"] = at_client["observable_rate_hz"]  # diagnostic, not execution evidence
             res.estimates["client_rate_achieved_hz"] = at_client["client_rate_achieved_hz"]
             res.estimates["publish_rate_hz"] = at_client["publish_rate_hz"]
-            res.estimates["zoh_error_at_client_rate_m"] = at_client.get("zoh_error_bound_m")
+            acc0 = at_client.get("acceptance") or {}
+            res.estimates["zoh_error_at_client_rate_m"] = (self.tol.speed_m_s * acc0["max_stale_s"]) if acc0.get("status") == "ok" and acc0.get("max_stale_s") is not None and not (isinstance(acc0.get("max_stale_s"), float) and math.isnan(acc0["max_stale_s"])) else None
         if te.rate == "required":
-            est = None
-            if at_client is not None:
-                keys = RateEstimate.__dataclass_fields__.keys()
-                est = RateEstimate(**{k: at_client[k] for k in keys})
-            sub["rate"] = rate_subverdict(est, f_req)
+            acc = None
+            if at_client is not None and at_client.get("acceptance"):
+                acc = AcceptanceEstimate(**at_client["acceptance"])
+            sub["rate"] = rate_subverdict(acc, f_req)
+            if acc is not None:
+                res.estimates["accepted_commands_at_client_rate"] = acc.to_dict()
             if sub["rate"] == "violated":
-                notes.append(f"observable command rate {at_client['observable_rate_hz']:.1f} Hz < required {f_req:.1f} Hz (eq. 9) and the channel is not the limit")
+                notes.append(f"longest stale interval between accepted commands {acc.max_stale_s*1e3:.0f} ms > required period {1e3/f_req:.0f} ms (eq. 9; setpoint_cp channel, {acc.accepted} of {acc.commands_sent} commands accepted) while the client sustained {acc.client_rate_achieved_hz:.0f} Hz")
+            elif sub["rate"] == "satisfied":
+                notes.append(f"longest stale interval between accepted commands {acc.max_stale_s*1e3:.1f} ms <= required period {1e3/f_req:.0f} ms (setpoint_cp channel, {acc.accepted} of {acc.commands_sent} accepted)")
             elif sub["rate"] == "undetermined" and at_client is not None:
-                notes.append("rate expectation cannot be decided: " + (at_client.get("reason") or f"observation bounded by {at_client['observation_bounded_by']}"))
+                why = (acc.reason if acc is not None and acc.reason else None) or at_client.get("reason") or "client rate below the required rate: the client, not the implementation, is the limit"
+                notes.append("rate expectation cannot be decided: " + why)
         res.estimates["sub_verdicts"] = sub
         res.outcome = Outcome(combine(sub))
         if not te.declared:

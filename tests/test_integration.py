@@ -3,7 +3,8 @@
 0.1.1 additions cover the Reviewer #2 defects as regressions: client-relative spatial decision (M3),
 noise-robust rate estimation (M4), liveness resolution and stop-behaviour classes (M6), delayed
 commands executed rather than discarded (M5.3), n >= 3 guard on the liveness estimate (M5.4), and
-no-response handling of dropped commands (minor 3).
+no-response handling of dropped commands (minor 3).  0.1.2 (RC3 adversarial review): calibrated spatial region,
+accepted-command rate verdicts, liveness intervals that contain the timeout, observation horizons.
 """
 import math
 import os
@@ -54,7 +55,7 @@ def adapter(anchor=True):
 def test_frame_probe_recovers_injected_transform_discover_only(master):
     with mock_node("reference", {"bind_translation_m": [0.02, -0.01, 0.005], "bind_angle_deg": 30.0, "bind_axis": [0, 0, 1]}):
         a = adapter()
-        r = FrameSemanticsProbe(a, TOL, trials=3, samples_per_trial=3).run()
+        r = FrameSemanticsProbe(a, TOL, trials=5, samples_per_trial=3).run()
         a.close()
     assert r.outcome == Outcome.UNDETERMINED  # no expectation declared -> no verdict
     t = np.array(r.estimates["binding_translation_m"])
@@ -66,12 +67,12 @@ def test_frame_probe_identity_expectation(master):
     e = Expectations.from_dict({"spatial": {"mode": "identity"}})
     with mock_node("reference", {}):
         a = adapter()
-        r = FrameSemanticsProbe(a, TOL, trials=3, samples_per_trial=3, expectations=e).run()
+        r = FrameSemanticsProbe(a, TOL, trials=5, samples_per_trial=3, expectations=e).run()
         a.close()
     assert r.outcome == Outcome.CONFORMANT
     with mock_node("reference", {"bind_translation_m": [0.002, 0, 0]}):
         a = adapter()
-        r = FrameSemanticsProbe(a, TOL, trials=3, samples_per_trial=3, expectations=e).run()
+        r = FrameSemanticsProbe(a, TOL, trials=5, samples_per_trial=3, expectations=e).run()
         a.close()
     assert r.outcome == Outcome.DIVERGENT
 
@@ -80,13 +81,13 @@ def test_frame_probe_non_identity_expected_transform(master):
     e = jhu_expectation()
     with mock_node("reference", JHU):
         a = adapter()
-        r = FrameSemanticsProbe(a, TOL, trials=3, samples_per_trial=3, expectations=e).run()
+        r = FrameSemanticsProbe(a, TOL, trials=5, samples_per_trial=3, expectations=e).run()
         a.close()
     assert r.outcome == Outcome.CONFORMANT  # the JHU-like binding is what the client expects
     assert r.estimates["residual_translation_norm_m"] < 1e-6
     with mock_node("reference", JHU):
         a = adapter()
-        r = FrameSemanticsProbe(a, TOL, trials=3, samples_per_trial=3, expectations=Expectations.from_dict({"spatial": {"mode": "identity"}})).run()
+        r = FrameSemanticsProbe(a, TOL, trials=5, samples_per_trial=3, expectations=Expectations.from_dict({"spatial": {"mode": "identity"}})).run()
         a.close()
     assert r.outcome == Outcome.DIVERGENT  # the same binding against an identity expectation
 
@@ -94,7 +95,7 @@ def test_frame_probe_non_identity_expected_transform(master):
 def test_frame_probe_undetermined_without_local_whatever_the_expectation(master):
     with mock_node("emul-src-v1"):
         a = adapter()
-        r = FrameSemanticsProbe(a, TOL, trials=2, expectations=Expectations.from_dict({"spatial": {"mode": "identity"}})).run()
+        r = FrameSemanticsProbe(a, TOL, trials=2, expectations=Expectations.from_dict({"spatial": {"mode": "identity"}})).run()  # n <= 3: undetermined by construction
         a.close()
     assert r.outcome == Outcome.UNDETERMINED
     assert "T_b_w_translation_m" in r.estimates
@@ -192,9 +193,12 @@ def test_liveness_fault_estimate_and_resolution(master):
                                  expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "fault"}})).run()
         a.close()
     L = r.observations["liveness"]
-    assert L["stop_class"] == "fault"
+    assert L["stop_class"] == "faulted"
     tau = L["tau_w_estimate_s"]
-    assert tau["status"] == "ok" and abs(tau["mean"] - 0.25) < 0.03 and tau["n"] == 3
+    # 0.1.2: the interval must CONTAIN the injected timeout (RC3 review, finding 3), and be tight
+    assert tau["status"] == "ok" and tau["n"] == 3
+    assert tau["interval_low_s"] <= 0.25 <= tau["interval_high_s"], tau
+    assert tau["interval_high_s"] - tau["interval_low_s"] < 0.15
     assert r.observations["resolution"]["resolution_floor_s"] < 0.1
     assert r.outcome == Outcome.CONFORMANT  # the client's 100 Hz stream keeps well inside 0.25 s
 
@@ -206,9 +210,9 @@ def test_liveness_release_is_a_stop_policy_not_no_policy(master):
                                  expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "hold"}})).run()
         a.close()
     L = r.observations["liveness"]
-    assert L["stop_class"] == "release"
-    assert "no stop policy" not in L["finding"]
-    assert r.outcome == Outcome.DIVERGENT  # client expects hold; the implementation releases
+    assert L["stop_class"] == "drifted"
+    assert "held within" not in L["finding"]
+    assert r.outcome == Outcome.DIVERGENT  # client expects hold within the horizon; the pose drifted at 0.5 s
 
 
 def test_liveness_hold_no_policy(master):
@@ -217,8 +221,9 @@ def test_liveness_hold_no_policy(master):
         r = RateSensitivityProbe(a, TOL, trials=3, gap_max_s=0.5, rates_hz=(100,),
                                  expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "hold"}})).run()
         a.close()
-    assert r.observations["liveness"]["stop_class"] == "no_policy_within_range"
-    assert r.outcome == Outcome.CONFORMANT
+    assert r.observations["liveness"]["stop_class"] == "held_through_range"
+    assert "longer timeout is not excluded" in r.observations["liveness"]["finding"]
+    assert r.outcome == Outcome.CONFORMANT  # held through the (default) horizon = tested range
 
 
 def test_liveness_below_resolution_is_not_a_number(master):
@@ -318,8 +323,10 @@ def test_liveness_short_release_with_drift_is_detected(master):
                                  expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "hold"}})).run()
         a.close()
     L = r.observations["liveness"]
-    assert L["stop_class"] == "release"
+    assert L["stop_class"] == "drifted"
     assert r.observations["resolution"]["resting_noise_sigma_m"] < 0.001
+    tau = L["tau_w_estimate_s"]
+    assert tau["status"] == "ok" and tau["interval_low_s"] <= 0.1 <= tau["interval_high_s"], tau  # onset-based, no 0.2 s window
     assert r.outcome == Outcome.DIVERGENT
 
 
@@ -332,3 +339,108 @@ def test_scale_probe_streams_goals_so_a_release_policy_does_not_corrupt_the_esti
         a.close()
     s = r.estimates["scale_anchored"]
     assert abs(s["mean"] - 1.0) < 0.02 and r.outcome == Outcome.CONFORMANT
+
+
+# ------------------------------------------------------------------ 0.1.2: RC3 adversarial review regressions
+def test_rate_final_command_only_is_not_credited(master):
+    # RC3 review finding 2: only 1 of every 100 commands is accepted and the arm moves continuously to it,
+    # crossing every earlier target.  Feedback crossings (diagnostic) can be ~100; the verdict must come from
+    # setpoint_cp: one acceptance per 100 commands -> a stale interval of ~1 s -> violated for a 50 Hz requirement.
+    with mock_node("reference", {"accept_every_k": 100, "max_speed_m_s": 0.05, "loop_rate_hz": 1000, "publish_rate_hz": 200, "seed": 8}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.2, bisection_steps=2, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
+        a.close()
+    row = r.observations["effective_rate"]["per_rate"][0]
+    acc = row["acceptance"]
+    assert acc["channel"] == "setpoint_cp" and acc["accepted"] <= 2 and acc["max_stale_s"] > 0.5
+    assert row["feedback_count_is_evidence_of_execution"] is False
+    assert r.estimates["sub_verdicts"]["rate"] == "violated"
+    assert r.outcome == Outcome.DIVERGENT
+
+
+def test_rate_without_setpoint_channel_is_undetermined(master):
+    # the SRC emulations publish no setpoint_cp: no rate verdict, whatever the feedback shows
+    with mock_node("emul-src-v2", {}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.2, bisection_steps=2, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
+        a.close()
+    row = r.observations["effective_rate"]["per_rate"][0]
+    assert row["acceptance"]["channel"] == "none"
+    assert r.estimates["sub_verdicts"]["rate"] == "undetermined"
+    assert r.outcome == Outcome.UNDETERMINED
+
+
+def test_rate_accepted_channel_satisfied_on_reference(master):
+    with mock_node("reference", {"loop_rate_hz": 1000, "publish_rate_hz": 500, "seed": 9}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.2, bisection_steps=2, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
+        a.close()
+    acc = r.observations["effective_rate"]["per_rate"][0]["acceptance"]
+    assert acc["accepted"] >= 0.9 * acc["commands_sent"] and acc["max_stale_s"] < 0.02 + acc["channel_period_s"] + 0.005
+    assert r.estimates["sub_verdicts"]["rate"] == "satisfied"
+
+
+def test_rate_fifty_percent_drops_violate_the_stale_interval_criterion(master):
+    # random 50 % drops of a 100 Hz stream leave stale intervals well above the 20 ms period a 50 Hz requirement allows
+    with mock_node("reference", {"drop_prob": 0.5, "loop_rate_hz": 1000, "publish_rate_hz": 500, "seed": 10}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.2, bisection_steps=2, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
+        a.close()
+    acc = r.observations["effective_rate"]["per_rate"][0]["acceptance"]
+    assert acc["max_stale_s"] > 0.02
+    assert r.estimates["sub_verdicts"]["rate"] == "violated"
+
+
+def test_hold_expectation_beyond_tested_horizon_is_undetermined(master):
+    with mock_node("reference", {}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=2, gap_max_s=0.4, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "hold", "horizon_s": 3.0}})).run()
+        a.close()
+    assert r.observations["liveness"]["stop_class"] == "held_through_range"
+    assert r.estimates["sub_verdicts"]["stop_behaviour"] == "undetermined"
+
+
+def test_release_expectation_is_undetermined_from_pose_alone(master):
+    with mock_node("emul-ambf-object-watchdog"):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=2, gap_max_s=1.0, bisection_steps=3, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "release"}})).run()
+        a.close()
+    assert r.observations["liveness"]["stop_class"] == "drifted"
+    assert r.estimates["sub_verdicts"]["stop_behaviour"] == "undetermined"
+    assert r.outcome == Outcome.UNDETERMINED
+
+
+def test_fault_expected_but_timeout_beyond_horizon_is_not_violated(master):
+    # a fault policy at 1.5 s, client claims a fault within 0.5 s: within the tested 0.6 s nothing trips -> violated
+    # for the declared horizon; with horizon 2 s (beyond the tested range) -> undetermined
+    with mock_node("reference", {"watchdog_s": 1.5, "watchdog_mode": "fault"}):
+        a = adapter()
+        r1 = RateSensitivityProbe(a, TOL, trials=2, gap_max_s=0.6, bisection_steps=2, rates_hz=(100,),
+                                  expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "fault", "horizon_s": 0.5}})).run()
+        r2 = RateSensitivityProbe(a, TOL, trials=2, gap_max_s=0.6, bisection_steps=2, rates_hz=(100,),
+                                  expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "fault", "horizon_s": 2.0}})).run()
+        a.close()
+    assert r1.estimates["sub_verdicts"]["stop_behaviour"] == "violated"
+    assert r2.estimates["sub_verdicts"]["stop_behaviour"] == "undetermined"
+
+
+def test_liveness_margin_uses_the_interval_not_a_point(master):
+    # RC3 review finding 3: a 50 ms fault policy and a client whose period + jitter (48 ms) sits inside the
+    # timeout interval must not be approved; a client at 100 Hz + 5 ms (15 ms) is approved
+    with mock_node("reference", {"watchdog_s": 0.05, "watchdog_mode": "fault"}):
+        a = adapter()
+        tight = Tolerance(epsilon_m=0.001, workspace_radius_m=0.1, speed_m_s=0.05, client_rate_hz=1.0 / 0.043, jitter_max_s=0.005)
+        r = RateSensitivityProbe(a, tight, trials=3, gap_max_s=0.3, bisection_steps=5, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "fault"}})).run()
+        a.close()
+    tau = r.observations["liveness"]["tau_w_estimate_s"]
+    assert tau["status"] in ("ok", "undetermined")
+    if tau["status"] == "ok":
+        assert tau["interval_low_s"] <= 0.05 <= tau["interval_high_s"], tau
+    assert r.estimates["sub_verdicts"]["stop_behaviour"] != "satisfied"

@@ -64,7 +64,7 @@ temporal:
 | `RateSensitivityProbe` — operating-state precondition; liveness / stop-behaviour probe with measured timing resolution, observational stop classes, drift onset/speed estimation and a timeout **interval** with explicit allowances; rate verdict on the accepted-command channel `setpoint_cp` (longest stale interval), with the feedback-crossing statistic kept as a diagnostic | identifying the internal controller rate (not identifiable through the interface); identifying a physical release from the pose; measuring the platform's own jitter; a rate verdict without `setpoint_cp` |
 | JSON report validated against `schema/report.schema.json`; text summary; every outcome-affecting constant recorded | PDF reports |
 | `crtk-mock` with presets emulating *documented* behaviours (built from cited configuration values) | any emulation of dVRK/AMBF/SRC *code* |
-| Unit tests (no ROS; «NUNIT») incl. the RC3 reviewer's counterexamples (`tests/adversarial/`) + integration tests (ROS 1; «NINT») | hardware tests of any kind |
+| Unit tests (no ROS; 55) incl. the RC3 reviewer's counterexamples (`tests/adversarial/`) + integration tests (ROS 1; 31) | hardware tests of any kind |
 
 Three probe families, one per binding class; the temporal probe has three sub-probes. There are no others.
 

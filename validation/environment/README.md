@@ -27,3 +27,11 @@ AMBF or of either SRC release was modified.
 
 `meta_env.json` in each live directory and `meta.json` in the mock archive record the interpreter, package
 versions (`pip freeze`), commits and commands of the run itself.
+
+## v0.1.2 (RC4) runs
+
+`run_mock_v012.sh` (mock campaign, `run_validation_v012.py`) and `run_all_rc4.sh` (mock campaign, then live v1, then
+live v2, sequentially) reproduce the v0.1.2 archive in the same `focal-crtk:rc3` image; `run_live.sh` is unchanged.
+The client expectation files now declare `horizon_s: 2.0` (the hold is claimed only up to the tested silence).
+The archive layout is `validation/v0.1.2/{mock, live-src-v1, live-src-v2}` plus the superseded first-freeze runs
+`*-run1-superseded/` (see their READMEs).

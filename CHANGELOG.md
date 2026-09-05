@@ -46,6 +46,20 @@ was produced under `validation/v0.1.2/`.
   interval coverage, accepted-channel rate cases, liveness interval coverage against injected timeouts,
   Fig. 5(d) rate labels: FPR = false divergent, FNR = false conformant). `analyze_v011.py` is kept as it was
   used for the v0.1.1 archive (its Fig. 5(d) legend had the two labels swapped; corrected in v012).
+- Tests: 55 unit (no ROS) + 31 integration (ROS 1), all passing in the validation container at the release commit.
+
+### Archive (`validation/v0.1.2/`)
+- `mock/` (commit d322518, 54.1 min), `live-src-v1/`, `live-src-v2/` (commit 0f4549b, which differs from d322518
+  in `validation/analyze_v012.py` only): the runs reported by manuscript RC4. `mock-run1-superseded/`,
+  `live-src-v{1,2}-run1-superseded/` (commit f9e2b51): the first freeze, superseded because the rate estimator did
+  not distinguish a stall of the probe's own send loop from a stale accepted-command channel (see the READMEs);
+  kept unchanged, used for no claim. The v0.1.1 and v0.1.0 archives are untouched.
+
+### Found by the campaign
+- A ~47 ms stall of the probe's Python send loop recurs in the 120 Hz-loop / 1000 Hz-publish configuration and in
+  one regression case; the rate verdict is `undetermined` there (client's longest send gap > required period).
+- Every v0.1.1 fault-mode liveness case with a timeout below 1 s had no latency measurement (the policy fired during
+  the silent settling before the latency probes); 0.1.2 recovers the implementation first.
 
 ## 0.1.1 — 2026-09-03 (branch `rc3-major-revision`)
 

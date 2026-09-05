@@ -1,0 +1,2810 @@
+{
+ "preset": "reference",
+ "overrides": {
+  "bind_translation_m": [
+   0.002,
+   0,
+   0
+  ],
+  "bind_angle_deg": 5.0,
+  "bind_axis": [
+   0,
+   0,
+   1
+  ],
+  "noise_m": 0.0001,
+  "seed": 10703
+ },
+ "expectation": {
+  "spatial": {
+   "mode": "identity",
+   "translation_m": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "orientation_tolerance_deg": null,
+   "declared": true
+  },
+  "dimensional": {
+   "mode": "discover_only",
+   "expected_unit_m": 1.0,
+   "declared": false
+  },
+  "temporal": {
+   "state_machine": "any",
+   "stop_behaviour": "any",
+   "rate": "any",
+   "horizon_s": null,
+   "declared": false
+  },
+  "source": "dict"
+ },
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.003045546000066679,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": true,
+    "type": "crtk_msgs/OperatingState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": true,
+    "type": "crtk_msgs/StringStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/local/measured_cp",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/operating_state",
+   "/PSM1/servo_cp",
+   "/PSM1/setpoint_cp",
+   "/PSM1/state_command"
+  ]
+ },
+ "truth": {
+  "t_m": [
+   0.002,
+   0,
+   0
+  ],
+  "t_norm_m": 0.002,
+  "theta_deg": 5.0,
+  "axis": [
+   0,
+   0,
+   1
+  ],
+  "exact_max_error_m": 0.010723877473067186,
+  "bound_eq3_m": 0.0107238774730672,
+  "noise_m": 0.0001,
+  "orientation_noise_deg": 0.0,
+  "replicates": 60,
+  "trials": 10
+ },
+ "replicates": [
+  {
+   "replicate": 0,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019888980322574556,
+     2.220322139382562e-05,
+     -2.990872557204816e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01071294118531834,
+    "e_min_m": 2.990872557204816e-05,
+    "ci_low_m": 0.01058743870465031,
+    "ci_high_m": 0.010838443665986372,
+    "delta_t_m": 0.0001255024806680311,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010713124289734784
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01071294118531834,
+    "std": null,
+    "ci_low": 0.01058743870465031,
+    "ci_high": 0.010838443665986372,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019888980322574556,
+    2.220322139382562e-05,
+    -2.990872557204816e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 1,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019834865259505292,
+     2.618700947478381e-05,
+     -3.434448060754436e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010707591938579482,
+    "e_min_m": 3.434448060754436e-05,
+    "ci_low_m": 0.01058291527539367,
+    "ci_high_m": 0.010832268601765295,
+    "delta_t_m": 0.00012467666318581225,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010707834151384463
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010707591938579482,
+    "std": null,
+    "ci_low": 0.01058291527539367,
+    "ci_high": 0.010832268601765295,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019834865259505292,
+    2.618700947478381e-05,
+    -3.434448060754436e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 2,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020059761319059554,
+     2.2276416168089212e-05,
+     -7.638375146578612e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01072998001001894,
+    "e_min_m": 7.638375146578612e-06,
+    "ci_low_m": 0.010573301246914848,
+    "ci_high_m": 0.010886658773123033,
+    "delta_t_m": 0.0001566787631040925,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010729991833034615
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01072998001001894,
+    "std": null,
+    "ci_low": 0.010573301246914848,
+    "ci_high": 0.010886658773123033,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020059761319059554,
+    2.2276416168089212e-05,
+    -7.638375146578612e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 3,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019634983071844794,
+     -1.1600695179130484e-05,
+     -3.3176508795448936e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010687410564374196,
+    "e_min_m": 3.3176508795448936e-06,
+    "ci_low_m": 0.010534904918634319,
+    "ci_high_m": 0.010839916210114073,
+    "delta_t_m": 0.00015250564573987663,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010687412852236941
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010687410564374196,
+    "std": null,
+    "ci_low": 0.010534904918634319,
+    "ci_high": 0.010839916210114073,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019634983071844794,
+    -1.1600695179130484e-05,
+    -3.3176508795448936e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 4,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002049461325843572,
+     -5.057669871247342e-07,
+     8.786961833627815e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010773342444732078,
+    "e_min_m": 8.786961833627815e-06,
+    "ci_low_m": 0.010645792066374215,
+    "ci_high_m": 0.01090089282308994,
+    "delta_t_m": 0.0001275503783578631,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010773357698057404
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010773342444732078,
+    "std": null,
+    "ci_low": 0.010645792066374215,
+    "ci_high": 0.01090089282308994,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002049461325843572,
+    -5.057669871247342e-07,
+    8.786961833627815e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 5,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.00201322054935552,
+     -1.5081606972861138e-05,
+     3.102678611845711e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010737154960215914,
+    "e_min_m": 3.102678611845711e-06,
+    "ci_low_m": 0.010622755114664468,
+    "ci_high_m": 0.01085155480576736,
+    "delta_t_m": 0.0001143998455514455,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010737156902711707
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010737154960215914,
+    "std": null,
+    "ci_low": 0.010622755114664468,
+    "ci_high": 0.01085155480576736,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.00201322054935552,
+    -1.5081606972861138e-05,
+    3.102678611845711e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 6,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019787474395674305,
+     -1.5564000936539212e-05,
+     -3.42142889322658e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010702740809540102,
+    "e_min_m": 3.42142889322658e-05,
+    "ci_low_m": 0.010548887154584559,
+    "ci_high_m": 0.010856594464495646,
+    "delta_t_m": 0.00015385365495554246,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010702981888020057
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010702740809540102,
+    "std": null,
+    "ci_low": 0.010548887154584559,
+    "ci_high": 0.010856594464495646,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019787474395674305,
+    -1.5564000936539212e-05,
+    -3.42142889322658e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 7,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020616262099978537,
+     -8.178431492677857e-06,
+     2.6244811589402066e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010785551836037847,
+    "e_min_m": 2.6244811589402066e-05,
+    "ci_low_m": 0.010643408852528992,
+    "ci_high_m": 0.010927694819546703,
+    "delta_t_m": 0.0001421429835088553,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010785686946958046
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010785551836037847,
+    "std": null,
+    "ci_low": 0.010643408852528992,
+    "ci_high": 0.010927694819546703,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020616262099978537,
+    -8.178431492677857e-06,
+    2.6244811589402066e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 8,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019791106871822565,
+     -2.476092627741884e-05,
+     -5.8913510618580065e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010703144669260697,
+    "e_min_m": 5.8913510618580065e-06,
+    "ci_low_m": 0.010552495409625556,
+    "ci_high_m": 0.010853793928895837,
+    "delta_t_m": 0.00015064925963513957,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010703151815750753
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010703144669260697,
+    "std": null,
+    "ci_low": 0.010552495409625556,
+    "ci_high": 0.010853793928895837,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019791106871822565,
+    -2.476092627741884e-05,
+    -5.8913510618580065e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 9,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019931550473573116,
+     -6.108764913780742e-06,
+     -2.065327458593863e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.0107170617825838,
+    "e_min_m": 2.065327458593863e-05,
+    "ci_low_m": 0.0105985195187245,
+    "ci_high_m": 0.0108356040464431,
+    "delta_t_m": 0.00011854226385929848,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010717148883980614
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0107170617825838,
+    "std": null,
+    "ci_low": 0.0105985195187245,
+    "ci_high": 0.0108356040464431,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019931550473573116,
+    -6.108764913780742e-06,
+    -2.065327458593863e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 10,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002045158613278814,
+     -1.393708871667304e-05,
+     6.520433485514567e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010769085548137132,
+    "e_min_m": 6.520433485514567e-06,
+    "ci_low_m": 0.010615026525108838,
+    "ci_high_m": 0.010923144571165427,
+    "delta_t_m": 0.00015405902302829315,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010769093968199722
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010769085548137132,
+    "std": null,
+    "ci_low": 0.010615026525108838,
+    "ci_high": 0.010923144571165427,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002045158613278814,
+    -1.393708871667304e-05,
+    6.520433485514567e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 11,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002007251240404671,
+     -1.7539102789181615e-05,
+     1.4418070331659592e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010731215025021435,
+    "e_min_m": 1.4418070331659592e-05,
+    "ci_low_m": 0.010583838791245779,
+    "ci_high_m": 0.010878591258797091,
+    "delta_t_m": 0.000147376233775655,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010731257119019542
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010731215025021435,
+    "std": null,
+    "ci_low": 0.010583838791245779,
+    "ci_high": 0.010878591258797091,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002007251240404671,
+    -1.7539102789181615e-05,
+    1.4418070331659592e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 12,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001989449650870732,
+     3.2614877514578723e-06,
+     3.821575815644019e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01071333047896566,
+    "e_min_m": 3.821575815644019e-06,
+    "ci_low_m": 0.01055876393228274,
+    "ci_high_m": 0.010867897025648582,
+    "delta_t_m": 0.00015456654668291966,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010713333467828752
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01071333047896566,
+    "std": null,
+    "ci_low": 0.01055876393228274,
+    "ci_high": 0.010867897025648582,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001989449650870732,
+    3.2614877514578723e-06,
+    3.821575815644019e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 13,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019947216755258675,
+     -7.630168739273825e-06,
+     -1.9689960131479558e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010718631827013146,
+    "e_min_m": 1.9689960131479558e-05,
+    "ci_low_m": 0.010566117907246637,
+    "ci_high_m": 0.010871145746779656,
+    "delta_t_m": 0.00015251391976650903,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010718710918950996
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010718631827013146,
+    "std": null,
+    "ci_low": 0.010566117907246637,
+    "ci_high": 0.010871145746779656,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019947216755258675,
+    -7.630168739273825e-06,
+    -1.9689960131479558e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 14,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019718795445069284,
+     3.150810029059389e-05,
+     1.8146370050427792e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010696024124126569,
+    "e_min_m": 1.8146370050427792e-05,
+    "ci_low_m": 0.010583107993682703,
+    "ci_high_m": 0.010808940254570434,
+    "delta_t_m": 0.00011291613044386512,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010696092215222252
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010696024124126569,
+    "std": null,
+    "ci_low": 0.010583107993682703,
+    "ci_high": 0.010808940254570434,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019718795445069284,
+    3.150810029059389e-05,
+    1.8146370050427792e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 15,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001957982932840168,
+     1.6973217650128424e-05,
+     1.259082098507947e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01068194139302477,
+    "e_min_m": 1.259082098507947e-05,
+    "ci_low_m": 0.010511981626045545,
+    "ci_high_m": 0.010851901160003993,
+    "delta_t_m": 0.00016995976697922358,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010681974453347495
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01068194139302477,
+    "std": null,
+    "ci_low": 0.010511981626045545,
+    "ci_high": 0.010851901160003993,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001957982932840168,
+    1.6973217650128424e-05,
+    1.259082098507947e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 16,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020174082812507758,
+     -2.5469639861906857e-05,
+     -2.562885950896352e-07
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010741446527189074,
+    "e_min_m": 2.562885950896352e-07,
+    "ci_low_m": 0.010579229051633348,
+    "ci_high_m": 0.0109036640027448,
+    "delta_t_m": 0.00016221747555572453,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010741446540409545
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010741446527189074,
+    "std": null,
+    "ci_low": 0.010579229051633348,
+    "ci_high": 0.0109036640027448,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020174082812507758,
+    -2.5469639861906857e-05,
+    -2.562885950896352e-07
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 17,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.00203005224328314,
+     3.3958104085898003e-06,
+     2.8984756702966074e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010753971617361168,
+    "e_min_m": 2.8984756702966074e-05,
+    "ci_low_m": 0.010604114758901323,
+    "ci_high_m": 0.010903828475821014,
+    "delta_t_m": 0.0001498568584598441,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.01075413946554681
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010753971617361168,
+    "std": null,
+    "ci_low": 0.010604114758901323,
+    "ci_high": 0.010903828475821014,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.00203005224328314,
+    3.3958104085898003e-06,
+    2.8984756702966074e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 18,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020177351290209646,
+     2.6463779420041292e-05,
+     -1.4518510269878604e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010741795950163458,
+    "e_min_m": 1.4518510269878604e-05,
+    "ci_low_m": 0.010580734355717169,
+    "ci_high_m": 0.010902857544609748,
+    "delta_t_m": 0.0001610615944462888,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010741838367050484
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010741795950163458,
+    "std": null,
+    "ci_low": 0.010580734355717169,
+    "ci_high": 0.010902857544609748,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020177351290209646,
+    2.6463779420041292e-05,
+    -1.4518510269878604e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 19,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.00197518330930102,
+     3.2198257741274686e-05,
+     5.868038611081817e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010699324812473196,
+    "e_min_m": 5.868038611081817e-06,
+    "ci_low_m": 0.010559122753944094,
+    "ci_high_m": 0.010839526871002298,
+    "delta_t_m": 0.00014020205852910213,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.01069933191876292
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010699324812473196,
+    "std": null,
+    "ci_low": 0.010559122753944094,
+    "ci_high": 0.010839526871002298,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.00197518330930102,
+    3.2198257741274686e-05,
+    5.868038611081817e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 20,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019853288612142433,
+     1.1645823135213317e-05,
+     3.298009764753779e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010709291273358228,
+    "e_min_m": 3.298009764753779e-05,
+    "ci_low_m": 0.010591420773870944,
+    "ci_high_m": 0.010827161772845512,
+    "delta_t_m": 0.00011787049948728363,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010709514398390284
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010709291273358228,
+    "std": null,
+    "ci_low": 0.010591420773870944,
+    "ci_high": 0.010827161772845512,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019853288612142433,
+    1.1645823135213317e-05,
+    3.298009764753779e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 21,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019972246250633202,
+     -9.278507677117676e-06,
+     6.14911731293216e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010721125414016194,
+    "e_min_m": 6.14911731293216e-06,
+    "ci_low_m": 0.010611026567953895,
+    "ci_high_m": 0.010831224260078494,
+    "delta_t_m": 0.00011009884606229814,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010721133116520658
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010721125414016194,
+    "std": null,
+    "ci_low": 0.010611026567953895,
+    "ci_high": 0.010831224260078494,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019972246250633202,
+    -9.278507677117676e-06,
+    6.14911731293216e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 22,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002031718832927953,
+     -1.7068549673850358e-05,
+     -1.2622202151998387e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010755675407832196,
+    "e_min_m": 1.2622202151998387e-05,
+    "ci_low_m": 0.010614169315709398,
+    "ci_high_m": 0.010897181499954995,
+    "delta_t_m": 0.00014150609212279787,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010755707207923978
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010755675407832196,
+    "std": null,
+    "ci_low": 0.010614169315709398,
+    "ci_high": 0.010897181499954995,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002031718832927953,
+    -1.7068549673850358e-05,
+    -1.2622202151998387e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 23,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002006757271068085,
+     1.68227015676518e-06,
+     4.866758759886264e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010730745811872264,
+    "e_min_m": 4.866758759886264e-05,
+    "ci_low_m": 0.01062667037838116,
+    "ci_high_m": 0.010834821245363368,
+    "delta_t_m": 0.00010407543349110309,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010731225501959828
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010730745811872264,
+    "std": null,
+    "ci_low": 0.01062667037838116,
+    "ci_high": 0.010834821245363368,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002006757271068085,
+    1.68227015676518e-06,
+    4.866758759886264e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 24,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019918991829733015,
+     -7.699804728338093e-07,
+     8.914759067927542e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010715780513080482,
+    "e_min_m": 8.914759067927542e-06,
+    "ci_low_m": 0.010608193752675773,
+    "ci_high_m": 0.010823367273485191,
+    "delta_t_m": 0.00010758676040470936,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010715796753793154
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010715780513080482,
+    "std": null,
+    "ci_low": 0.010608193752675773,
+    "ci_high": 0.010823367273485191,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019918991829733015,
+    -7.699804728338093e-07,
+    8.914759067927542e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 25,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019974648260206807,
+     1.312527029276334e-05,
+     2.0294111543596448e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01072140462843127,
+    "e_min_m": 2.0294111543596448e-05,
+    "ci_low_m": 0.010604163843744036,
+    "ci_high_m": 0.010838645413118502,
+    "delta_t_m": 0.00011724078468723272,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010721488509999154
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01072140462843127,
+    "std": null,
+    "ci_low": 0.010604163843744036,
+    "ci_high": 0.010838645413118502,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019974648260206807,
+    1.312527029276334e-05,
+    2.0294111543596448e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 26,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020296569396024687,
+     1.8036304133634358e-05,
+     6.656323144077492e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010753616609900278,
+    "e_min_m": 6.656323144077492e-06,
+    "ci_low_m": 0.010638581208556593,
+    "ci_high_m": 0.010868652011243964,
+    "delta_t_m": 0.00011503540134368497,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.01075362546416855
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010753616609900278,
+    "std": null,
+    "ci_low": 0.010638581208556593,
+    "ci_high": 0.010868652011243964,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020296569396024687,
+    1.8036304133634358e-05,
+    6.656323144077492e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 27,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001989891881825994,
+     3.34455762787526e-05,
+     -2.0492794259346918e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010714050603226782,
+    "e_min_m": 2.0492794259346918e-06,
+    "ci_low_m": 0.010568239748689716,
+    "ci_high_m": 0.010859861457763848,
+    "delta_t_m": 0.0001458108545370648,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010714051462314047
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010714050603226782,
+    "std": null,
+    "ci_low": 0.010568239748689716,
+    "ci_high": 0.010859861457763848,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001989891881825994,
+    3.34455762787526e-05,
+    -2.0492794259346918e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 28,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019964429081154407,
+     -1.296809191414162e-05,
+     -2.7651148477336457e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010720398158894296,
+    "e_min_m": 2.7651148477336457e-05,
+    "ci_low_m": 0.01055521097176431,
+    "ci_high_m": 0.010885585346024282,
+    "delta_t_m": 0.00016518718712998587,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010720553972348787
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010720398158894296,
+    "std": null,
+    "ci_low": 0.01055521097176431,
+    "ci_high": 0.010885585346024282,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019964429081154407,
+    -1.296809191414162e-05,
+    -2.7651148477336457e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 29,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002012434151716273,
+     1.4489529803854284e-05,
+     9.197190107648472e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010736367725764646,
+    "e_min_m": 9.197190107648472e-06,
+    "ci_low_m": 0.010578688671717986,
+    "ci_high_m": 0.010894046779811307,
+    "delta_t_m": 0.00015767905404665976,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010736384802189934
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010736367725764646,
+    "std": null,
+    "ci_low": 0.010578688671717986,
+    "ci_high": 0.010894046779811307,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002012434151716273,
+    1.4489529803854284e-05,
+    9.197190107648472e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 30,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002016416843887029,
+     -4.7138272607262964e-05,
+     -2.95419379446657e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010740885849627266,
+    "e_min_m": 2.95419379446657e-05,
+    "ci_low_m": 0.010620271076646096,
+    "ci_high_m": 0.010861500622608437,
+    "delta_t_m": 0.00012061477298116949,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.01074106155766438
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010740885849627266,
+    "std": null,
+    "ci_low": 0.010620271076646096,
+    "ci_high": 0.010861500622608437,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002016416843887029,
+    -4.7138272607262964e-05,
+    -2.95419379446657e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 31,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020189911402807956,
+     -1.553431489593472e-05,
+     -1.3020977156850414e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010742936264772154,
+    "e_min_m": 1.3020977156850414e-05,
+    "ci_low_m": 0.01061503222894378,
+    "ci_high_m": 0.010870840300600527,
+    "delta_t_m": 0.000127904035828373,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010742970359815272
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010742936264772154,
+    "std": null,
+    "ci_low": 0.01061503222894378,
+    "ci_high": 0.010870840300600527,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020189911402807956,
+    -1.553431489593472e-05,
+    -1.3020977156850414e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 32,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020170199550637604,
+     5.6017372997329156e-06,
+     -1.1195905626842639e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010740911041873268,
+    "e_min_m": 1.1195905626842639e-05,
+    "ci_low_m": 0.01062343446396063,
+    "ci_high_m": 0.010858387619785905,
+    "delta_t_m": 0.00011747657791263719,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010740936279073587
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010740911041873268,
+    "std": null,
+    "ci_low": 0.01062343446396063,
+    "ci_high": 0.010858387619785905,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020170199550637604,
+    5.6017372997329156e-06,
+    -1.1195905626842639e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 33,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020264664015782505,
+     -3.21307839321866e-05,
+     2.0462191956864827e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010750618057993811,
+    "e_min_m": 2.0462191956864827e-05,
+    "ci_low_m": 0.010602307348260061,
+    "ci_high_m": 0.01089892876772756,
+    "delta_t_m": 0.00014831070973374817,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010750701877227606
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010750618057993811,
+    "std": null,
+    "ci_low": 0.010602307348260061,
+    "ci_high": 0.01089892876772756,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020264664015782505,
+    -3.21307839321866e-05,
+    2.0462191956864827e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 34,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001986398146488635,
+     1.4906096795104146e-05,
+     2.319622418303469e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010710356665995159,
+    "e_min_m": 2.319622418303469e-05,
+    "ci_low_m": 0.010558861302179307,
+    "ci_high_m": 0.010861852029811011,
+    "delta_t_m": 0.0001514953638158515,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010710466975936484
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010710356665995159,
+    "std": null,
+    "ci_low": 0.010558861302179307,
+    "ci_high": 0.010861852029811011,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001986398146488635,
+    1.4906096795104146e-05,
+    2.319622418303469e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 35,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001985546169443026,
+     -8.966780600013851e-06,
+     -2.7408106749633173e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01070947896151263,
+    "e_min_m": 2.7408106749633173e-05,
+    "ci_low_m": 0.010565595056415578,
+    "ci_high_m": 0.010853362866609682,
+    "delta_t_m": 0.00014388390509705148,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.01070963304676169
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01070947896151263,
+    "std": null,
+    "ci_low": 0.010565595056415578,
+    "ci_high": 0.010853362866609682,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001985546169443026,
+    -8.966780600013851e-06,
+    -2.7408106749633173e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 36,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020114790927236734,
+     -1.3359370978466363e-06,
+     2.4791259083566386e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010735385634729882,
+    "e_min_m": 2.4791259083566386e-05,
+    "ci_low_m": 0.010633237607887284,
+    "ci_high_m": 0.010837533661572479,
+    "delta_t_m": 0.00010214802684259707,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010735509778365127
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010735385634729882,
+    "std": null,
+    "ci_low": 0.010633237607887284,
+    "ci_high": 0.010837533661572479,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020114790927236734,
+    -1.3359370978466363e-06,
+    2.4791259083566386e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 37,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001968653335476484,
+     -1.5106999076881312e-06,
+     -3.6803155018471644e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01069259472529803,
+    "e_min_m": 3.6803155018471644e-05,
+    "ci_low_m": 0.010561597143403503,
+    "ci_high_m": 0.010823592307192556,
+    "delta_t_m": 0.0001309975818945258,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010692875367864233
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01069259472529803,
+    "std": null,
+    "ci_low": 0.010561597143403503,
+    "ci_high": 0.010823592307192556,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001968653335476484,
+    -1.5106999076881312e-06,
+    -3.6803155018471644e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 38,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002026519085143647,
+     -1.3928563539658456e-05,
+     -1.2736043236612205e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010750451968365196,
+    "e_min_m": 1.2736043236612205e-05,
+    "ci_low_m": 0.010590557137819345,
+    "ci_high_m": 0.010910346798911048,
+    "delta_t_m": 0.00015989483054585125,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010750484443875786
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010750451968365196,
+    "std": null,
+    "ci_low": 0.010590557137819345,
+    "ci_high": 0.010910346798911048,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002026519085143647,
+    -1.3928563539658456e-05,
+    -1.2736043236612205e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 39,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001987259486727808,
+     1.8865945923578615e-05,
+     -2.5911336890831194e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010711257850002166,
+    "e_min_m": 2.5911336890831194e-05,
+    "ci_low_m": 0.010572437913705907,
+    "ci_high_m": 0.010850077786298425,
+    "delta_t_m": 0.00013881993629625904,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010711395419875144
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010711257850002166,
+    "std": null,
+    "ci_low": 0.010572437913705907,
+    "ci_high": 0.010850077786298425,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001987259486727808,
+    1.8865945923578615e-05,
+    -2.5911336890831194e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 40,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002027217921383082,
+     -1.1774246539195517e-05,
+     -3.4100736062088744e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01075118366775455,
+    "e_min_m": 3.4100736062088744e-05,
+    "ci_low_m": 0.010645505716010126,
+    "ci_high_m": 0.010856861619498975,
+    "delta_t_m": 0.00010567795174442382,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010751416373768538
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01075118366775455,
+    "std": null,
+    "ci_low": 0.010645505716010126,
+    "ci_high": 0.010856861619498975,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002027217921383082,
+    -1.1774246539195517e-05,
+    -3.4100736062088744e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 41,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019677747071788826,
+     -2.3382000592418164e-05,
+     -1.645577553777089e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010691803756729523,
+    "e_min_m": 1.645577553777089e-05,
+    "ci_low_m": 0.010569802630048003,
+    "ci_high_m": 0.010813804883411042,
+    "delta_t_m": 0.00012200112668151954,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010691859893901322
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010691803756729523,
+    "std": null,
+    "ci_low": 0.010569802630048003,
+    "ci_high": 0.010813804883411042,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019677747071788826,
+    -2.3382000592418164e-05,
+    -1.645577553777089e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 42,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001972455100526792,
+     -2.0961901264544865e-05,
+     -2.9592126014757473e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010696444364149448,
+    "e_min_m": 2.9592126014757473e-06,
+    "ci_low_m": 0.01055673282493119,
+    "ci_high_m": 0.010836155903367705,
+    "delta_t_m": 0.00013971153921825703,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010696446174491041
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010696444364149448,
+    "std": null,
+    "ci_low": 0.01055673282493119,
+    "ci_high": 0.010836155903367705,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001972455100526792,
+    -2.0961901264544865e-05,
+    -2.9592126014757473e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 43,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019638371212116652,
+     4.166333077859902e-06,
+     9.633437644038233e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010687723355343879,
+    "e_min_m": 9.633437644038233e-06,
+    "ci_low_m": 0.01051809495563094,
+    "ci_high_m": 0.010857351755056819,
+    "delta_t_m": 0.00016962839971293905,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010687742641580563
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010687723355343879,
+    "std": null,
+    "ci_low": 0.01051809495563094,
+    "ci_high": 0.010857351755056819,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019638371212116652,
+    4.166333077859902e-06,
+    9.633437644038233e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 44,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001994508045553352,
+     1.6701344979153894e-05,
+     -3.484006284266427e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010718456009373703,
+    "e_min_m": 3.484006284266427e-06,
+    "ci_low_m": 0.010560417532751078,
+    "ci_high_m": 0.010876494485996327,
+    "delta_t_m": 0.0001580384766226232,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010718458485961858
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010718456009373703,
+    "std": null,
+    "ci_low": 0.010560417532751078,
+    "ci_high": 0.010876494485996327,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001994508045553352,
+    1.6701344979153894e-05,
+    -3.484006284266427e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 45,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001975959540154251,
+     4.170138739027754e-05,
+     9.183189565965532e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010700280945650358,
+    "e_min_m": 9.183189565965532e-06,
+    "ci_low_m": 0.010545832023864034,
+    "ci_high_m": 0.010854729867436682,
+    "delta_t_m": 0.00015444892178632412,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010700298339433069
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010700280945650358,
+    "std": null,
+    "ci_low": 0.010545832023864034,
+    "ci_high": 0.010854729867436682,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001975959540154251,
+    4.170138739027754e-05,
+    9.183189565965532e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 46,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002005623301971619,
+     4.2217407051046335e-06,
+     1.9946403172702853e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010729523758715189,
+    "e_min_m": 1.9946403172702853e-05,
+    "ci_low_m": 0.010576908643002645,
+    "ci_high_m": 0.010882138874427733,
+    "delta_t_m": 0.0001526151157125427,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010729604401515977
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010729523758715189,
+    "std": null,
+    "ci_low": 0.010576908643002645,
+    "ci_high": 0.010882138874427733,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002005623301971619,
+    4.2217407051046335e-06,
+    1.9946403172702853e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 47,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020245322685445467,
+     -1.1564512877519656e-05,
+     -3.9697146050687586e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01074851607703058,
+    "e_min_m": 3.9697146050687586e-05,
+    "ci_low_m": 0.010639028300846079,
+    "ci_high_m": 0.01085800385321508,
+    "delta_t_m": 0.00010948777618449934,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010748831918910292
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01074851607703058,
+    "std": null,
+    "ci_low": 0.010639028300846079,
+    "ci_high": 0.01085800385321508,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020245322685445467,
+    -1.1564512877519656e-05,
+    -3.9697146050687586e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 48,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001971196042899055,
+     -3.6105724867788014e-05,
+     -1.183390531373229e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010695404221821025,
+    "e_min_m": 1.183390531373229e-06,
+    "ci_low_m": 0.010572599824403919,
+    "ci_high_m": 0.010818208619238132,
+    "delta_t_m": 0.00012280439741710553,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010695404511512581
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010695404221821025,
+    "std": null,
+    "ci_low": 0.010572599824403919,
+    "ci_high": 0.010818208619238132,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001971196042899055,
+    -3.6105724867788014e-05,
+    -1.183390531373229e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 49,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002044518818063594,
+     2.7870199432859278e-05,
+     3.712864046730602e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010768650248038854,
+    "e_min_m": 3.712864046730602e-05,
+    "ci_low_m": 0.010617811628976504,
+    "ci_high_m": 0.010919488867101205,
+    "delta_t_m": 0.00015083861906235052,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010768923311520321
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010768650248038854,
+    "std": null,
+    "ci_low": 0.010617811628976504,
+    "ci_high": 0.010919488867101205,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002044518818063594,
+    2.7870199432859278e-05,
+    3.712864046730602e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 50,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019937653950335547,
+     -3.98552985456466e-05,
+     -1.757923982551896e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01071805559762738,
+    "e_min_m": 1.757923982551896e-05,
+    "ci_low_m": 0.010595756356023785,
+    "ci_high_m": 0.010840354839230976,
+    "delta_t_m": 0.00012229924160359445,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010718118663326602
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01071805559762738,
+    "std": null,
+    "ci_low": 0.010595756356023785,
+    "ci_high": 0.010840354839230976,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019937653950335547,
+    -3.98552985456466e-05,
+    -1.757923982551896e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 51,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001973780911999825,
+     -1.4949551571528079e-05,
+     2.1043651988082726e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010697735696355473,
+    "e_min_m": 2.1043651988082726e-05,
+    "ci_low_m": 0.010584522100488573,
+    "ci_high_m": 0.010810949292222373,
+    "delta_t_m": 0.00011321359586689943,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010697827171756349
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010697735696355473,
+    "std": null,
+    "ci_low": 0.010584522100488573,
+    "ci_high": 0.010810949292222373,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001973780911999825,
+    -1.4949551571528079e-05,
+    2.1043651988082726e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 52,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002006829888450967,
+     -3.64265122553869e-05,
+     1.7224238847264872e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010731051751215404,
+    "e_min_m": 1.7224238847264872e-05,
+    "ci_low_m": 0.010577938404344855,
+    "ci_high_m": 0.010884165098085954,
+    "delta_t_m": 0.00015311334687054856,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010731111830679187
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010731051751215404,
+    "std": null,
+    "ci_low": 0.010577938404344855,
+    "ci_high": 0.010884165098085954,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002006829888450967,
+    -3.64265122553869e-05,
+    1.7224238847264872e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 53,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002009546150496463,
+     -4.998867213891926e-05,
+     -4.31337827856343e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010734046143234997,
+    "e_min_m": 4.31337827856343e-06,
+    "ci_low_m": 0.010596323714858026,
+    "ci_high_m": 0.010871768571611968,
+    "delta_t_m": 0.0001377224283769709,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.01073404990436469
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010734046143234997,
+    "std": null,
+    "ci_low": 0.010596323714858026,
+    "ci_high": 0.010871768571611968,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002009546150496463,
+    -4.998867213891926e-05,
+    -4.31337827856343e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 54,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.001977534328428101,
+     1.9438692656092475e-05,
+     -1.8300282858387802e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010701522985386201,
+    "e_min_m": 1.8300282858387802e-05,
+    "ci_low_m": 0.010559907054662619,
+    "ci_high_m": 0.010843138916109784,
+    "delta_t_m": 0.00014161593072358286,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010701592008392102
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010701522985386201,
+    "std": null,
+    "ci_low": 0.010559907054662619,
+    "ci_high": 0.010843138916109784,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.001977534328428101,
+    1.9438692656092475e-05,
+    -1.8300282858387802e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 55,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0020053739293046805,
+     2.4074953472445092e-05,
+     9.155204610733494e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010729399815697815,
+    "e_min_m": 9.155204610733494e-06,
+    "ci_low_m": 0.010627057533021893,
+    "ci_high_m": 0.010831742098373738,
+    "delta_t_m": 0.00010234228267592114,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.01072941680638629
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010729399815697815,
+    "std": null,
+    "ci_low": 0.010627057533021893,
+    "ci_high": 0.010831742098373738,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0020053739293046805,
+    2.4074953472445092e-05,
+    9.155204610733494e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 56,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019948305826863284,
+     -7.404443391711558e-06,
+     1.7116322902667177e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01071873546386718,
+    "e_min_m": 1.7116322902667177e-05,
+    "ci_low_m": 0.010584769423686679,
+    "ci_high_m": 0.010852701504047683,
+    "delta_t_m": 0.00013396604018050143,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010718795227740623
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01071873546386718,
+    "std": null,
+    "ci_low": 0.010584769423686679,
+    "ci_high": 0.010852701504047683,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019948305826863284,
+    -7.404443391711558e-06,
+    1.7116322902667177e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 57,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.00199680297079106,
+     1.725011190180655e-05,
+     -5.1911413456941215e-05
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.01072088063363487,
+    "e_min_m": 5.1911413456941215e-05,
+    "ci_low_m": 0.010563480311012428,
+    "ci_high_m": 0.010878280956257314,
+    "delta_t_m": 0.0001574003226224425,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.01072142959137767
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.01072088063363487,
+    "std": null,
+    "ci_low": 0.010563480311012428,
+    "ci_high": 0.010878280956257314,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.00199680297079106,
+    1.725011190180655e-05,
+    -5.1911413456941215e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 58,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.002013248448056869,
+     3.3934390505700163e-06,
+     9.060055561617706e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010737132603498947,
+    "e_min_m": 9.060055561617706e-06,
+    "ci_low_m": 0.01063776511442328,
+    "ci_high_m": 0.010836500092574614,
+    "delta_t_m": 9.936748907566676e-05,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010737149167011581
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010737132603498947,
+    "std": null,
+    "ci_low": 0.01063776511442328,
+    "ci_high": 0.010836500092574614,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.002013248448056869,
+    3.3934390505700163e-06,
+    9.060055561617706e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 59,
+   "outcome": "divergent",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0019973349317304414,
+     -1.7144068571124843e-06,
+     -6.982056441341701e-06
+    ],
+    "residual_rotation_deg": 4.9999999999998455,
+    "e_max_m": 0.010721215414063784,
+    "e_min_m": 6.982056441341701e-06,
+    "ci_low_m": 0.010592129470226619,
+    "ci_high_m": 0.01085030135790095,
+    "delta_t_m": 0.0001290859438371643,
+    "delta_rho_rad": 6.938893903907228e-18,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.010721225344073299
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.010721215414063784,
+    "std": null,
+    "ci_low": 0.010592129470226619,
+    "ci_high": 0.01085030135790095,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0019973349317304414,
+    -1.7144068571124843e-06,
+    -6.982056441341701e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 5.000000000000137,
+    "std": 9.362222582871203e-16,
+    "ci_low": 5.000000000000136,
+    "ci_high": 5.000000000000138,
+    "alpha": 0.05
+   }
+  }
+ ],
+ "coverage": 1.0
+}

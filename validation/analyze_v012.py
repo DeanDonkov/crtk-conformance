@@ -496,7 +496,7 @@ def main():
         ax.plot([r["s_true"] for r in sub], [r["s_hat_mean"] for r in sub], marker=markers.get(noise, "o"), color=cols.get(noise, C_GREY), lw=1, ms=4, label=f"ŝ (anchored), noise {noise:g} mm")
         ax.plot([r["s_true"] for r in sub], [r["r_int_mean"] for r in sub], marker=markers.get(noise, "o"), mfc="none", color=cols.get(noise, C_GREY), lw=1, ls="--", ms=4)
     ax.plot([0.1, 10], [0.1, 10], color=C_GREY, lw=0.8, ls=":")
-    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected scale s"); ax.set_ylabel("estimate"); ax.set_title("(b) scale: anchored ŝ (solid), internal ratio (dashed)", loc="left", fontsize=7.5); ax.legend(fontsize=6.5)
+    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected scale s"); ax.set_ylabel("estimate"); ax.set_title("(b) scale: ŝ (solid), internal ratio (dashed)", loc="left", fontsize=7.5); ax.legend(fontsize=6.5, loc="upper left")
     ax = axs[1, 0]
     ok = [r for r in lrows if r["tau_status"] == "ok" and r["mode"] == "fault" and r["expect"] == "fault"]
     if ok:
@@ -516,7 +516,7 @@ def main():
         fl = float(np.median([r["floor_ms"] for r in lrows])) / 1e3
         ax.axhline(fl, color=C_GREY, lw=0.8, ls="--", label=f"measured resolution floor ≈ {fl*1e3:.0f} ms")
     ax.plot([0.01, 1.2], [0.01, 1.2], color=C_GREY, lw=0.8, ls=":")
-    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected τ_w (s)"); ax.set_ylabel("τ_w interval (s)"); ax.set_title("(c) liveness timeout interval", loc="left"); ax.legend(fontsize=6)
+    ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected τ_w (s)"); ax.set_ylabel("τ_w interval (s)"); ax.set_title("(c) liveness timeout interval", loc="left"); ax.legend(fontsize=5.5, loc="upper left")
     ax = axs[1, 1]
     ax.plot([r["eps_mm"] for r in fsweep], [r["FNR"] for r in fsweep], color=C_BLUE, lw=1.5, label="frame false-conformant (FNR)")
     ax.plot([r["eps_mm"] for r in fsweep], [r["FPR"] for r in fsweep], color=C_BLUE, lw=1.5, ls="--", label="frame false-divergent (FPR)")
@@ -524,7 +524,7 @@ def main():
     ax.plot([r["eps_mm"] for r in ssweep], [r["FNR"] for r in ssweep], color=C_ORANGE, lw=1.5, label="scale false-conformant (FNR)")
     ax.plot([r["eps_mm"] for r in ssweep], [r["FPR"] for r in ssweep], color=C_ORANGE, lw=1.5, ls="--", label="scale false-divergent (FPR)")
     ax.plot([r["eps_mm"] for r in ssweep], [r["undetermined_rate"] for r in ssweep], color=C_ORANGE, lw=1, ls=":", label="scale undetermined")
-    ax.set_xscale("log"); ax.set_xlabel("tolerance ε (mm)"); ax.set_ylabel("rate"); ax.set_ylim(-0.02, 1.02); ax.set_title("(d) decision rates vs. tolerance", loc="left"); ax.legend(fontsize=6.5, ncol=2)
+    ax.set_xscale("log"); ax.set_xlabel("tolerance ε (mm)"); ax.set_ylabel("rate"); ax.set_ylim(-0.02, 1.02); ax.set_title("(d) decision rates vs. tolerance", loc="left"); ax.legend(fontsize=5.5, ncol=2, loc="upper center")
     fig.tight_layout()
     fig.savefig(os.path.join(figdir, "fig05_validation.pdf")); fig.savefig(os.path.join(figdir, "fig05_validation.png"), dpi=200)
 
@@ -546,7 +546,7 @@ def main():
             ax.plot(m["x_mm"], m["measured_mm"], "o", color=C_BLUE, ms=4, mfc="white")
         if m["kind"].startswith("incremental_perp"):
             ax.plot(m["x_mm"], m["measured_mm"], "o", color=C_ORANGE, ms=4, mfc="white")
-    ax.set_xlabel("‖p_c‖ or step (mm)"); ax.set_ylabel("positional error (mm)"); ax.set_title("(a) M1, T = base_frame⁻¹ (JHU)", loc="left"); ax.legend(fontsize=5.5)
+    ax.set_xlabel("‖p_c‖ or step (mm)"); ax.set_ylabel("positional error (mm)"); ax.set_title("(a) M1, T = base_frame⁻¹ (JHU)", loc="left"); ax.set_ylim(-10, 470); ax.legend(fontsize=5, loc="upper left")
     ax = axs[1]
     for s, c in ((0.1, C_BLUE), (0.5, C_ORANGE), (1.1, C_GREEN)):
         ax.plot(ps * 1e3, [G.m2_error(s, p) * 1e3 for p in ps], color=c, lw=1.5, label=f"s = {s}")

@@ -110,7 +110,9 @@ def test_non_gaussian_errors_break_the_coverage_documented_limitation():
     # the true zero error and 57.2 % false divergence at a 1 um tolerance over 2000 replicates (seed 20260909,
     # tests/adversarial/rc4_reviewer_non_gaussian_scope_check.json).  This test documents that limitation: it
     # asserts that the coverage IS far below nominal for such errors, so that nobody reads the Gaussian-case
-    # coverage tests above as a general guarantee.  It is not a pass criterion of the tool.
+    # coverage tests above as a general guarantee.  It is not a pass criterion of the tool.  (This re-implementation
+    # draws the noise in a different order from the reviewer's script: at 2000 replicates it gives 39.2 % coverage and
+    # 60.9 % false divergence -- the same conclusion, not the same number.)
     rng = np.random.default_rng(20260909)
     reps = 500
     hits = 0

@@ -1,0 +1,230 @@
+{
+ "preset": "reference",
+ "overrides": {
+  "publish_local": false,
+  "publish_T_b_w": true,
+  "seed": 20560
+ },
+ "expectation": {
+  "spatial": {
+   "mode": "identity",
+   "translation_m": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "orientation_tolerance_deg": null,
+   "declared": true
+  },
+  "dimensional": {
+   "mode": "discover_only",
+   "expected_unit_m": 1.0,
+   "declared": false
+  },
+  "temporal": {
+   "state_machine": "any",
+   "stop_behaviour": "any",
+   "rate": "any",
+   "horizon_s": null,
+   "declared": false
+  },
+  "source": "dict"
+ },
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.0027038379994337447,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": true,
+    "type": "crtk_msgs/OperatingState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": true,
+    "type": "crtk_msgs/StringStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/T_b_w",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/operating_state",
+   "/PSM1/servo_cp",
+   "/PSM1/setpoint_cp",
+   "/PSM1/state_command"
+  ]
+ },
+ "result": {
+  "probe": "FrameSemanticsProbe",
+  "binding_class": "spatial",
+  "outcome": "undetermined",
+  "estimates": {
+   "T_b_w_translation_m": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "T_b_w_rotation_deg": 0.0
+  },
+  "predicted_error_m": null,
+  "predicted_error_ci": null,
+  "decision_basis": "no local/ reference available -> undetermined by construction (whatever the declared expectation)",
+  "observations": {
+   "expectation": {
+    "mode": "identity",
+    "translation_m": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "quaternion_xyzw": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "orientation_tolerance_deg": null,
+    "declared": true
+   },
+   "discovery": {
+    "measured_cp": {
+     "topic": "/PSM1/measured_cp",
+     "present": true,
+     "type": "geometry_msgs/PoseStamped",
+     "type_matches": true,
+     "published": true,
+     "subscribed": false
+    },
+    "setpoint_cp": {
+     "topic": "/PSM1/setpoint_cp",
+     "present": true,
+     "type": "geometry_msgs/PoseStamped",
+     "type_matches": true,
+     "published": true,
+     "subscribed": false
+    },
+    "local/measured_cp": {
+     "topic": "/PSM1/local/measured_cp",
+     "present": false,
+     "type": null,
+     "type_matches": null,
+     "published": false,
+     "subscribed": false
+    },
+    "servo_cp": {
+     "topic": "/PSM1/servo_cp",
+     "present": true,
+     "type": "geometry_msgs/PoseStamped",
+     "type_matches": true,
+     "published": false,
+     "subscribed": true
+    },
+    "T_b_w": {
+     "topic": "/PSM1/T_b_w",
+     "present": true,
+     "type": "geometry_msgs/PoseStamped",
+     "type_matches": true,
+     "published": true,
+     "subscribed": false
+    }
+   },
+   "frame_ids": {
+    "measured_cp": "PSM1_base",
+    "T_b_w": "world"
+   }
+  },
+  "notes": [
+   "no local/measured_cp topic: the binding of the unqualified topics relative to the arm base cannot be verified through the interface",
+   "T_b_w present: interface exposes base-in-world, which suggests (but does not prove) an arm-base binding of measured_cp"
+  ],
+  "started_at": 1789034747.1333046,
+  "duration_s": 0.019255399703979492
+ },
+ "wall_s": 0.01928567886352539,
+ "event_log": null,
+ "truth": {
+  "binding": "identity",
+  "local": false,
+  "expect": "identity"
+ }
+}

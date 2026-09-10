@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--rate-max-step-mm", type=float, default=50.0, help="largest excursion of the rate sweep from the start pose (interface units x 1e-3)")
     r.add_argument("--settle-s", type=float, default=1.0, help="settle time per scale-probe step")
     r.add_argument("--still-tol-mm", type=float, default=0.01, help="motion below this is 'no response' (scale probe) / 'still' (settling)")
-    r.add_argument("--latency-bound-s", type=float, default=None, help="externally justified bound on the one-way transport latency used by the liveness interval; without it the run maximum of the observed response latencies is used and the interval is labelled conditional (0.1.3)")
+    r.add_argument("--latency-bound-s", type=float, default=None, help="externally justified bound on the one-way transport latency: used by the liveness interval for the transaction that draws no response, and subtracted from the rate verdict's age lower bound; without it the liveness interval uses the run maximum of the observed response latencies and is labelled conditional, and a violated rate verdict is labelled conditional on the channel's transport delay (0.1.3)")
     r.add_argument("--pairing-window-ms", type=float, default=50.0, help="max |stamp difference| for a measured_cp / local/measured_cp pair (frame probe)")
     r.add_argument("--step-mm", type=float, default=5.0, help="scale-probe step in interface units x 1e-3")
     r.add_argument("--temporal-step-mm", type=float, default=2.0, help="temporal-probe step in interface units x 1e-3")

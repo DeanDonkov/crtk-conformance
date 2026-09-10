@@ -4,10 +4,11 @@ Black-box **semantic** conformance probes for CRTK/ROS surgical-robot interfaces
 **crtk-mock**, a configurable CRTK-compatible reference node with injectable semantic divergences.
 
 Companion code for the manuscript *Structural Conformance Is Not Semantic Conformance: An Error Model
-and Black-Box Test Suite for CRTK/ROS Interfaces in Surgical Robotics* (Donkov, 2026). **Version 0.1.2 —
-the revision described by manuscript RC4** (see `CHANGELOG.md`; the measurement code of the reported archives is
-the commit recorded in `validation/v0.1.2/*/meta*.json`). This branch (`rc4-decision-semantics`) is the single
-entry point for RC4; the RC3 state is tag/branch `rc3-major-revision`, the RC2 state commit `c3ecdc1`.
+and Black-Box Test Suite for CRTK/ROS Interfaces in Surgical Robotics* (Donkov, 2026). **Version 0.1.3 —
+the revision described by manuscript RC5** (see `CHANGELOG.md`; the measurement code of the reported archives is
+the commit recorded in `validation/v0.1.3/*/meta*.json`). This branch (`rc5-temporal-semantics`) is the single
+entry point for RC5; the RC4 state is branch `rc4-decision-semantics` (commit `59c4876`), the RC3 state
+tag/branch `rc3-major-revision`, the RC2 state commit `c3ecdc1`.
 
 Two implementations of the same CRTK topic names and message types can still interpret a
 `PoseStamped` in different frames, in different units, or under different timing and state
@@ -40,31 +41,32 @@ dimensional:
 temporal:
   state_machine: required         # required | forbidden | any (default)
   stop_behaviour: hold            # hold | fault | drift | release | any (default); 'release' is undetermined from pose
-  horizon_s: 2.0                  # 0.1.2: the silence up to which the stop expectation is claimed (default: tested range)
-  rate: required                  # required | any (default); decided on setpoint_cp (undetermined without it)
+  horizon_s: 2.0                  # the silence up to which the stop expectation is claimed (default: tested range); 0.1.3: enforced on the tau_w interval for fault/drift
+  rate: required                  # required | any (default); 0.1.3: decided on the source age of the applied setpoint shown by setpoint_cp (undetermined without it)
 ```
 
-## Decision semantics (0.1.2)
+## Decision semantics (0.1.3)
 
 | Class | Decision quantity | Interval | Verdict rests on | Assumptions recorded in the report |
 |---|---|---|---|---|
 | spatial | exact maximum positional error of the residual `T_hat · T_expected⁻¹` over the ball ‖p‖ ≤ r_ws (eq. 3′), positional only | Hotelling T² regions of the translation and rotation-vector residuals propagated through the Lipschitz bounds of e_max (≥ 95 %, conservative; undefined for n ≤ 3) | `measured_cp` vs `local/measured_cp` (passive) | translations read in `expected_unit_m`; the frame of `servo_cp` is *assumed* to be that of `measured_cp` (source-supported for dVRK/SRC, never tested by the probe) |
 | dimensional | anchored scale ŝ vs the declared unit, eq. (6) at r_ws | Student-t on the per-trial ratios | anchor topic (external SI pose) | the anchor's accuracy |
 | temporal / state | executed disabled / enabled | — | `operating_state`, `state_command`, response to `servo_cp` | — |
-| temporal / stop | observational class (`held`, `drifted`, `rejected`, `faulted`, `not_observable`; `held_through_range` for the whole probe) and a timeout **interval** | intersection of per-trial bounds with allowances L (measured p95 latency), G (one feedback period), t_det (drift) | pose during the silence and the response afterwards | deterministic timeout evaluated at least once per feedback period; a hold is claimed only up to `horizon_s`; release is undetermined from pose |
-| temporal / rate | longest stale interval between accepted commands vs 1/f_req (+ one channel period) | — | **`setpoint_cp`** (accepted-command channel); feedback crossings are a diagnostic only | `setpoint_cp` piecewise constant on the commanded targets (checked) |
+| temporal / stop | observational class (`held`, `drifted`, `rejected`, `faulted`, `not_observable`; `held_through_range` for the whole probe) and a timeout **interval** | intersection of per-trial bounds: passing gap − r_last (that trial's own last-command latency) − G − t_det; trip + L (fault/rejection) or the drift onset; L = `--latency-bound-s` or, *conditionally*, the run maximum of observed latencies | pose during the silence and the response afterwards | deterministic timeout evaluated at least once per feedback period G; a `hold` is claimed only up to `horizon_s`; a `fault`/`drift` expectation is satisfied only if the interval lies within `horizon_s` **and** 1/f_c + J_max lies below it; `release` is undetermined from the pose |
+| temporal / rate | **source age of the applied setpoint** (t − send time of the target the channel shows applied), bracketed [age_lower, age_upper] between causally matched samples; satisfied iff age_upper ≤ 1/f_req, violated iff age_lower > 1/f_req while the client sustained f_req | the bracket itself | **`setpoint_cp`** (CRTK: current setpoint to the low-level controller); feedback crossings are a diagnostic only | `setpoint_cp` piecewise constant on the commanded targets (checked); age_lower is measured at receipt, so `violated` is conditional on the channel's transport delay being below the margin unless `--latency-bound-s` is given |
+| spatial (scope) | — | the Hotelling region is exact for iid **multivariate-normal** trial errors only; rotation deviations treated as Euclidean-normal under a small-angle approximation; campaign coverage is empirical for its Gaussian configurations (the RC4 reviewer's mixture noise gives 43 % coverage: `tests/test_spatial.py`) | — | recorded in every frame report (`observations.assumptions`, `spatial_decision.assumptions`) |
 
-## What is and is not implemented (0.1.2)
+## What is and is not implemented (0.1.3)
 
 | Implemented | Not implemented |
 |---|---|
 | ROS 1 (`rospy`) transport; discovery through the ROS master API | ROS 2 (no `rclpy` backend) |
 | `FrameSemanticsProbe` — binding of the unqualified `measured_cp` relative to `local/measured_cp`, decided on the exact maximum error eq. (3′) against a declared expected transform with a propagated interval; **passive** (never publishes `servo_cp`, so it never tests the command frame) | inferring the binding when `local/` is absent (undetermined by construction); TF beyond a one-hop `/tf` lookup; an active command-frame test |
 | `ScalingUnitsProbe` — internal command/measurement ratio, and a unit estimate **only with an out-of-band anchor topic**; noise-adaptive step; goals streamed at the client rate; no-response accounting | detecting a uniform unit scale without an anchor (impossible; paper Sec. 5.2) |
-| `RateSensitivityProbe` — operating-state precondition; liveness / stop-behaviour probe with measured timing resolution, observational stop classes, drift onset/speed estimation and a timeout **interval** with explicit allowances; rate verdict on the accepted-command channel `setpoint_cp` (longest stale interval), with the feedback-crossing statistic kept as a diagnostic | identifying the internal controller rate (not identifiable through the interface); identifying a physical release from the pose; measuring the platform's own jitter; a rate verdict without `setpoint_cp` |
+| `RateSensitivityProbe` — operating-state precondition; liveness / stop-behaviour probe with measured timing resolution, observational stop classes, drift onset/speed estimation and a timeout **interval** with explicit allowances; rate verdict on the source age of the applied setpoint reported by `setpoint_cp` (bracketed between samples), with the feedback-crossing statistic kept as a diagnostic | identifying the internal controller rate (not identifiable through the interface); identifying a physical release from the pose; measuring the platform's own jitter; a rate verdict without `setpoint_cp` |
 | JSON report validated against `schema/report.schema.json`; text summary; every outcome-affecting constant recorded | PDF reports |
 | `crtk-mock` with presets emulating *documented* behaviours (built from cited configuration values) | any emulation of dVRK/AMBF/SRC *code* |
-| Unit tests (no ROS; 55) incl. the RC3 reviewer's counterexamples (`tests/adversarial/`) + integration tests (ROS 1; 31) | hardware tests of any kind |
+| Unit tests (no ROS; 68) incl. both reviewers' counterexamples (`tests/adversarial/`, `tests/test_liveness_verdict.py` offline replays) + integration tests (ROS 1; 35) | hardware tests of any kind |
 
 Three probe families, one per binding class; the temporal probe has three sub-probes. There are no others.
 
@@ -88,7 +90,7 @@ the v0.1.0 archive.
 crtk-mock --preset emul-dvrk-jhu-psm2 &                       # or your real arm
 crtk-conformance run --namespace /PSM1 --tolerance-mm 1.0 --workspace-radius-m 0.10 \
     --speed-mm-s 50 --client-rate-hz 100 --jitter-max-ms 5 --trials 10 --temporal-trials 5 \
-    --expectations expectations.yaml [--anchor-topic /tracker/tool_pose] --out report.json
+    --expectations expectations.yaml [--anchor-topic /tracker/tool_pose] [--latency-bound-s 0.005] --out report.json
 ```
 
 ## Task thresholds versus implementation constants
@@ -130,16 +132,18 @@ tripping gaps of `--temporal-trials` bisection runs (needs ≥ 3). `--still-tol-
 ## Validate against the mock (reproduces the paper's Section 7)
 
 ```
-python validation/run_validation_v012.py --out validation/v0.1.2/mock          # ~1 h, private ROS master on :11611
-python validation/analyze_v012.py validation/v0.1.2/mock --live validation/v0.1.2/live-src-v1 validation/v0.1.2/live-src-v2
+python validation/run_validation_v013.py --out validation/v0.1.3/mock          # ~1 h, private ROS master on :11611
+python validation/analyze_v013.py validation/v0.1.3/mock --live validation/v0.1.3/live-src-v1 validation/v0.1.3/live-src-v2
 ```
 
-The analyzer needs no ROS (numpy, scipy, matplotlib). `validation/v0.1.2/mock/` holds the archived outputs of the
-run reported in the paper (`meta.json`: commit, interpreter, package versions, container, seeds, commands);
-`validation/v0.1.2/live-src-v1/` and `live-src-v2/` hold the runs against the released Surgical Robotics Challenge
-v1.0.0 and v2.0.0 CRTK interfaces on AMBF (`validation/environment/run_live.sh`). `validation/v0.1.1/` (RC3) and
-`validation/archive-v0.1.0/` (RC1/RC2) are the historical archives, unchanged; their analysis scripts
-(`analyze_v011.py`, `analyze.py`) are kept as used.
+The analyzer needs no ROS (numpy, scipy, matplotlib). `validation/v0.1.3/mock/` holds the archived outputs of the
+run reported in the paper (`meta.json`: commit, interpreter, package versions, container, seeds, commands; one
+`*.events.jsonl` per temporal run — the mock's own record of every command received, applied, dropped, ignored,
+superseded or discarded, from which `analyze_v013.py` derives the rate truth independently of the estimator);
+`validation/v0.1.3/live-src-v1/` and `live-src-v2/` hold the runs against the released Surgical Robotics Challenge
+v1.0.0 and v2.0.0 CRTK interfaces on AMBF (`validation/environment/run_live.sh`). `validation/v0.1.2/` (RC4),
+`validation/v0.1.1/` (RC3) and `validation/archive-v0.1.0/` (RC1/RC2) are the historical archives, unchanged;
+their analysis scripts (`analyze_v012.py`, `analyze_v011.py`, `analyze.py`) are kept as used.
 
 ## Mock presets
 

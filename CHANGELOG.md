@@ -56,7 +56,35 @@ v0.1.0, v0.1.1 and v0.1.2 archives are unchanged and a new archive was produced 
 
 ### Packaging
 - Version 0.1.3. `numpy.ndarray.ptp` replaced by `numpy.ptp` (removed in NumPy 2). `validation/run_validation_v013.py`
-  / `analyze_v013.py`; see `validation/v0.1.3/README.md` for the campaign.
+  / `analyze_v013.py` (event-log truth for every rate window; soundness / completeness / unscored reported
+  separately; bracket containment and the lower-end excess; Fig. 6 bracket-vs-truth; horizon cases scored against
+  the injected policy and the declared horizon). `--latency-bound-s`.
+- Tests: 68 unit (no ROS) + 35 integration (ROS 1), all passing in the validation container at the measurement
+  commit; `tests/test_liveness_verdict.py` replays the v0.1.2 archive through the 0.1.3 verdict logic offline.
+
+### Archive (`validation/v0.1.3/`)
+- `mock/` (commit 1c06238, 64.2 min, seeds offset 20000; one `*.events.jsonl` per temporal run), `live-src-v1/`,
+  `live-src-v2/` (the same commit): the runs reported by manuscript RC5. The v0.1.0, v0.1.1 and v0.1.2 archives are
+  untouched (`preprint/verify_rc4_baseline.py`).
+- Rate: 180 windows, 160 scored against the event log (20 without a channel or without separable targets); truth
+  ok 69 / violated 52 / client-limited 39; 106 determinate verdicts agree with the truth, 54 undetermined, 0 false
+  conformant, 0 false divergent; completeness 106/121; every client-stall window undetermined; the bracket contains
+  the true age in 98 of 150 windows, every miss an excess of the lower end by the channel's transport delay
+  (≤ 1.33 ms outside client stalls, ≤ 8.6 ms during them; 95th percentile 0.88 ms).
+- Liveness: 23 intervals with status ok, 23 contain the injected timeout (22 conditional on the run-maximum
+  allowance, 1 with a client-supplied bound); 0 wrong definite stop verdicts; horizon below / at / above the policy
+  → violated / undetermined / satisfied for both a fault and a drift policy; the RC4 reviewer's replay (1.0 s fault
+  against "fault within 0.1 s") → violated.
+- Spatial and dimensional: 120/120 and 240/240 containment (Gaussian noise), 0 false conformant / divergent over
+  the sweeps, as in v0.1.2.
+
+### Found by the campaign
+- The window-end age of the rate bracket was charged at the receipt of the sample showing the last target; on a
+  20 Hz channel this added the publication interval to an on-time application and produced a false *violated*
+  verdict in the pre-freeze check. The window end now charges the last target's age at its application. Found by
+  scoring against the event log, before the reported campaign.
+- The probe's Python send loop stalls (> 20 ms between sends) recur in 39 of 180 windows in this container; every
+  one is *undetermined* by the client-stall rule and is reported as client-limited, not charged to the mock.
 
 ## 0.1.2 — 2026-09-05 (branch `rc4-decision-semantics`)
 

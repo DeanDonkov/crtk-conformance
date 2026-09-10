@@ -189,6 +189,13 @@ class AppliedAgeEstimate:
     command) counted as 'nothing of this window applied yet', i.e. an age of t - s_0.  The verdict (finding 2)
     passes only when age_upper meets the required period and fails only when age_lower exceeds it; publication
     uncertainty widens the bracket, it is never added to the allowed period.
+
+    The sample times t_k are the probe's RECEIPT times.  A sample received at t_k was published at t_k - d_k with
+    d_k >= 0 the feedback transport delay, and target j_k was applied at that publication time; the age at the
+    sample therefore overstates the true age of the applied setpoint by up to d_k, so the lower bound subtracts
+    a feedback-latency allowance (the probe's latency allowance L, see probe_liveness; 0 when none is known, in
+    which case age_lower is the age at receipt).  The upper bound needs no allowance (d_k >= 0 only makes the
+    hold shorter than the receipt-time interval).
     """
     channel: str  # 'setpoint_cp' | 'none'
     commands_sent: int
@@ -206,6 +213,10 @@ class AppliedAgeEstimate:
     status: str  # 'ok' | 'undetermined'
     reason: str = ""
     unmatched_after_first_fraction: float = 0.0  # samples matching no sent target after the first application: an interpolating low-level setpoint
+    age_lower_at_receipt_s: float = float("nan")  # the lower bound before the feedback-transport allowance (age at the probe's receipt of the sample)
+    feedback_latency_allowance_s: float = 0.0  # allowance subtracted from age_lower: a sample received at t_k was published at t_k - (transport delay)
+    window_start_s: float = float("nan")  # w0: the first send (monotonic clock of the probe)
+    window_end_s: float = float("nan")  # w1: the first sample showing the last target applied, else the observation end
 
     def to_dict(self) -> Dict:
         return asdict(self)
@@ -222,7 +233,7 @@ def _causal_match(sample: np.ndarray, targets: np.ndarray, send: np.ndarray, t: 
 
 
 def estimate_applied_age(targets: np.ndarray, setpoint_positions: np.ndarray, setpoint_times: np.ndarray, send_times: np.ndarray,
-                         delta: float, window_end: Optional[float] = None) -> AppliedAgeEstimate:
+                         delta: float, window_end: Optional[float] = None, feedback_latency_allowance_s: float = 0.0) -> AppliedAgeEstimate:
     """Source-age bracket of the applied setpoint over the command window.
 
     The window starts at the first send and ends when the channel first shows the LAST target applied (the client's
@@ -262,8 +273,9 @@ def estimate_applied_age(targets: np.ndarray, setpoint_positions: np.ndarray, se
     first_app = next((i for i, j in enumerate(idx) if j >= 0), None)
     if first_app is None:
         # the channel never showed a target of this window: the applied setpoint is at least as old as the window
-        return AppliedAgeEstimate("setpoint_cp", n, 0, 0.0, 0, float("nan"), w1 - w0, w1 - w0, w1 - w0, period, int(in_win.sum()), achieved, send_gap,
-                                  "ok", "no commanded target of this window was ever reported on setpoint_cp")
+        L_fb = float(feedback_latency_allowance_s) if (feedback_latency_allowance_s is not None and not math.isnan(feedback_latency_allowance_s)) else 0.0
+        return AppliedAgeEstimate("setpoint_cp", n, 0, 0.0, 0, float("nan"), max(0.0, w1 - w0 - L_fb), w1 - w0, w1 - w0, period, int(in_win.sum()), achieved, send_gap,
+                                  "ok", "no commanded target of this window was ever reported on setpoint_cp", 0.0, w1 - w0, L_fb, w0, w1)
     after = idx[first_app:]
     unmatched_after = float(np.mean(after < 0))
     if unmatched_after > UNMATCHED_UNDETERMINED_FRACTION:
@@ -288,7 +300,9 @@ def estimate_applied_age(targets: np.ndarray, setpoint_positions: np.ndarray, se
     # the stretch from the window start to the first in-window sample: the pre-window state (if any) is held
     # there; whatever it is, nothing of this window has been applied before the first sample that shows it
     lead_upper = float(tw[0] - w0)
-    age_lower = float(np.max(ages_at))
+    L_fb = float(feedback_latency_allowance_s) if (feedback_latency_allowance_s is not None and not math.isnan(feedback_latency_allowance_s)) else 0.0
+    age_lower_receipt = float(np.max(ages_at))
+    age_lower = max(0.0, age_lower_receipt - L_fb)
     age_upper = float(max(np.max(ages_to), lead_upper))
     # accepted count and ordering (informational)
     accepted, last, ooo = 0, -1, 0
@@ -303,7 +317,7 @@ def estimate_applied_age(targets: np.ndarray, setpoint_positions: np.ndarray, se
     change_times = [tw[0]] + [tw[k] for k in range(1, len(idx)) if idx[k] != idx[k - 1]]
     gaps = np.diff(np.array(change_times + [w1])) if len(change_times) else np.array([w1 - w0])
     return AppliedAgeEstimate("setpoint_cp", n, accepted, accepted / n, ooo, float(tw[first_app] - w0), age_lower, age_upper, float(np.max(gaps)) if len(gaps) else float("nan"),
-                              period, int(in_win.sum()), achieved, send_gap, "ok", "", unmatched_after)
+                              period, int(in_win.sum()), achieved, send_gap, "ok", "", unmatched_after, age_lower_receipt, L_fb, w0, w1)
 
 
 def rate_subverdict(est: Optional[AppliedAgeEstimate], f_required_hz: float) -> str:

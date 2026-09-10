@@ -504,3 +504,40 @@ def test_drift_horizon_uses_the_onset_interval(master):
     assert any("drift speed" in s for s in tau["assumptions"])
     assert r_lo.estimates["sub_verdicts"]["stop_behaviour"] == "violated", r_lo.observations["liveness"]
     assert r_hi.estimates["sub_verdicts"]["stop_behaviour"] == "satisfied", r_hi.observations["liveness"]
+
+
+def test_fifo_queue_slower_than_the_client_is_violated_and_logged(master, tmp_path):
+    # RC4 review, finding 1: an ordered buffer applying one command per 20 ms tick while the client sends every
+    # 10 ms; the channel changes every 20 ms (the 0.1.2 statistic passed it) but the applied command ages by ~0.5 s
+    # over the 1 s window.  The mock's event log is the estimator-independent truth (finding 5): the largest source
+    # age of an applied command, from the send stamps in the probe's trace and the apply events, must lie inside
+    # the estimator's bracket
+    log = tmp_path / "events.jsonl"
+    with mock_node("reference", {"queue_policy": "fifo", "loop_rate_hz": 50, "publish_rate_hz": 500, "event_log_path": str(log), "seed": 9}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.3, bisection_steps=2, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
+        a.close()
+    row = r.observations["effective_rate"]["per_rate"][0]
+    acc = row["acceptance"]
+    assert acc["status"] == "ok" and acc["age_lower_s"] > 0.3, acc
+    assert r.estimates["sub_verdicts"]["rate"] == "violated"
+    # truth from the event log, matched by the client's header stamp
+    import json as _json
+    events = [_json.loads(l) for l in open(log)]
+    tr = row["trace"]
+    by_stamp = {round(s, 6): t for s, t in zip(tr["send_stamps_wall"], tr["send_times_mono"])}
+    applies = sorted((e["t"], by_stamp.get(round(e["stamp"], 6))) for e in events if e["event"] == "apply" and round(e["stamp"], 6) in by_stamp)
+    assert len(applies) >= 50, len(applies)
+    # the truth window: from the first send to the application of the last target or the end of the observation;
+    # the source age just before each application (the previously applied command's age), the pre-window lead
+    # (nothing applied yet: age from the first send) and the age at the window end
+    w0 = tr["send_times_mono"][0]
+    s_last = tr["send_times_mono"][-1]
+    t_last_apply = next((t for t, s in applies if s == s_last), None)
+    w1 = min(t_last_apply, tr["window_end_mono"]) if t_last_apply is not None else tr["window_end_mono"]
+    inwin = [(t, s) for t, s in applies if t <= w1]
+    ages = [inwin[0][0] - w0] + [inwin[k][0] - inwin[k - 1][1] for k in range(1, len(inwin))] + [w1 - inwin[-1][1]]
+    true_sup = max(ages)
+    assert acc["window_start_s"] == pytest.approx(w0, abs=1e-6) and acc["window_end_s"] <= tr["window_end_mono"] + 1e-6
+    assert acc["age_lower_s"] - 1e-6 <= true_sup <= acc["age_upper_s"] + 1e-6, (acc["age_lower_s"], true_sup, acc["age_upper_s"])

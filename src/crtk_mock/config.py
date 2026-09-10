@@ -47,6 +47,7 @@ class MockConfig:
     anchor_noise_m: float = 0.0  # Gaussian noise added to the out-of-band ground-truth (anchor) topic, validation only (0.1.1)
     accept_every_k: int = 1  # 0.1.2: accept only every k-th received servo_cp (the others are silently ignored); 1 = all
     publish_setpoint_cp: bool = True  # 0.1.2: publish the low-level setpoint on setpoint_cp (the dVRK does; the SRC does not); 0.1.3: the goal currently APPLIED by the execution loop, not the last received (CRTK: 'current setpoint to low-level controller')
+    queue_policy: str = "latest"  # 0.1.3: 'latest' = among the due commands the newest is applied and older ones are superseded; 'fifo' = one due command per tick in order of receipt (an ordered trajectory buffer: the RC4 review's counterexample, which applies ever older commands when the loop is slower than the client)
     event_log_path: str = ""  # 0.1.3 (validation only): JSON-lines log of every command receipt / drop / rejection / application, with the command's header.stamp, for an estimator-independent truth
     # misc
     publish_measured_cp: bool = True  # False emulates a missing topic

@@ -149,6 +149,8 @@ class MockCRTKNode:
                 # liveness policy
                 if self.cfg.watchdog_s > 0 and self.last_cmd_time is not None and self.state == "ENABLED":
                     if now - self.last_cmd_time > self.cfg.watchdog_s and not self.released:
+                        for q in self.queue:
+                            self._log("discard", now, q[4], q[1], q[3][:3, 3])  # queued commands dropped by the stop policy
                         if self.cfg.watchdog_mode == "fault":
                             self.state = "FAULT"
                             self.goal = None
@@ -165,13 +167,19 @@ class MockCRTKNode:
                 if self.state == "ENABLED":
                     due = [q for q in self.queue if q[0] <= now]
                     if due:
-                        # latest-wins among the due commands (highest sequence number); anything older than the
-                        # command executed is stale and is discarded, so a jittered pipeline never moves backwards
-                        newest = max(due, key=lambda q: q[1])
-                        for q in self.queue:
-                            if q[1] < newest[1]:
-                                self._log("supersede", now, q[4], q[1], q[3][:3, 3])
-                        self.queue = [q for q in self.queue if q[1] > newest[1]]
+                        if self.cfg.queue_policy == "fifo":
+                            # ordered buffer: the OLDEST due command is applied, one per tick; nothing is superseded,
+                            # so a loop slower than the client applies ever older commands (RC4 review, finding 1)
+                            newest = min(due, key=lambda q: q[1])
+                            self.queue = [q for q in self.queue if q[1] != newest[1]]
+                        else:
+                            # latest-wins among the due commands (highest sequence number); anything older than the
+                            # command executed is stale and is discarded, so a jittered pipeline never moves backwards
+                            newest = max(due, key=lambda q: q[1])
+                            for q in self.queue:
+                                if q[1] < newest[1]:
+                                    self._log("supersede", now, q[4], q[1], q[3][:3, 3])
+                            self.queue = [q for q in self.queue if q[1] > newest[1]]
                         self.goal = newest[2]
                         self.accepted_goal_if = newest[3]
                         self.executed += 1

@@ -318,3 +318,38 @@ def test_sparse_channel_widens_the_bracket_towards_undetermined():
     acc = estimate_applied_age(targets, sp, st, send, 1e-6)
     assert acc.age_upper_s >= 0.05 and acc.age_lower_s < 0.02
     assert rate_subverdict(acc, 50.0) == "undetermined"
+
+
+def test_feedback_latency_allowance_lowers_only_the_lower_bound():
+    # a sample received at t_k was published up to L_fb earlier: the age AT the sample overstates the true age by
+    # up to L_fb, so the lower bound subtracts it; the upper bound (hold until the next sample) is unchanged
+    targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.0005
+    send = np.arange(100) * 0.01
+    apply = send + 0.030  # every target applied 30 ms after it was sent and held for one period: sup age 40 ms
+    st = np.arange(0.0, 1.3, 0.002)
+    sp = _held_channel(targets, send, apply, st)
+    a0 = estimate_applied_age(targets, sp, st, send, 5e-5)
+    a1 = estimate_applied_age(targets, sp, st, send, 5e-5, feedback_latency_allowance_s=0.004)
+    assert abs(a0.age_lower_s - 0.040) < 0.0025 and a0.feedback_latency_allowance_s == 0.0
+    assert abs(a1.age_lower_s - (a0.age_lower_s - 0.004)) < 1e-9 and a1.age_lower_at_receipt_s == a0.age_lower_s
+    assert a1.age_upper_s == a0.age_upper_s
+    # 40 ms of age against a 20 ms period: violated with or without the allowance; an allowance as large as the
+    # excess makes it undetermined, never satisfied
+    assert rate_subverdict(a0, 50.0) == "violated" and rate_subverdict(a1, 50.0) == "violated"
+    a2 = estimate_applied_age(targets, sp, st, send, 5e-5, feedback_latency_allowance_s=0.025)
+    assert rate_subverdict(a2, 50.0) == "undetermined"
+
+
+def test_rc4_reviewer_fifo_queue_at_half_the_client_rate_is_violated():
+    # RC4 review, finding 1: an ordered queue applying one command per 20 ms while the client sends every 10 ms
+    # changes the channel regularly (update gap 20 ms) but applies ever older commands; the source age grows to
+    # ~0.5 s over a 1 s window
+    targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.0005
+    send = np.arange(100) * 0.01
+    apply = 0.005 + np.arange(100) * 0.02  # FIFO at 50 Hz
+    st = np.arange(0.0, 2.2, 0.002)
+    sp = _held_channel(targets, send, apply, st)
+    acc = estimate_applied_age(targets, sp, st, send, 5e-5)
+    assert acc.max_update_gap_s < 0.025  # the 0.1.2 statistic would have passed this
+    assert acc.age_lower_s > 0.45 and acc.age_upper_s > acc.age_lower_s
+    assert rate_subverdict(acc, 50.0) == "violated"

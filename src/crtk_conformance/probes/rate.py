@@ -202,6 +202,16 @@ class RateSensitivityProbe:
         self._executed(buf, base_T, timeout=max(0.5, self.response_timeout))
 
     # ------------------------------------------------------------------ resolution
+    def _latency_allowance(self):
+        """(L, source, conditional): the one-way transport allowance used where a transaction cannot bound itself --
+        a client-supplied bound, else the run maximum of the observed response latencies (a sample maximum, not a
+        bound: the result is labelled conditional), else unknown (nan)."""
+        if self.latency_bound_s is not None:
+            return float(self.latency_bound_s), "client-supplied one-way latency bound", False
+        if self._latencies:
+            return float(max(self._latencies)), "run maximum of %d observed response latencies (not a bound)" % len(self._latencies), True
+        return float("nan"), "no response latency observed", True
+
     def measure_resolution(self, buf, base_T) -> Dict[str, float]:
         out: Dict[str, float] = {}
         # sleep resolution
@@ -468,12 +478,7 @@ class RateSensitivityProbe:
         out["drift_during_gap_max_m"] = estimate(drifts).to_dict() if drifts else None
         classes = [b["class"] for b in big]
 
-        def allowance():
-            if self.latency_bound_s is not None:
-                return float(self.latency_bound_s), "client-supplied one-way latency bound", False
-            if self._latencies:
-                return float(max(self._latencies)), "run maximum of %d observed response latencies (not a bound)" % len(self._latencies), True
-            return float("nan"), "no response latency observed", True
+        allowance = self._latency_allowance
         if n_trip == 0:
             out["stop_class"] = "not_observable" if all(c == "not_observable" for c in classes) else "held_through_range"
             out["tau_w_estimate_s"] = None
@@ -674,7 +679,18 @@ class RateSensitivityProbe:
                 sps = sp_buf.since(t_start - 1.0)  # include the pre-window state of the channel
                 SP = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in sps]) if sps else np.zeros((0, 3))
                 sts = np.array([t for t, _ in sps])
-                acc = estimate_applied_age(targets, SP, sts, np.array(send_times), delta, t_end)
+                # the lower bound of the age subtracts the feedback-transport allowance: a client-supplied one-way
+                # bound when given; otherwise none (0), and a violated verdict is then conditional on the transport
+                # delay of the channel being smaller than the margin by which the bound exceeds the period.  (The run
+                # maximum of the observed response latencies is NOT used here: a response latency includes the
+                # implementation's own application delay, i.e. the very quantity under test.)
+                if self.latency_bound_s is not None:
+                    L_fb, L_src, L_cond = float(self.latency_bound_s), "client-supplied one-way latency bound", False
+                else:
+                    L_fb, L_src, L_cond = 0.0, "none: age_lower is the age at the probe's receipt of the sample (transport delay of the channel not subtracted)", True
+                acc = estimate_applied_age(targets, SP, sts, np.array(send_times), delta, t_end, feedback_latency_allowance_s=L_fb)
+                row["feedback_latency_allowance_source"] = L_src
+                row["feedback_latency_allowance_conditional"] = L_cond
                 trace["setpoint_times_mono"] = [round(float(x), 6) for x in sts]
                 trace["setpoint_positions"] = [[round(float(v), 7) for v in p] for p in SP]
             else:
@@ -855,6 +871,10 @@ class RateSensitivityProbe:
                 res.estimates["applied_setpoint_age_at_client_rate"] = acc.to_dict()
             if sub["rate"] == "violated":
                 notes.append(f"source age of the applied setpoint at least {acc.age_lower_s*1e3:.0f} ms > required period {1e3/f_req:.0f} ms (eq. 9 with the age; setpoint_cp channel, {acc.accepted} of {acc.commands_sent} commands applied) while the client sustained {acc.client_rate_achieved_hz:.0f} Hz with send gaps <= {acc.client_max_send_gap_s*1e3:.0f} ms")
+                if at_client.get("feedback_latency_allowance_conditional", True):
+                    margin = acc.age_lower_s - 1.0 / f_req
+                    notes.append(f"conditional: the age is measured at the probe's receipt of the channel sample; the verdict assumes the one-way transport delay of setpoint_cp is below the margin of {margin*1e3:.1f} ms (supply --latency-bound-s for an unconditional verdict)")
+                res.estimates["rate_verdict_conditional_on_feedback_transport_delay"] = bool(at_client.get("feedback_latency_allowance_conditional", True))
             elif sub["rate"] == "satisfied":
                 notes.append(f"source age of the applied setpoint at most {acc.age_upper_s*1e3:.1f} ms <= required period {1e3/f_req:.0f} ms (setpoint_cp channel, {acc.accepted} of {acc.commands_sent} applied; bracket [{acc.age_lower_s*1e3:.1f}, {acc.age_upper_s*1e3:.1f}] ms)")
             elif sub["rate"] == "undetermined" and at_client is not None:

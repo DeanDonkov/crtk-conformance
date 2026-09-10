@@ -38,6 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--rate-max-step-mm", type=float, default=50.0, help="largest excursion of the rate sweep from the start pose (interface units x 1e-3)")
     r.add_argument("--settle-s", type=float, default=1.0, help="settle time per scale-probe step")
     r.add_argument("--still-tol-mm", type=float, default=0.01, help="motion below this is 'no response' (scale probe) / 'still' (settling)")
+    r.add_argument("--latency-bound-s", type=float, default=None, help="externally justified bound on the one-way transport latency used by the liveness interval; without it the run maximum of the observed response latencies is used and the interval is labelled conditional (0.1.3)")
     r.add_argument("--pairing-window-ms", type=float, default=50.0, help="max |stamp difference| for a measured_cp / local/measured_cp pair (frame probe)")
     r.add_argument("--step-mm", type=float, default=5.0, help="scale-probe step in interface units x 1e-3")
     r.add_argument("--temporal-step-mm", type=float, default=2.0, help="temporal-probe step in interface units x 1e-3")
@@ -80,7 +81,8 @@ def run(args) -> int:
                                             bisection_steps=args.bisection_steps, rates_hz=rates, expectations=exp,
                                             step_if=args.temporal_step_mm / 1000.0, response_timeout_s=args.response_timeout_s,
                                             rate_match_tolerance_m=(args.rate_match_tolerance_mm / 1000.0) if args.rate_match_tolerance_mm is not None else None,
-                                            rate_window_s=args.rate_window_s, rate_max_step_if=args.rate_max_step_mm / 1000.0, still_tol_m=args.still_tol_mm / 1000.0).run())
+                                            rate_window_s=args.rate_window_s, rate_max_step_if=args.rate_max_step_mm / 1000.0, still_tol_m=args.still_tol_mm / 1000.0,
+                                            latency_bound_s=args.latency_bound_s).run())
     params = {k: v for k, v in vars(args).items() if k not in ("cmd",)}
     rep = build_report(args.namespace, tol, disc, results, os.environ.get("ROS_MASTER_URI", ""), expectations=exp, parameters=params)
     with open(args.out, "w") as f:

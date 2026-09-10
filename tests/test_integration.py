@@ -458,3 +458,49 @@ def test_liveness_margin_uses_the_interval_not_a_point(master):
     if tau["status"] == "ok":
         assert tau["interval_low_s"] <= 0.05 <= tau["interval_high_s"], tau
     assert r.estimates["sub_verdicts"]["stop_behaviour"] != "satisfied"
+
+
+def test_fault_horizon_below_across_above_the_interval(master):
+    # 0.1.3 (RC4 review finding 4): a declared horizon is enforced against the tau_w INTERVAL, not the tested
+    # range. Fault policy at 0.25 s: horizon 0.1 s -> violated (interval_low > horizon); horizon = 0.25 s lies inside
+    # the interval -> undetermined; horizon 1.0 s -> satisfied only if interval_high <= horizon and the eq. (7)
+    # margin is below interval_low. The interval is conditional on the latency allowance (run maximum) and says so.
+    with mock_node("reference", {"watchdog_s": 0.25, "watchdog_mode": "fault"}):
+        a = adapter()
+        rs = {}
+        for h in (0.1, 0.25, 1.0):
+            rs[h] = RateSensitivityProbe(a, TOL, trials=3, gap_max_s=0.6, bisection_steps=6, rates_hz=(100,),
+                                         expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "fault", "horizon_s": h}})).run()
+        a.close()
+    tau = rs[1.0].observations["liveness"]["tau_w_estimate_s"]
+    assert tau["status"] == "ok" and tau["interval_low_s"] <= 0.25 <= tau["interval_high_s"], tau
+    assert "run maximum" in tau["latency_allowance_source"] and tau["conditional"] is True
+    assert any("stop policy" in s for s in tau["assumptions"])
+    assert tau["n_trials_with_own_last_latency"] >= tau["n"]  # every bracketing trial carries its own last-command latency
+    v = {h: rs[h].estimates["sub_verdicts"]["stop_behaviour"] for h in rs}
+    assert v[0.1] == "violated", v
+    assert v[0.25] != "violated", v
+    if rs[0.25].observations["liveness"]["tau_w_estimate_s"]["interval_high_s"] > 0.25:
+        assert v[0.25] == "undetermined", v
+    assert v[1.0] == "satisfied", (v, tau)
+    assert rs[1.0].outcome == Outcome.CONFORMANT and rs[0.1].outcome == Outcome.DIVERGENT
+
+
+def test_drift_horizon_uses_the_onset_interval(master):
+    # release with drift at 0.5 s (AMBF object-layer emulation): a client expecting drift within 0.2 s is violated
+    # (onset lower bound beyond the horizon); within 1.5 s satisfied (onset upper bound within it); the onset lower
+    # bound carries the drift-speed assumption
+    with mock_node("emul-ambf-object-watchdog"):
+        a = adapter()
+        r_lo = RateSensitivityProbe(a, TOL, trials=3, gap_max_s=1.0, bisection_steps=3, rates_hz=(100,),
+                                    expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "drift", "horizon_s": 0.2}})).run()
+        r_hi = RateSensitivityProbe(a, TOL, trials=3, gap_max_s=1.0, bisection_steps=3, rates_hz=(100,),
+                                    expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "drift", "horizon_s": 1.5}})).run()
+        a.close()
+    for r in (r_lo, r_hi):
+        assert r.observations["liveness"]["stop_class"] == "drifted"
+    tau = r_hi.observations["liveness"]["tau_w_estimate_s"]
+    assert tau["status"] == "ok" and tau["interval_low_s"] <= 0.5 <= tau["interval_high_s"], tau
+    assert any("drift speed" in s for s in tau["assumptions"])
+    assert r_lo.estimates["sub_verdicts"]["stop_behaviour"] == "violated", r_lo.observations["liveness"]
+    assert r_hi.estimates["sub_verdicts"]["stop_behaviour"] == "satisfied", r_hi.observations["liveness"]

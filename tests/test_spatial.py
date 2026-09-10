@@ -101,3 +101,38 @@ def test_too_few_trials_gives_undetermined():
 def test_hotelling_radius_zero_noise_is_zero():
     X = np.tile(np.array([[1.0, 2.0, 3.0]]), (10, 1))
     assert hotelling_radius(X, 0.025) == 0.0
+
+
+def test_non_gaussian_errors_break_the_coverage_documented_limitation():
+    # 0.1.3 (RC4 adversarial review, finding 7): the region is a Hotelling T^2 region and is NOT distribution-free.
+    # The reviewer's stress case -- n = 10, iid zero-mean translation errors whose x component is a mixture of
+    # -20 um (p = 0.95) and +380 um (p = 0.05) plus 1 um Gaussian noise on every axis -- had 42.8 % coverage of
+    # the true zero error and 57.2 % false divergence at a 1 um tolerance over 2000 replicates (seed 20260909,
+    # tests/adversarial/rc4_reviewer_non_gaussian_scope_check.json).  This test documents that limitation: it
+    # asserts that the coverage IS far below nominal for such errors, so that nobody reads the Gaussian-case
+    # coverage tests above as a general guarantee.  It is not a pass criterion of the tool.
+    rng = np.random.default_rng(20260909)
+    reps = 500
+    hits = 0
+    false_div = 0
+    for _ in range(reps):
+        Es = []
+        for _ in range(10):
+            x = -20e-6 if rng.random() < 0.95 else 380e-6
+            Es.append(G.make_pose(np.eye(3), np.array([x, 0.0, 0.0]) + rng.normal(size=3) * 1e-6))
+        sd = spatial_decision(Es, 0.1)
+        hits += sd.ci_low_m <= 0.0 <= sd.ci_high_m
+        false_div += decide(sd.ci_low_m, sd.ci_high_m, 1e-6) == Outcome.DIVERGENT
+    assert hits / reps < 0.7, hits / reps          # nowhere near the nominal 0.95 (reviewer: 0.428)
+    assert false_div / reps > 0.3, false_div / reps  # (reviewer: 0.572)
+    # and the decision carries its model with it
+    assert any("multivariate normal" in a for a in sd.assumptions) and any("small-angle" in a for a in sd.assumptions)
+    assert sd.model.startswith("hotelling-t2-mvn")
+
+
+def test_rotation_deviation_is_reported_for_the_small_angle_check():
+    rng = np.random.default_rng(11)
+    Es = [G.make_pose(Rot.from_rotvec(rng.normal(size=3) * math.radians(0.05)).as_matrix(), rng.normal(size=3) * 1e-5) for _ in range(8)]
+    sd = spatial_decision(Es, 0.1)
+    assert 0.0 < sd.max_rotation_deviation_deg < 1.0
+    assert f"{sd.max_rotation_deviation_deg:.3f} deg" in " ".join(sd.assumptions)

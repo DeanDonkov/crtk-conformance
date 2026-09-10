@@ -124,7 +124,9 @@ class FrameSemanticsProbe:
                 for T in trial_T:
                     T[:3, 3] *= unit
                 T_hat = G.average_pose(trial_T)
-                e_t = estimate(trial_tnorm)
+                # 0.1.3: the per-trial norms are formed AFTER the unit conversion (0.1.2 formed them in interface
+                # units while the matrix was converted; identical for a declared unit of 1.0, wrong otherwise)
+                e_t = estimate([float(np.linalg.norm(T[:3, 3])) for T in trial_T])
                 e_th = estimate([math.degrees(x) for x in trial_theta])
                 res.estimates = {
                     "binding_translation_m": [float(v) for v in T_hat[:3, 3]],
@@ -151,6 +153,8 @@ class FrameSemanticsProbe:
                     res.estimates["residual_translation_norm_m"] = float(np.linalg.norm(sd.residual_translation_m))
                     res.estimates["residual_rotation_deg"] = sd.residual_rotation_deg
                     res.estimates["spatial_decision"] = sd.to_dict()
+                    # 0.1.3 (RC4 review, finding 7): the interval's distributional model is part of the report
+                    res.observations["assumptions"].extend(sd.assumptions)
                     # kept for readers of 0.1.1 reports: same keys, now carrying the exact maximum error and its
                     # propagated interval (not eq. (3) and not the re-centred Student-t half-width)
                     res.estimates["predicted_abs_error_at_workspace_edge_m"] = {"n": sd.n, "mean": sd.e_max_m, "std": None, "ci_low": sd.ci_low_m, "ci_high": sd.ci_high_m, "alpha": sd.alpha,

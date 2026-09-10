@@ -1,5 +1,63 @@
 # Changelog
 
+## 0.1.3 — 2026-09-10 (branch `rc5-temporal-semantics`)
+
+Response to the adversarial review of the RC4 manuscript (`preprint/rc5/RC4_ADVERSARIAL_REVIEW.md`, verdict
+"major revision"; the reviewer's counterexample script and results are kept verbatim under `tests/adversarial/`).
+Executable behaviour changed in the temporal decision procedures and in the reference implementation; the
+v0.1.0, v0.1.1 and v0.1.2 archives are unchanged and a new archive was produced under `validation/v0.1.3/`.
+
+### Decision semantics
+- **Rate** (`rate_estimator.py`, `probes/rate.py`; review findings 1–3). The verdict is taken on the *source age
+  of the applied setpoint*: CRTK defines `setpoint_cp` as the current setpoint sent to the low-level controller
+  (api-robot-motion.rst, ledger P64), so a sample of that channel that shows commanded target k means "target
+  k is applied now", and its age is now − send(k). The 0.1.2 statistic (the longest interval between changes
+  of the channel) was not this quantity: it credited a channel whose stale value was a target the client sent
+  long ago (the reviewer's "applied late" case, 0.58 ms first-application delay on a channel that showed the
+  previous command), it added the channel's own period as leniency, it ignored the age of the setpoint that
+  was in force before the first command of the window, and it measured a mean rate where a maximum age was
+  claimed. 0.1.3 brackets the age between causally matched channel samples ([age_lower, age_upper]: the age is
+  known at each sample and bounded until the next one), matches each sample to the nearest *earlier* sent
+  target, charges the pre-window state as "nothing applied" from the first send, ends the window when the
+  last target is first seen applied, and decides `satisfied` iff age_upper ≤ 1/f_req, `violated` iff
+  age_lower > 1/f_req while the client's own stream sustained the rate (mean rate and longest send gap),
+  `undetermined` otherwise — including a channel that interpolates between targets (> 50 % of the samples
+  after the first application match no sent target) and a client stall. No channel-period leniency. The
+  probe archives the send stamps and the channel trace of every window (`trace`).
+- **Liveness** (`probes/rate.py`; findings 4 and 6). A `fault` or `drift` expectation with a declared
+  `horizon_s` is `satisfied` only if the tau_w interval lies entirely within the horizon *and* the eq. (7)
+  margin lies below the interval; `violated` if the interval lies beyond the horizon or the margin at or
+  above it; `undetermined` when either straddles. 0.1.2 decided the horizon on the stop class alone (a 1.0 s
+  fault policy satisfied "fault within 0.1 s"). A horizon beyond the tested silences is `undetermined` only
+  when no trip was observed (a trip evidenced inside the tested range decides). Each trial's bound now uses
+  the response latency of *its own last streamed command* (the stream ends with an observable half-step
+  offset whose response is timed); the allowance L for transactions that drew no response is a client-supplied
+  bound (`--latency-bound-s`) or, failing that, the run maximum of the observed response latencies, in which
+  case the interval is labelled *conditional* and the verdict note says so. The estimate lists its
+  assumptions (policy evaluated at least once per feedback period; deterministic timeout; latency allowance;
+  minimum drift speed during detection).
+- **Spatial scope** (`spatial.py`, `probes/frame.py`; finding 7). No change to the statistic. The
+  distributional model is now stated where the interval is formed and in every report
+  (`SpatialDecision.assumptions`, `observations.assumptions`): the Hotelling T² region is exact for iid
+  *multivariate-normal* trial errors and for no wider class in finite samples (independence alone is not
+  enough — the reviewer's mixture-noise stress case has 42.8 % coverage, reproduced as a documented
+  limitation in `tests/test_spatial.py`); the rotation-vector deviations are treated as Euclidean-normal
+  samples under a small-angle approximation (the largest per-trial deviation is reported); the campaign's
+  containment counts are empirical for their Gaussian-noise configurations. The frame probe's
+  `binding_translation_norm_m` is now formed after the unit conversion (0.1.2 formed it in interface units;
+  identical for the declared unit 1.0 of every archived run).
+
+### Reference implementation (`crtk_mock`)
+- `setpoint_cp` is published as the goal *applied* by the execution loop (with the client's `header.stamp`),
+  not as the last accepted goal; a queued command is therefore not shown applied before it is.
+- Event log (`event_log_path`, JSON lines): `receive`, `drop`, `reject`, `ignore`, `apply`, `supersede`, with
+  the monotonic time, the client's header stamp, the sequence number and the commanded position. The
+  v0.1.3 analysis derives the rate truth from this log (finding 5), independently of the estimator.
+
+### Packaging
+- Version 0.1.3. `numpy.ndarray.ptp` replaced by `numpy.ptp` (removed in NumPy 2). `validation/run_validation_v013.py`
+  / `analyze_v013.py`; see `validation/v0.1.3/README.md` for the campaign.
+
 ## 0.1.2 — 2026-09-05 (branch `rc4-decision-semantics`)
 
 Response to the adversarial review of the RC3 manuscript (`preprint/rc4/RC3_ADVERSARIAL_REVIEW.md`; the

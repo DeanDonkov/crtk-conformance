@@ -1,4 +1,4 @@
-"""Spatial decision statistics (0.1.2).
+"""Spatial decision statistics (0.1.2; distributional scope stated in 0.1.3).
 
 Two things changed after the adversarial review of RC3 (rc4/RC3_ADVERSARIAL_REVIEW.md, findings 1 and 4):
 
@@ -26,9 +26,30 @@ Two things changed after the adversarial review of RC3 (rc4/RC3_ADVERSARIAL_REVI
 
        e_max(true) in [ max(0, e_max(centre) - delta_t - r_ws delta_rho),  e_max(centre) + delta_t + r_ws delta_rho ]
 
-   with probability >= 1 - alpha under iid Gaussian trial errors.  The interval is conservative by construction;
-   its empirical coverage is checked in tests/test_spatial.py (>= 0.95 at zero residual and near the boundary).
-   n <= p gives an infinite interval (undetermined): the region is not defined.
+   with probability >= 1 - alpha under the model stated below.  The interval is conservative by construction
+   under that model; its empirical coverage is checked in tests/test_spatial.py (>= 0.95 at zero residual and
+   near the boundary, Gaussian trial errors).  n <= p gives an infinite interval (undetermined): the region is
+   not defined.
+
+Distributional model (0.1.3, RC4 adversarial review finding 7).  The guarantee above is NOT distribution-free and
+independence of the trial errors alone does not give it.  It rests on three separate things, reported with every
+decision (SpatialDecision.assumptions):
+
+   (a) the parameter-region theorem: the per-trial translation errors t_i - t are iid multivariate normal, and so
+       are the rotation-vector deviations rho_i; Hotelling's T^2 with the F distribution is exact for that model
+       (Anderson, An Introduction to Multivariate Statistical Analysis, ch. 5) and for no wider class in finite
+       samples.  Heavy-tailed or mixture errors break it: the reviewer's stress case (n = 10, x-error a mixture of
+       -20 um w.p. 0.95 and +380 um w.p. 0.05, plus 1 um Gaussian noise) has 42.8 % coverage at zero residual and
+       declares divergence at a 1 um tolerance 57.2 % of the time (tests/adversarial/
+       rc4_reviewer_non_gaussian_scope_check.json; reproduced as a documented limitation in tests/test_spatial.py).
+       A client whose trial errors are not approximately normal must not read the interval as a 95 % region.
+   (b) the rotation approximation: the rho_i are rotation vectors of R_i R_bar^T, i.e. deviations from the
+       chordal mean rotation mapped to R^3 by the logarithm; treating them as iid Euclidean-normal samples is a
+       small-angle approximation (the logarithm is close to linear for angles << 1 rad; all validated
+       configurations have per-trial rotation deviations below 1 deg).  The Lipschitz step from the rotation-
+       vector region to e_max is exact, the normality of the rho_i is not a theorem.
+   (c) the measured coverage: the 240/240 and 120/120 containment counts of the v0.1.2 campaign are empirical
+       results for their four specified Gaussian-noise configurations, not a distribution-free guarantee.
 
 The verdict is positional: an orientation tolerance, if the client declares one, is checked separately on the
 rotation angle of the residual (with its own interval); without one, orientation enters the verdict only
@@ -37,7 +58,7 @@ through its positional effect over the workspace.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from typing import List, Optional, Sequence
 
 import numpy as np
@@ -112,9 +133,24 @@ class SpatialDecision:
     delta_rho_rad: float  # Hotelling radius of the rotation-vector region (level 1 - alpha/2)
     alpha: float
     bound_eq3_m: float  # the old eq. (3) upper bound, for comparison only
+    max_rotation_deviation_deg: float = float("nan")  # largest per-trial rotation deviation from the mean (small-angle check)
+    model: str = "hotelling-t2-mvn/small-angle-rotation/lipschitz"
+    assumptions: List[str] = field(default_factory=list)
 
     def to_dict(self):
         return asdict(self)
+
+
+def spatial_assumptions(n: int, alpha: float, max_dev_deg: float) -> List[str]:
+    """The distributional assumptions under which [ci_low, ci_high] is a >= 1 - alpha region (module docstring)."""
+    return [
+        f"the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = {n}, level 1 - {alpha}); "
+        "the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+        f"the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; "
+        f"this is a small-angle approximation (largest deviation in this run {max_dev_deg:.3f} deg)",
+        "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+        "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions",
+    ]
 
 
 def spatial_decision(residuals: Sequence[np.ndarray], r_ws: float, alpha: float = 0.05) -> SpatialDecision:
@@ -133,10 +169,12 @@ def spatial_decision(residuals: Sequence[np.ndarray], r_ws: float, alpha: float 
     slack = d_t + r_ws * d_rho
     lo = max(0.0, e_c - slack) if math.isfinite(slack) else 0.0
     hi = e_c + slack if math.isfinite(slack) else float("inf")
+    max_dev = math.degrees(float(np.linalg.norm(rhos, axis=1).max())) if n else float("nan")
     return SpatialDecision(
         n=n, r_ws_m=r_ws, residual_translation_m=[float(v) for v in t_bar], residual_rotation_deg=math.degrees(G.rotation_angle(R_bar)),
         e_max_m=e_c, e_min_m=exact_min_error(R_bar, t_bar, r_ws), ci_low_m=lo, ci_high_m=hi, delta_t_m=d_t, delta_rho_rad=d_rho, alpha=alpha,
         bound_eq3_m=float(np.linalg.norm(t_bar) + 2.0 * math.sin(G.rotation_angle(R_bar) / 2.0) * r_ws),
+        max_rotation_deviation_deg=max_dev, assumptions=spatial_assumptions(n, alpha, max_dev),
     )
 
 

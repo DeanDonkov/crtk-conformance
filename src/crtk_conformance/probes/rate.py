@@ -1,6 +1,6 @@
 """RateSensitivityProbe — temporal binding class (state precondition, command liveness / stop behaviour, rate).
 
-Version 0.1.2 (designs: rc3/LIVENESS_PROBE_DESIGN.md, rc3/RATE_ESTIMATOR_DESIGN.md, both revised in rc4/).
+Version 0.1.3 (designs: rc3/LIVENESS_PROBE_DESIGN.md, rc3/RATE_ESTIMATOR_DESIGN.md, revised in rc4/; 0.1.3 changes in CHANGELOG.md).
 
 Sub-probes, each reported separately:
 
@@ -407,7 +407,7 @@ class RateSensitivityProbe:
             if onset is not None:
                 # drift speed: least-squares slope of the departure over the samples from the onset on (m/s)
                 tt = np.array([tq for tq, _ in after[k:]]); dd = np.array(d[k:])
-                if len(tt) >= 2 and tt.ptp() > 0:
+                if len(tt) >= 2 and np.ptp(tt) > 0:
                     speed = float(np.polyfit(tt, dd, 1)[0])
             if early_pts:
                 ref_motion = float(np.linalg.norm(np.mean(early_pts, axis=0) - ref)) > thr

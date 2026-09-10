@@ -295,7 +295,15 @@ def estimate_applied_age(targets: np.ndarray, setpoint_positions: np.ndarray, se
             known[k] = False
         src[k] = cur
     nxt = np.append(tw[1:], w1)
-    ages_at = (tw - src)[known]
+    at = tw - src
+    # the window ends when the LAST target is first seen applied: what matters there is the age of the last target
+    # AT ITS APPLICATION (the client's intent stops moving afterwards, so no further lag accrues), which lies
+    # between the previous sample time and this one; the age at this sample's receipt would charge the
+    # implementation for the channel's publication interval after an application that was on time
+    kw = len(idx) - 1
+    if idx[kw] == n - 1 and w1 <= tw[kw] + 1e-12:
+        at[kw] = max(0.0, (tw[kw - 1] if kw > 0 else w0) - src[kw])
+    ages_at = at[known]
     ages_to = np.maximum(nxt - src, 0.0)
     # the stretch from the window start to the first in-window sample: the pre-window state (if any) is held
     # there; whatever it is, nothing of this window has been applied before the first sample that shows it

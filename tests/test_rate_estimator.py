@@ -353,3 +353,25 @@ def test_rc4_reviewer_fifo_queue_at_half_the_client_rate_is_violated():
     assert acc.max_update_gap_s < 0.025  # the 0.1.2 statistic would have passed this
     assert acc.age_lower_s > 0.45 and acc.age_upper_s > acc.age_lower_s
     assert rate_subverdict(acc, 50.0) == "violated"
+
+
+def test_window_end_uses_the_age_of_the_last_target_at_its_application():
+    # a 20 Hz channel (period 50 ms) on an instantaneous implementation: the sample that first shows the LAST
+    # target may arrive up to 50 ms after its application; the client's intent stops moving at the last send, so
+    # the age charged at the window end is the last target's age at application, bracketed between the previous
+    # sample and this one -- not the age at the sample's receipt (which would charge the channel's publication
+    # interval to the implementation: found by the v0.1.3 event-log truth check)
+    targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.0005
+    send = np.arange(100) * 0.01
+    apply = send + 0.001
+    st = 0.049 + np.arange(0, 1.2, 0.05)  # last send at 0.99, applied 0.991; samples at 0.999 (shows 98) and 1.049 (shows 99)
+    sp = _held_channel(targets, send, apply, st)
+    acc = estimate_applied_age(targets, sp, st, send, 5e-5)
+    assert acc.age_lower_s < 0.015 and acc.age_upper_s > 0.05  # undetermined: the sparse channel cannot show satisfaction
+    assert rate_subverdict(acc, 50.0) == "undetermined"
+    # the same channel on a FIFO buffer that applies the last target 0.7 s late: the lower bound keeps the delay
+    apply2 = send + 0.7
+    st2 = 0.049 + np.arange(0, 2.0, 0.05)
+    sp2 = _held_channel(targets, send, apply2, st2)
+    acc2 = estimate_applied_age(targets, sp2, st2, send, 5e-5)
+    assert acc2.age_lower_s > 0.64 and rate_subverdict(acc2, 50.0) == "violated"

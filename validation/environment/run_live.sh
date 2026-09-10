@@ -1,5 +1,5 @@
 #!/bin/bash
-# Live run of crtk-conformance 0.1.1 against a released Surgical Robotics Challenge CRTK interface on AMBF.
+# Live run of crtk-conformance (the version recorded in meta_env.json) against a released Surgical Robotics Challenge CRTK interface on AMBF.
 # Usage (inside focal-crtk:rc3 with /home/claude/rc3 mounted at /rc3):  run_live.sh v1|v2 <outdir>
 set +u
 VER=$1; OUT=$2

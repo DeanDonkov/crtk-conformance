@@ -19,6 +19,7 @@ built from the source lines cited in the paper, not the platforms.
 """
 from __future__ import annotations
 
+import json
 import math
 import random
 import threading
@@ -73,7 +74,8 @@ class MockCRTKNode:
         self.pub_js = rospy.Publisher(f"{self.ns}/measured_js", JointState, queue_size=q) if cfg.publish_measured_js else None
         self.pub_truth = rospy.Publisher(f"{self.ns}/mock/ground_truth_cp", PoseStamped, queue_size=q)
         self.pub_setpoint = rospy.Publisher(f"{self.ns}/setpoint_cp", PoseStamped, queue_size=q) if cfg.publish_setpoint_cp else None
-        self.accepted_goal_if: Optional[np.ndarray] = None  # last accepted goal, interface frame/units (what setpoint_cp reports)
+        self.accepted_goal_if: Optional[np.ndarray] = None  # goal currently applied by the execution loop, interface frame/units (what setpoint_cp reports; 0.1.3)
+        self._event_log = open(cfg.event_log_path, "a") if cfg.event_log_path else None
         self.accept_counter = 0
         self.pub_state = rospy.Publisher(f"{self.ns}/operating_state", OperatingState, queue_size=q, latch=True) if cfg.state_machine else None
         self.pub_tf = rospy.Publisher("/tf", TFMessage, queue_size=q) if cfg.publish_tf else None
@@ -82,25 +84,39 @@ class MockCRTKNode:
         self.threads = [threading.Thread(target=self._loop, daemon=True), threading.Thread(target=self._publish_loop, daemon=True)]
 
     # ------------------------------------------------------------------ callbacks
+    def _log(self, event: str, t: float, stamp: float, seq: int, pos_if=None):
+        if self._event_log is not None:
+            self._event_log.write(json.dumps({"event": event, "t": t, "stamp": stamp, "seq": seq,
+                                              "pos_if": ([float(v) for v in pos_if] if pos_if is not None else None)}) + "\n")
+            self._event_log.flush()
+
     def _servo_cp_cb(self, msg: PoseStamped):
         now = time.monotonic()
+        stamp = msg.header.stamp.to_sec()  # the client's own stamp: the key by which the validation matches events to sends
         with self.lock:
             self.received += 1
+            T_if = pose_msg_to_matrix(msg)  # interface units, bound frame
             if self.cfg.drop_prob > 0 and self.rng.random() < self.cfg.drop_prob:
+                self._log("drop", now, stamp, self.received, T_if[:3, 3])
                 return
             if self.cfg.require_enabled and not (self.state == "ENABLED" and self.homed):
                 self.rejected += 1
+                self._log("reject", now, stamp, self.received, T_if[:3, 3])
                 return
             self.accept_counter += 1
             if self.cfg.accept_every_k > 1 and (self.accept_counter % self.cfg.accept_every_k) != 0:
+                self._log("ignore", now, stamp, self.received, T_if[:3, 3])
                 return  # silently ignored (0.1.2: counterexample of the RC3 review, finding 2)
-            T_if = pose_msg_to_matrix(msg)  # interface units, bound frame
-            self.accepted_goal_if = T_if.copy()
+            goal_if = T_if.copy()
             T_if[:3, 3] *= self.cfg.unit_m  # -> metres
             T_local = self.T_bind_inv @ T_if  # -> arm-base frame
             delay = self.cfg.response_delay_s + self.rng.uniform(0.0, self.cfg.response_jitter_s)
             self.seq += 1
-            self.queue.append((now + delay, self.seq, T_local))
+            # 0.1.3: the goal in interface units travels with the queued command and becomes the reported setpoint
+            # only when the execution loop applies it (RC4 review, finding 1: the channel must report the stage its
+            # name denotes, not receipt)
+            self.queue.append((now + delay, self.seq, T_local, goal_if, stamp))
+            self._log("receive", now, stamp, self.seq, goal_if[:3, 3])
             self.last_cmd_time = now
             self.released = False
 
@@ -152,9 +168,14 @@ class MockCRTKNode:
                         # latest-wins among the due commands (highest sequence number); anything older than the
                         # command executed is stale and is discarded, so a jittered pipeline never moves backwards
                         newest = max(due, key=lambda q: q[1])
+                        for q in self.queue:
+                            if q[1] < newest[1]:
+                                self._log("supersede", now, q[4], q[1], q[3][:3, 3])
                         self.queue = [q for q in self.queue if q[1] > newest[1]]
                         self.goal = newest[2]
+                        self.accepted_goal_if = newest[3]
                         self.executed += 1
+                        self._log("apply", now, newest[4], newest[1], newest[3][:3, 3])
                     if self.goal is not None:
                         if self.cfg.max_speed_m_s <= 0:
                             self.pose = self.goal
@@ -269,6 +290,9 @@ class MockCRTKNode:
 
     def shutdown(self):
         self.stop.set()
+        if self._event_log is not None:
+            self._event_log.close()
+            self._event_log = None
         for t in self.threads:
             t.join(timeout=1.0)
         for s in (self.sub_servo, self.sub_state):

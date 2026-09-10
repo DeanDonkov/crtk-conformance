@@ -209,8 +209,12 @@ class PlatformAdapter:
             time.sleep(0.3)  # let the subscriber connect (TCPROS handshake)
         return self._pubs[topic]
 
-    def servo_cp(self, T: np.ndarray, frame_id: str = ""):
-        self.publisher("servo_cp").publish(matrix_to_pose_msg(T, frame_id))
+    def servo_cp(self, T: np.ndarray, frame_id: str = "") -> float:
+        """Publish a servo_cp goal; returns the header.stamp (wall seconds) the message carried, so that a validation
+        harness can match the command to the implementation's own event log (0.1.3)."""
+        m = matrix_to_pose_msg(T, frame_id)
+        self.publisher("servo_cp").publish(m)
+        return m.header.stamp.to_sec()
 
     def state_command(self, cmd: str):
         m = StringStamped()

@@ -48,8 +48,8 @@ import numpy as np
 from ..adapter import PlatformAdapter, pose_msg_to_matrix
 from ..expectations import Expectations, TemporalExpectation, combine
 from ..rate_estimator import (
-    AcceptanceEstimate,
-    estimate_acceptance,
+    AppliedAgeEstimate,
+    estimate_applied_age,
     RateEstimate,
     estimate_noise_sigma,
     estimate_rate,
@@ -576,9 +576,9 @@ class RateSensitivityProbe:
                                        f"only {n_max} separable targets fit (minimum {MIN_RATE_TARGETS}); no commands sent",
                                "step_used_m": None, "command_window_s": 0.0, "zoh_error_bound_m": None,
                                "feedback_target_crossings_hz": 0.0, "feedback_count_is_evidence_of_execution": False,
-                               "acceptance": AcceptanceEstimate(channel="setpoint_cp" if sp_buf is not None else "none", commands_sent=0, accepted=0, accepted_fraction=0.0,
-                                                                first_acceptance_delay_s=float("nan"), max_stale_s=None, mean_acceptance_rate_hz=0.0, channel_period_s=None,
-                                                                client_rate_achieved_hz=0.0, status="undetermined", reason="targets_not_separable").to_dict()}
+                               "acceptance": AppliedAgeEstimate(channel="setpoint_cp" if sp_buf is not None else "none", commands_sent=0, accepted=0, accepted_fraction=0.0, out_of_order_events=0,
+                                                                first_application_delay_s=float("nan"), age_lower_s=float("nan"), age_upper_s=float("nan"), max_update_gap_s=float("nan"), channel_period_s=float("nan"),
+                                                                samples_in_window=0, client_rate_achieved_hz=0.0, client_max_send_gap_s=float("nan"), status="undetermined", reason="targets_not_separable").to_dict()}
                         out["per_rate"].append(row)
                         continue
                     n = n_max
@@ -591,12 +591,13 @@ class RateSensitivityProbe:
             if sp_buf is not None:
                 sp_buf.clear()
             send_times = []
+            send_stamps = []
             t_start = time.monotonic()
             for k in range(n):
                 T = base_T.copy()
                 T[0, 3] = targets[k, 0]
                 send_times.append(time.monotonic())
-                self.a.servo_cp(T)
+                send_stamps.append(self.a.servo_cp(T))
                 dt = t_start + (k + 1) * period - time.monotonic()
                 if dt > 0:
                     time.sleep(dt)
@@ -614,23 +615,29 @@ class RateSensitivityProbe:
             row["command_window_s"] = t_end_cmd - t_start
             if note:
                 row["note"] = note
-            row["zoh_error_bound_m"] = None  # 0.1.2: set below from the longest stale interval of accepted commands (eq. 9 needs the max gap, not a mean rate)
-            # 0.1.2: the feedback count above is a DIAGNOSTIC (target crossings); the verdict uses the accepted-command
+            row["zoh_error_bound_m"] = None  # 0.1.3: set below from the source-age bracket of the applied setpoint (eq. 9 with the age, not a mean rate or an update gap)
+            # 0.1.2: the feedback count above is a DIAGNOSTIC (target crossings); the verdict uses the applied-setpoint
             # channel setpoint_cp when the implementation exposes one, and is undetermined otherwise
             row["feedback_target_crossings_hz"] = est.observable_rate_hz
             row["feedback_count_is_evidence_of_execution"] = False
             acc = None
+            trace = {"send_times_mono": [round(float(x), 6) for x in send_times], "send_stamps_wall": [round(float(x), 6) for x in send_stamps],
+                     "targets_x": [round(float(x), 7) for x in targets[:, 0]], "window_end_mono": round(float(t_end), 6)}
             if sp_buf is not None:
-                sps = sp_buf.since(t_start)
+                sps = sp_buf.since(t_start - 1.0)  # include the pre-window state of the channel
                 SP = np.array([pose_msg_to_matrix(m)[:3, 3] for _, m in sps]) if sps else np.zeros((0, 3))
-                acc = estimate_acceptance(targets, SP, np.array([t for t, _ in sps]), np.array(send_times), delta, t_end)
+                sts = np.array([t for t, _ in sps])
+                acc = estimate_applied_age(targets, SP, sts, np.array(send_times), delta, t_end)
+                trace["setpoint_times_mono"] = [round(float(x), 6) for x in sts]
+                trace["setpoint_positions"] = [[round(float(v), 7) for v in p] for p in SP]
             else:
-                acc = AcceptanceEstimate("none", int(len(send_times)), 0, 0.0, float("nan"), float("nan"), 0.0, float("nan"),
-                                         row["client_rate_achieved_hz"], "undetermined", "no_accepted_command_channel: the interface publishes no setpoint_cp",
-                                         0.0, float(np.max(np.diff(send_times))) if len(send_times) > 1 else float("nan"))
+                acc = AppliedAgeEstimate("none", int(len(send_times)), 0, 0.0, 0, float("nan"), float("nan"), float("nan"), float("nan"), float("nan"), 0,
+                                         row["client_rate_achieved_hz"], float(np.max(np.diff(send_times))) if len(send_times) > 1 else float("nan"),
+                                         "undetermined", "no_applied_setpoint_channel: the interface publishes no setpoint_cp")
             row["acceptance"] = acc.to_dict()
-            if acc.status == "ok" and acc.accepted > 0 and not math.isnan(acc.max_stale_s):
-                row["zoh_error_bound_m"] = self.tol.speed_m_s * acc.max_stale_s
+            row["trace"] = trace  # 0.1.3: every send and every channel sample, so that each acceptance and age can be audited
+            if acc.status == "ok" and not math.isnan(acc.age_upper_s):
+                row["zoh_error_bound_m"] = self.tol.speed_m_s * acc.age_upper_s
             out["per_rate"].append(row)
             self.a.servo_cp(base_T)
             self._executed(buf, base_T, timeout=max(0.5, self.response_timeout))
@@ -765,22 +772,29 @@ class RateSensitivityProbe:
             res.estimates["client_rate_achieved_hz"] = at_client["client_rate_achieved_hz"]
             res.estimates["publish_rate_hz"] = at_client["publish_rate_hz"]
             acc0 = at_client.get("acceptance") or {}
-            res.estimates["zoh_error_at_client_rate_m"] = (self.tol.speed_m_s * acc0["max_stale_s"]) if acc0.get("status") == "ok" and acc0.get("max_stale_s") is not None and not (isinstance(acc0.get("max_stale_s"), float) and math.isnan(acc0["max_stale_s"])) else None
+            res.estimates["zoh_error_at_client_rate_m"] = (self.tol.speed_m_s * acc0["age_upper_s"]) if acc0.get("status") == "ok" and acc0.get("age_upper_s") is not None and not (isinstance(acc0.get("age_upper_s"), float) and math.isnan(acc0["age_upper_s"])) else None
         if te.rate == "required":
             acc = None
             if at_client is not None and at_client.get("acceptance"):
-                acc = AcceptanceEstimate(**at_client["acceptance"])
+                acc = AppliedAgeEstimate(**at_client["acceptance"])
             sub["rate"] = rate_subverdict(acc, f_req)
             if acc is not None:
-                res.estimates["accepted_commands_at_client_rate"] = acc.to_dict()
+                res.estimates["applied_setpoint_age_at_client_rate"] = acc.to_dict()
             if sub["rate"] == "violated":
-                notes.append(f"longest stale interval between accepted commands {acc.max_stale_s*1e3:.0f} ms > required period {1e3/f_req:.0f} ms (eq. 9; setpoint_cp channel, {acc.accepted} of {acc.commands_sent} commands accepted) while the client sustained {acc.client_rate_achieved_hz:.0f} Hz")
+                notes.append(f"source age of the applied setpoint at least {acc.age_lower_s*1e3:.0f} ms > required period {1e3/f_req:.0f} ms (eq. 9 with the age; setpoint_cp channel, {acc.accepted} of {acc.commands_sent} commands applied) while the client sustained {acc.client_rate_achieved_hz:.0f} Hz with send gaps <= {acc.client_max_send_gap_s*1e3:.0f} ms")
             elif sub["rate"] == "satisfied":
-                notes.append(f"longest stale interval between accepted commands {acc.max_stale_s*1e3:.1f} ms <= required period {1e3/f_req:.0f} ms (setpoint_cp channel, {acc.accepted} of {acc.commands_sent} accepted)")
+                notes.append(f"source age of the applied setpoint at most {acc.age_upper_s*1e3:.1f} ms <= required period {1e3/f_req:.0f} ms (setpoint_cp channel, {acc.accepted} of {acc.commands_sent} applied; bracket [{acc.age_lower_s*1e3:.1f}, {acc.age_upper_s*1e3:.1f}] ms)")
             elif sub["rate"] == "undetermined" and at_client is not None:
-                why = (acc.reason if acc is not None and acc.reason else None) or at_client.get("reason") or (
-                    "the client's own stream did not meet the requirement (achieved %.0f Hz, longest send gap %.0f ms): the client, not the implementation, is the limit"
-                    % (acc.client_rate_achieved_hz, (acc.client_max_send_gap_s or float('nan')) * 1e3) if acc is not None else "client rate below the required rate")
+                if acc is not None and acc.reason:
+                    why = acc.reason
+                elif at_client.get("reason"):
+                    why = at_client["reason"]
+                elif acc is not None and not math.isnan(acc.client_max_send_gap_s) and acc.client_max_send_gap_s > 1.0 / f_req:
+                    why = "the client's own stream did not meet the requirement (achieved %.0f Hz, longest send gap %.0f ms): the client, not the implementation, is the limit" % (acc.client_rate_achieved_hz, acc.client_max_send_gap_s * 1e3)
+                elif acc is not None:
+                    why = "the source-age bracket of the applied setpoint [%.0f, %.0f] ms straddles the required period %.0f ms (the channel is sampled too sparsely to decide)" % (acc.age_lower_s * 1e3, acc.age_upper_s * 1e3, 1e3 / f_req)
+                else:
+                    why = "client rate below the required rate"
                 notes.append("rate expectation cannot be decided: " + why)
         res.estimates["sub_verdicts"] = sub
         res.outcome = Outcome(combine(sub))

@@ -353,7 +353,7 @@ def test_rate_final_command_only_is_not_credited(master):
         a.close()
     row = r.observations["effective_rate"]["per_rate"][0]
     acc = row["acceptance"]
-    assert acc["channel"] == "setpoint_cp" and acc["accepted"] <= 2 and acc["max_stale_s"] > 0.5
+    assert acc["channel"] == "setpoint_cp" and acc["accepted"] <= 2 and acc["age_lower_s"] > 0.5
     assert row["feedback_count_is_evidence_of_execution"] is False
     assert r.estimates["sub_verdicts"]["rate"] == "violated"
     assert r.outcome == Outcome.DIVERGENT
@@ -379,7 +379,7 @@ def test_rate_accepted_channel_satisfied_on_reference(master):
                                  expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
         a.close()
     acc = r.observations["effective_rate"]["per_rate"][0]["acceptance"]
-    assert acc["accepted"] >= 0.9 * acc["commands_sent"] and acc["max_stale_s"] < 0.02 + acc["channel_period_s"] + 0.005
+    assert acc["accepted"] >= 0.9 * acc["commands_sent"] and acc["age_upper_s"] <= 0.02
     assert r.estimates["sub_verdicts"]["rate"] == "satisfied"
 
 
@@ -391,8 +391,22 @@ def test_rate_fifty_percent_drops_violate_the_stale_interval_criterion(master):
                                  expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
         a.close()
     acc = r.observations["effective_rate"]["per_rate"][0]["acceptance"]
-    assert acc["max_stale_s"] > 0.02
-    assert r.estimates["sub_verdicts"]["rate"] == "violated"
+    assert acc["age_lower_s"] > 0.02
+    assert r.estimates["sub_verdicts"]["rate"] in ("violated", "undetermined")  # violated unless the probe's own send loop stalled
+
+
+def test_rate_delayed_application_is_charged_to_the_implementation(master):
+    # RC4 review finding 1: a 50 ms application delay ages every applied setpoint by 50 ms (2.5 mm at 50 mm/s):
+    # violated for a 1 mm / 50 mm/s client; the 0.1.2 channel reported receipt and passed it
+    with mock_node("reference", {"response_delay_s": 0.05, "loop_rate_hz": 1000, "publish_rate_hz": 500, "seed": 11}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.2, bisection_steps=2, rates_hz=(100,),
+                                 expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
+        a.close()
+    acc = r.observations["effective_rate"]["per_rate"][0]["acceptance"]
+    assert acc["age_lower_s"] > 0.045 and acc["status"] == "ok"
+    assert r.estimates["sub_verdicts"]["rate"] in ("violated", "undetermined")
+    assert "trace" in r.observations["effective_rate"]["per_rate"][0]
 
 
 def test_hold_expectation_beyond_tested_horizon_is_undetermined(master):

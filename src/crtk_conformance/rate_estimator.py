@@ -1,4 +1,5 @@
-"""Noise-robust observable command/state rate estimator (0.1.1; design in rc3/RATE_ESTIMATOR_DESIGN.md).
+"""Noise-robust observable command/state rate estimator (0.1.1; design in rc3/RATE_ESTIMATOR_DESIGN.md) and, since 0.1.3, the
+applied-setpoint source-age estimator on which the rate verdict rests (AppliedAgeEstimate).
 
 The probe commands a known sequence of target positions g_1 .. g_n.  Every feedback sample is classified
 to the nearest commanded target within a matching tolerance delta (user-supplied, or estimated from the
@@ -16,9 +17,11 @@ This module is pure Python/numpy and is unit-tested with synthetic feedback (tes
 0.1.2 (RC3 adversarial review, finding 2): the feedback-based count is a DIAGNOSTIC -- the *feedback
 target-crossing rate* -- and is never the basis of a verdict.  A controller moving continuously towards one
 late command crosses every earlier target, so crossings do not identify accepted commands.  The verdict uses
-the accepted-command channel `setpoint_cp` (AcceptanceEstimate) and the longest stale interval between
-acceptances, which is the quantity the zero-order-hold bound (eq. 9) needs; an interface without
-`setpoint_cp` gets no rate verdict (undetermined) because the outside observer cannot tell.
+the applied-setpoint channel `setpoint_cp`.  0.1.2 decided on the longest interval between changes of that
+channel; 0.1.3 (RC4 adversarial review, findings 1-3) decides on the SOURCE AGE of the applied setpoint
+(AppliedAgeEstimate), bracketed between channel samples with causal target matching, which is the quantity the
+zero-order-hold bound (eq. 9) needs; an interface without `setpoint_cp` gets no rate verdict (undetermined)
+because the outside observer cannot tell.
 """
 from __future__ import annotations
 
@@ -167,39 +170,65 @@ def estimate_rate(
 
 
 @dataclass
-class AcceptanceEstimate:
-    """0.1.2: what the ACCEPTED-command channel (setpoint_cp) shows for one command window.
+class AppliedAgeEstimate:
+    """0.1.3: what the APPLIED-setpoint channel (setpoint_cp, CRTK: 'current setpoint to low-level controller') shows
+    for one command window, expressed as the SOURCE AGE of the applied setpoint.
 
-    The feedback-based RateEstimate counts target crossings of measured_cp; a controller that moves continuously
-    to a late command crosses the earlier targets without having accepted them (RC3 adversarial review,
-    finding 2), so crossings are not evidence of execution.  setpoint_cp reports the goal the implementation
-    is currently tracking, so a change of setpoint_cp to a commanded target is an acceptance event.  The
-    quantity that bounds the zero-order-hold error is not the mean rate but the LONGEST STALE INTERVAL
-    between acceptances (including the interval from the first command to the first acceptance), which is
-    what the verdict uses: v * max_stale_s <= epsilon  <=>  max_stale_s <= 1 / f_required.
+    0.1.2 decided on the longest interval between changes of the channel; the RC4 adversarial review (finding 1)
+    showed that a stream can change regularly while applying ever older commands (an ordered queue at half the
+    client rate), so the update cadence does not bound the trajectory lag.  What bounds it is the age of the
+    applied target: at time t the low-level controller holds the target of command j(t), sent at s_{j(t)}; for a
+    trajectory of speed <= v the intended position has moved by at most v (t - s_{j(t)}) since, so
+    e_ZOH(t) <= v * a(t) with a(t) = t - s_{j(t)} (eq. 9 with the source age in place of the period).
+
+    The channel is observed at sample times t_k with causally matched targets j_k (a sample may match target j
+    only if s_j <= t_k; finding 3).  Between samples the applied target is unobserved, so the age is bracketed:
+        age_lower = max_k (t_k - s_{j_k})           (the age at the sample itself)
+        age_upper = max_k (t_{k+1} - s_{j_k})       (the target may have been held until the next sample)
+    with the window [s_0, s_{n-1}] and the pre-window channel state (a setpoint left over from before the first
+    command) counted as 'nothing of this window applied yet', i.e. an age of t - s_0.  The verdict (finding 2)
+    passes only when age_upper meets the required period and fails only when age_lower exceeds it; publication
+    uncertainty widens the bracket, it is never added to the allowed period.
     """
     channel: str  # 'setpoint_cp' | 'none'
     commands_sent: int
-    accepted: int  # distinct commanded targets that appeared on the channel, in order
+    accepted: int  # distinct commanded targets that appeared on the channel causally, counted in order of first appearance
     accepted_fraction: float
-    first_acceptance_delay_s: float  # first command sent -> first acceptance seen
-    max_stale_s: float  # longest interval between consecutive acceptance events (incl. the first delay)
-    mean_acceptance_rate_hz: float
-    channel_period_s: float  # publication period of the channel: acceptance times are quantised to it
+    out_of_order_events: int  # channel returned to an older target after a newer one had appeared
+    first_application_delay_s: float  # first command sent -> first sample showing a target of this window
+    age_lower_s: float  # largest observed source age of the applied setpoint
+    age_upper_s: float  # largest source age the applied setpoint may have reached between observations
+    max_update_gap_s: float  # diagnostic: longest interval between changes of the channel (the 0.1.2 quantity)
+    channel_period_s: float  # median publication period of the channel (diagnostic; the bracket uses actual sample times)
+    samples_in_window: int
     client_rate_achieved_hz: float
+    client_max_send_gap_s: float  # longest interval between the client's own consecutive sends: a client stall is not the implementation's
     status: str  # 'ok' | 'undetermined'
     reason: str = ""
-    channel_unmatched_fraction: float = 0.0  # setpoint samples matching no commanded target (from the first acceptance on): a low-level interpolator would show many
-    client_max_send_gap_s: float = float("nan")  # longest interval between the client's own consecutive sends: a client stall is not the implementation's
+    unmatched_after_first_fraction: float = 0.0  # samples matching no sent target after the first application: an interpolating low-level setpoint
 
     def to_dict(self) -> Dict:
         return asdict(self)
 
 
-def estimate_acceptance(targets: np.ndarray, setpoint_positions: np.ndarray, setpoint_times: np.ndarray, send_times: np.ndarray,
-                        delta: float, window_end: float) -> AcceptanceEstimate:
-    """Acceptance events from the setpoint_cp channel: the first sample at which the channel reports each
-    commanded target (within delta; targets are separated by > 2 delta by construction of the probe)."""
+def _causal_match(sample: np.ndarray, targets: np.ndarray, send: np.ndarray, t: float, delta: float) -> int:
+    """Index of the nearest commanded target within delta among the targets already sent at time t; -1 if none."""
+    sent = np.nonzero(send <= t + 1e-12)[0]
+    if len(sent) == 0:
+        return -1
+    d = np.linalg.norm(targets[sent] - sample, axis=1)
+    k = int(np.argmin(d))
+    return int(sent[k]) if d[k] <= delta else -1
+
+
+def estimate_applied_age(targets: np.ndarray, setpoint_positions: np.ndarray, setpoint_times: np.ndarray, send_times: np.ndarray,
+                         delta: float, window_end: Optional[float] = None) -> AppliedAgeEstimate:
+    """Source-age bracket of the applied setpoint over the command window.
+
+    The window starts at the first send and ends when the channel first shows the LAST target applied (the client's
+    final intent is met) or, if it never does, at window_end (the end of the observation; default: the last channel
+    sample).  setpoint samples may start before the window (the pre-window state is used to bracket the age up to
+    the first in-window sample)."""
     G = np.asarray(targets, dtype=float)
     n = int(G.shape[0])
     S = np.asarray(setpoint_positions, dtype=float).reshape(-1, 3)
@@ -207,65 +236,94 @@ def estimate_acceptance(targets: np.ndarray, setpoint_positions: np.ndarray, set
     send = np.asarray(send_times, dtype=float)
     achieved = (len(send) - 1) / (send[-1] - send[0]) if len(send) > 1 and send[-1] > send[0] else float("nan")
     send_gap = float(np.max(np.diff(send))) if len(send) > 1 else float("nan")
-    if S.shape[0] < 2:
-        return AcceptanceEstimate("setpoint_cp", n, 0, 0.0, float("nan"), float("nan"), 0.0, float("nan"), achieved, "undetermined", "no_setpoint_samples", 0.0, send_gap)
-    period = float(np.median(np.diff(st))) if S.shape[0] > 1 else float("nan")
-    idx = classify_samples(S, G, max(delta, 1e-9))
-    # acceptance event = first sample whose classification moves to a new target index (monotone, as sent)
-    events = []
-    last = -1
+    if n == 0 or len(send) == 0:
+        return AppliedAgeEstimate("setpoint_cp", n, 0, 0.0, 0, float("nan"), float("nan"), float("nan"), float("nan"), float("nan"), 0, achieved, send_gap, "undetermined", "no_commands")
+    order = np.argsort(st)
+    st, S = st[order], S[order]
+    w0 = float(send[0])
+    w_obs = float(window_end) if window_end is not None else (float(st[-1]) if len(st) else float(send[-1]))
+    period = float(np.median(np.diff(st))) if len(st) > 1 else float("nan")
+    # window end: the first sample at or after the last send that shows the last target applied, else the observation end
+    w1 = w_obs
+    for k in np.nonzero(st >= float(send[-1]))[0]:
+        if np.linalg.norm(S[k] - G[-1]) <= delta:
+            w1 = float(st[k]); break
+    w1 = max(w1, float(send[-1]))
+    in_win = (st >= w0) & (st <= w1)
+    pre = np.nonzero(st < w0)[0]
+    if in_win.sum() < 2:
+        return AppliedAgeEstimate("setpoint_cp", n, 0, 0.0, 0, float("nan"), float("nan"), float("nan"), float("nan"), period, int(in_win.sum()), achieved, send_gap,
+                                  "undetermined", "fewer than two setpoint_cp samples inside the command window")
+    # matched index per in-window sample (causal); -1 = no sent target within delta
+    idx = np.array([_causal_match(S[k], G, send, st[k], delta) for k in np.nonzero(in_win)[0]])
+    tw = st[in_win]
+    # source time per sample: the matched target's send time; before the first application, the first command's
+    # send time (nothing of this window has been applied: the oldest unmet intent is command 0)
+    first_app = next((i for i, j in enumerate(idx) if j >= 0), None)
+    if first_app is None:
+        # the channel never showed a target of this window: the applied setpoint is at least as old as the window
+        return AppliedAgeEstimate("setpoint_cp", n, 0, 0.0, 0, float("nan"), w1 - w0, w1 - w0, w1 - w0, period, int(in_win.sum()), achieved, send_gap,
+                                  "ok", "no commanded target of this window was ever reported on setpoint_cp")
+    after = idx[first_app:]
+    unmatched_after = float(np.mean(after < 0))
+    if unmatched_after > UNMATCHED_UNDETERMINED_FRACTION:
+        return AppliedAgeEstimate("setpoint_cp", n, 0, 0.0, 0, float(tw[first_app] - w0), float("nan"), float("nan"), float("nan"), period, int(in_win.sum()), achieved, send_gap,
+                                  "undetermined", "setpoint_cp is not piecewise constant on the commanded targets (%.0f%% of samples after the first application match none): "
+                                  "an interpolating low-level setpoint cannot be told from a partial acceptor" % (100 * unmatched_after), unmatched_after)
+    # source time per sample: before the first application the oldest unmet intent (command 0); a matched sample
+    # its target's send time; an unmatched sample after the first application (an intermediate value, tolerated up
+    # to the fraction above) is not evidence of a fresher setpoint, so it continues the previous hold for the upper
+    # bound and contributes nothing to the lower bound
+    src = np.empty(len(idx)); known = np.ones(len(idx), dtype=bool)
+    cur = w0
     for k, j in enumerate(idx):
-        if j >= 0 and j > last:
-            events.append((float(st[k]), int(j)))
-            last = int(j)
-    accepted = len(events)
-    if accepted == 0:
-        # the channel never reported any commanded target: stale for at least the whole command window
-        return AcceptanceEstimate("setpoint_cp", n, 0, 0.0, float("nan"), float(send[-1] - send[0]) if len(send) > 1 else float("nan"), 0.0, period, achieved,
-                                  "ok", "no commanded target was ever reported on setpoint_cp", 1.0, send_gap)
-    # from the first acceptance on, the channel must be piecewise constant on the commanded targets (CRTK: the
-    # current setpoint to the low-level controller); a channel that reports intermediate values is an
-    # interpolating low-level controller, on which an acceptance cannot be told from a pass-through, exactly as
-    # for feedback crossings -> undetermined
-    after_first = st >= events[0][0]
-    unmatched = float(np.mean(idx[after_first] < 0)) if after_first.any() else 0.0
-    if unmatched > UNMATCHED_UNDETERMINED_FRACTION:
-        return AcceptanceEstimate("setpoint_cp", n, accepted, accepted / n, float("nan"), float("nan"), 0.0, period, achieved, "undetermined",
-                                  "setpoint_cp is not piecewise constant on the commanded targets (%.0f%% of samples match none): an interpolating low-level controller cannot be told from a partial acceptor" % (100 * unmatched), unmatched, send_gap)
-    times = [t for t, _ in events]
-    gaps = [times[0] - float(send[0])] + [b - a for a, b in zip(times[:-1], times[1:])]
-    # commands not accepted after the last acceptance leave the channel stale until the last command was sent: that
-    # tail counts (up to the last send time, not to the end of the observation window, which includes the probe's
-    # own settling wait after the last command)
-    tail = float(send[-1] - times[-1]) if len(send) else 0.0
-    max_stale = max(gaps + ([tail] if (accepted < n and tail > 0) else []))
-    span = times[-1] - float(send[0])
-    rate = accepted / span if span > 0 else float("nan")
-    return AcceptanceEstimate("setpoint_cp", n, accepted, accepted / n, gaps[0], float(max_stale), float(rate) if not math.isnan(rate) else 0.0, period, achieved, "ok", "", unmatched, send_gap)
+        if j >= 0:
+            cur = float(send[j])
+        elif k >= first_app:
+            known[k] = False
+        src[k] = cur
+    nxt = np.append(tw[1:], w1)
+    ages_at = (tw - src)[known]
+    ages_to = np.maximum(nxt - src, 0.0)
+    # the stretch from the window start to the first in-window sample: the pre-window state (if any) is held
+    # there; whatever it is, nothing of this window has been applied before the first sample that shows it
+    lead_upper = float(tw[0] - w0)
+    age_lower = float(np.max(ages_at))
+    age_upper = float(max(np.max(ages_to), lead_upper))
+    # accepted count and ordering (informational)
+    accepted, last, ooo = 0, -1, 0
+    for j in idx:
+        if j < 0:
+            continue
+        if j > last:
+            accepted += 1; last = int(j)
+        elif j < last:
+            ooo += 1
+    # update-gap diagnostic (the 0.1.2 quantity): changes of the matched index
+    change_times = [tw[0]] + [tw[k] for k in range(1, len(idx)) if idx[k] != idx[k - 1]]
+    gaps = np.diff(np.array(change_times + [w1])) if len(change_times) else np.array([w1 - w0])
+    return AppliedAgeEstimate("setpoint_cp", n, accepted, accepted / n, ooo, float(tw[first_app] - w0), age_lower, age_upper, float(np.max(gaps)) if len(gaps) else float("nan"),
+                              period, int(in_win.sum()), achieved, send_gap, "ok", "", unmatched_after)
 
 
-def rate_subverdict(acc: Optional[AcceptanceEstimate], f_required_hz: float) -> str:
-    """'satisfied' | 'violated' | 'undetermined' for the rate part of a declared rate expectation (0.1.2).
+def rate_subverdict(est: Optional[AppliedAgeEstimate], f_required_hz: float) -> str:
+    """'satisfied' | 'violated' | 'undetermined' for the rate part of a declared rate expectation (0.1.3).
 
-    Decided on the accepted-command channel only.  satisfied: the longest stale interval is within the required
-    period 1/f_req (allowing one channel publication period of quantisation).  violated: the longest stale
-    interval exceeds the period by more than the quantisation AND the client itself sustained the required rate,
-    both on average and in its longest send gap (otherwise the client, not the implementation, is the limit).
-    Without a setpoint channel: undetermined (feedback target crossings are reported as a diagnostic, never as a
-    verdict)."""
-    if acc is None or acc.channel != "setpoint_cp" or acc.status != "ok":
+    Decided on the source-age bracket of the applied setpoint (eq. 9: e_ZOH <= v * age).  satisfied: the upper
+    end of the bracket is within the required period 1/f_req, i.e. v * age_upper <= epsilon.  violated: the lower
+    end exceeds the period AND the client itself sustained the rate, on average and in its longest send gap
+    (otherwise the client, not the implementation, is the limit).  undetermined otherwise, and always without a
+    setpoint channel (feedback target crossings are a diagnostic, never a verdict)."""
+    if est is None or est.channel != "setpoint_cp" or est.status != "ok":
         return "undetermined"
     req_period = 1.0 / f_required_hz
-    q = acc.channel_period_s if not math.isnan(acc.channel_period_s) else 0.0
-    client_ok = (not math.isnan(acc.client_rate_achieved_hz) and acc.client_rate_achieved_hz >= f_required_hz
-                 and not (not math.isnan(acc.client_max_send_gap_s) and acc.client_max_send_gap_s > req_period * (1 + 1e-6)))
-    if acc.accepted == 0:
-        return "violated" if client_ok else "undetermined"
-    if acc.max_stale_s <= req_period + q:
+    client_ok = (not math.isnan(est.client_rate_achieved_hz) and est.client_rate_achieved_hz >= f_required_hz * (1 - 1e-6)
+                 and not (not math.isnan(est.client_max_send_gap_s) and est.client_max_send_gap_s > req_period * (1 + 1e-6)))
+    if est.age_upper_s <= req_period * (1 + 1e-9):
         return "satisfied"
-    if client_ok:
+    if est.age_lower_s > req_period * (1 + 1e-9) and client_ok:
         return "violated"
-    return "undetermined"  # the client's own stream (mean rate or its longest send gap) did not meet the requirement
+    return "undetermined"
 
 
 def crossing_subverdict_legacy(est: Optional[RateEstimate], f_required_hz: float) -> str:

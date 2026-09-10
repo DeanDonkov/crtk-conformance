@@ -199,86 +199,122 @@ def test_subverdict_legacy_crossing_rule():
     assert crossing_subverdict_legacy(None, 50.0) == "undetermined"
 
 
-# ------------------------------------------------------------------ 0.1.2: accepted-command channel (RC3 review, finding 2)
-def test_reviewer_final_command_only_counterexample():
-    from crtk_conformance.rate_estimator import estimate_acceptance, rate_subverdict
+# ------------------------------------------------------------------ 0.1.3: applied-setpoint source age (RC3 finding 2; RC4 findings 1-3)
+from crtk_conformance.rate_estimator import estimate_applied_age, rate_subverdict  # noqa: E402
+
+
+def _held_channel(targets, send, apply_times, st, pre=None):
+    """channel samples at st: the target applied last before each sample (apply_times[j] = when target j was applied);
+    before the first application the pre-window value (or the first target minus 1 m)"""
+    sp = np.zeros((len(st), 3))
+    for k, t in enumerate(st):
+        applied = [j for j in range(len(apply_times)) if apply_times[j] <= t]
+        sp[k] = targets[applied[-1]] if applied else (pre if pre is not None else targets[0] - np.array([1.0, 0, 0]))
+    return sp
+
+
+def test_rc3_reviewer_final_command_only_counterexample():
+    # RC3 review, finding 2: 100 crossings of measured_cp for 1 accepted command; the verdict rests on the channel
     targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.0005
     samples = np.vstack([np.zeros((100, 3)), targets])
     est = estimate_rate(targets, samples, np.arange(200) * 0.01, np.arange(100) * 0.01, 100.0, 5e-5, "synthetic", 0.0, 2.0)
     assert est.transitions == 100  # the crossings statistic is fooled, by construction ...
-    # ... but the verdict comes from the accepted-command channel: only the final target ever appears there
-    sp = np.zeros((200, 3)); sp[99:, 0] = 0.05
-    acc = estimate_acceptance(targets, sp, np.arange(200) * 0.01, np.arange(100) * 0.01, 5e-5, 2.0)
-    assert acc.accepted == 1 and acc.max_stale_s > 0.9
+    send = np.arange(100) * 0.01
+    st = np.arange(0, 1.2, 0.005)
+    sp = _held_channel(targets, send, [np.inf] * 99 + [0.995], st)  # only the last command is ever applied
+    acc = estimate_applied_age(targets, sp, st, send, 5e-5)
+    assert acc.accepted == 1 and acc.age_lower_s > 0.9
     assert rate_subverdict(acc, 50.0) == "violated"
     assert rate_subverdict(None, 50.0) == "undetermined"
 
 
-def test_acceptance_stale_interval_not_mean_rate():
-    from crtk_conformance.rate_estimator import estimate_acceptance, rate_subverdict
-    # 100 commands at 100 Hz; the channel accepts 50 in the first 0.25 s and 50 in the last 0.25 s: mean rate 100 Hz
-    # over the window but a 0.5 s stale interval in the middle -> violated for f_req = 50 Hz (period 20 ms)
-    targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.001
+def test_rc4_reviewer_source_age_not_update_cadence():
+    # RC4 review, finding 1: 100 Hz source, ordered delivery applied at 50 Hz after 10 ms: the channel changes every
+    # 20 ms (the 0.1.2 quantity passed) while the applied target ages to 0.5 s; the age bracket says violated
     send = np.arange(100) * 0.01
-    t_acc = np.concatenate([np.arange(50) * 0.005, 0.75 + np.arange(50) * 0.005])
-    sp_t = np.arange(0, 1.2, 0.002)
-    sp = np.zeros((len(sp_t), 3))
-    for k, t in enumerate(sp_t):
-        j = int(np.searchsorted(t_acc, t, side="right")) - 1
-        sp[k, 0] = targets[j, 0] if j >= 0 else 0.0
-    acc = estimate_acceptance(targets, sp, sp_t, send, 1e-4, 1.2)
-    assert acc.accepted == 100 and acc.max_stale_s > 0.45
+    targets = np.zeros((100, 3)); targets[:, 0] = send * 0.05
+    apply = 0.01 + np.arange(100) * 0.02
+    st = np.arange(403) * 0.005
+    sp = _held_channel(targets, send, apply, st, pre=np.array([-0.001, 0, 0]))
+    acc = estimate_applied_age(targets, sp, st, send, 1e-7)
+    assert acc.accepted == 100 and acc.max_update_gap_s < 0.025
+    # the last target (sent at 0.99 s) is applied at 1.99 s: the supremum of the source age over the window is 1.0 s
+    assert acc.age_lower_s > 0.95 and acc.age_upper_s < 1.05
     assert rate_subverdict(acc, 50.0) == "violated"
-    # the same 100 acceptances spread evenly at 100 Hz -> satisfied
-    t_acc2 = np.arange(100) * 0.01 + 0.002
-    for k, t in enumerate(sp_t):
-        j = int(np.searchsorted(t_acc2, t, side="right")) - 1
-        sp[k, 0] = targets[j, 0] if j >= 0 else 0.0
-    acc2 = estimate_acceptance(targets, sp, sp_t, send, 1e-4, 1.2)
-    assert rate_subverdict(acc2, 50.0) == "satisfied"
 
 
-def test_acceptance_channel_must_be_piecewise_constant():
-    # a low-level controller that interpolates its setpoint towards each goal reports intermediate setpoints; an
-    # acceptance cannot then be told from a pass-through, so the channel yields undetermined (0.1.2)
-    from crtk_conformance.rate_estimator import estimate_acceptance
-    targets = np.zeros((20, 3)); targets[:, 0] = np.arange(1, 21) * 0.001
-    t_sp = np.arange(400) * 0.001
-    sp = np.zeros((400, 3)); sp[:, 0] = np.linspace(0.0, 0.020, 400)  # ramps through the targets
-    acc = estimate_acceptance(targets, sp, t_sp, np.arange(20) * 0.01, 1e-5, 0.4)
-    assert acc.status == "undetermined" and acc.channel_unmatched_fraction > 0.5
-    sp2 = np.zeros((400, 3)); sp2[:, 0] = np.repeat(targets[:, 0], 20)  # piecewise constant
-    acc2 = estimate_acceptance(targets, sp2, t_sp, np.arange(20) * 0.01, 1e-5, 0.4)
-    assert acc2.status == "ok" and acc2.accepted == 20 and acc2.channel_unmatched_fraction == 0.0
+def test_rc4_reviewer_publication_uncertainty_is_not_extra_allowance():
+    # RC4 review, finding 2: updates every 24 ms, publication every 12 ms, client every 6 ms, requirement 20 ms:
+    # 0.1.2 passed because it added the channel period to the allowed period; the bracket [age_lower, age_upper]
+    # brackets the true supremum (24 ms) and the verdict is not satisfied
+    send = np.arange(200) * 0.006
+    targets = np.zeros((200, 3)); targets[:, 0] = np.arange(200) * 0.0003
+    apply = np.full(200, np.inf); apply[::4] = np.arange(50) * 0.024  # every fourth command applied, at its send time
+    st = np.arange(101) * 0.012
+    sp = _held_channel(targets, send, apply, st)
+    acc = estimate_applied_age(targets, sp, st, send, 1e-7)
+    assert acc.age_lower_s <= 0.024 + 1e-9 <= acc.age_upper_s + 1e-9
+    assert rate_subverdict(acc, 50.0) != "satisfied"
+
+
+def test_rc4_reviewer_preexisting_setpoint_is_not_a_future_acceptance():
+    # RC4 review, finding 3: the channel starts at a value equal to this sweep's FINAL target; every new command is
+    # applied after 5 ms; causal matching must not credit the old sample as an acceptance of command 99
+    send = np.arange(100) * 0.01
+    targets = np.zeros((100, 3)); targets[:, 0] = (np.arange(100) + 1) * 0.00002
+    apply = send + 0.004
+    st = np.arange(202) * 0.005
+    sp = _held_channel(targets, send, apply, st, pre=targets[-1])
+    acc = estimate_applied_age(targets, sp, st, send, 1e-7)
+    assert acc.accepted == 100 and acc.age_upper_s <= 0.015 + 1e-9
+    assert rate_subverdict(acc, 50.0) == "satisfied"
+
+
+def test_growing_queue_delay_is_violated_and_prompt_application_is_satisfied():
+    send = np.arange(100) * 0.01
+    targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.001
+    st = np.arange(0, 1.05, 0.002)
+    prompt = _held_channel(targets, send, send + 0.003, st)
+    acc = estimate_applied_age(targets, prompt, st, send, 1e-6)
+    assert rate_subverdict(acc, 50.0) == "satisfied" and acc.age_upper_s < 0.02
+    growing = _held_channel(targets, send, send * 1.5 + 0.003, st)  # delivery delay grows with time
+    acc2 = estimate_applied_age(targets, growing, st, send, 1e-6)
+    assert acc2.age_lower_s > 0.3 and rate_subverdict(acc2, 50.0) == "violated"
 
 
 def test_client_send_stall_is_not_attributed_to_the_implementation():
-    # the client itself pauses for 60 ms in the middle of its stream; the channel follows every command as sent,
-    # so the longest stale interval is the client's own gap: undetermined, not violated (v0.1.2 campaign, T_rate_004)
-    from crtk_conformance.rate_estimator import estimate_acceptance, rate_subverdict
     targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.001
     send = np.arange(100) * 0.01; send[50:] += 0.06
     st = np.arange(0, 1.2, 0.002)
-    sp = np.zeros((len(st), 3))
-    for k, t in enumerate(st):
-        j = int(np.searchsorted(send, t, side="right")) - 1
-        sp[k, 0] = targets[j, 0] if j >= 0 else 0.0
-    acc = estimate_acceptance(targets, sp, st, send, 1e-5, 1.2)
-    assert acc.accepted == 100 and acc.max_stale_s > 0.06 and acc.client_max_send_gap_s > 0.06
+    sp = _held_channel(targets, send, send + 0.002, st)
+    acc = estimate_applied_age(targets, sp, st, send, 1e-5)
+    assert acc.accepted == 100 and acc.age_lower_s > 0.06 and acc.client_max_send_gap_s > 0.06
     assert rate_subverdict(acc, 50.0) == "undetermined"
-    send2 = np.arange(100) * 0.01  # the same channel behaviour with a steady client is satisfied
-    sp2 = np.zeros((len(st), 3))
-    for k, t in enumerate(st):
-        j = int(np.searchsorted(send2, t, side="right")) - 1
-        sp2[k, 0] = targets[j, 0] if j >= 0 else 0.0
-    acc2 = estimate_acceptance(targets, sp2, st, send2, 1e-5, 1.2)
-    assert rate_subverdict(acc2, 50.0) == "satisfied"
 
 
-def test_channel_constant_at_a_non_target_value_is_a_zero_acceptance_not_an_interpolator():
-    from crtk_conformance.rate_estimator import estimate_acceptance, rate_subverdict
+def test_channel_never_showing_a_window_target_is_violated():
     targets = np.zeros((50, 3)); targets[:, 0] = np.arange(1, 51) * 0.001
-    st = np.arange(0, 1.0, 0.002); sp = np.full((len(st), 3), -0.5)  # a stale goal from before the window
-    acc = estimate_acceptance(targets, sp, st, np.arange(50) * 0.02, 1e-5, 1.0)
-    assert acc.status == "ok" and acc.accepted == 0 and acc.max_stale_s >= 0.9
+    st = np.arange(0, 1.0, 0.002); sp = np.full((len(st), 3), -0.5)
+    acc = estimate_applied_age(targets, sp, st, np.arange(50) * 0.02, 1e-5)
+    assert acc.status == "ok" and acc.accepted == 0 and acc.age_lower_s >= 0.9
     assert rate_subverdict(acc, 50.0) == "violated"
+
+
+def test_interpolating_low_level_setpoint_is_undetermined():
+    targets = np.zeros((20, 3)); targets[:, 0] = np.arange(1, 21) * 0.001
+    send = np.arange(20) * 0.01
+    st = np.arange(0, 0.2, 0.001)
+    sp = np.zeros((len(st), 3)); sp[:, 0] = np.interp(st, send, targets[:, 0])  # ramps through the targets
+    acc = estimate_applied_age(targets, sp, st, send, 1e-6)
+    assert acc.status == "undetermined" and acc.unmatched_after_first_fraction > 0.5
+
+
+def test_sparse_channel_widens_the_bracket_towards_undetermined():
+    # the same prompt application observed at 20 Hz: the upper end of the bracket grows by the sampling interval
+    send = np.arange(100) * 0.01
+    targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.001
+    st = np.arange(0, 1.05, 0.05)
+    sp = _held_channel(targets, send, send + 0.003, st)
+    acc = estimate_applied_age(targets, sp, st, send, 1e-6)
+    assert acc.age_upper_s >= 0.05 and acc.age_lower_s < 0.02
+    assert rate_subverdict(acc, 50.0) == "undetermined"

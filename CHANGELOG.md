@@ -2,6 +2,10 @@
 
 ## 0.1.4 — 2026-09-11
 
+> **Commit hashes**: the history was re-authored to a single author before first publication, so every
+> commit SHA cited below and in `validation/` predates that rewrite. `PROVENANCE-REWRITE.md` maps each of
+> them to its current SHA; no file content changed (every tree object is identical).
+
 Labelling only. **No measurement, estimator or decision input changes**: `estimate_applied_age()` is untouched,
 and every reported quantity — the source-age bracket `[age_lower_s, age_upper_s]`, the acceptance counts, the
 client's achieved rate and send gaps, the ZOH error bound — is computed exactly as in 0.1.3. The archived

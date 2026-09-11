@@ -20,7 +20,7 @@ repo = Path(sys.argv[1]).resolve()
 sys.path.insert(0, str(repo / "src"))
 from crtk_conformance.thresholds import Tolerance
 from crtk_conformance.probes.base import decide
-from crtk_conformance.rate_estimator import estimate_rate, rate_subverdict
+from crtk_conformance.rate_estimator import estimate_rate, rate_subverdict_v013_archival as rate_subverdict  # 0.1.4: the rule this review was answered under
 
 out = {}
 tol = Tolerance(epsilon_m=.001, workspace_radius_m=.1)

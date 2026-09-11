@@ -55,6 +55,7 @@ from ..rate_estimator import (
     estimate_rate,
     match_tolerance_from_sigma,
     rate_subverdict,
+    RATE_VERDICT_WITHDRAWN_NOTE,
 )
 from ..stats import estimate, rate_estimate
 from ..thresholds import Tolerance
@@ -866,29 +867,27 @@ class RateSensitivityProbe:
             acc = None
             if at_client is not None and at_client.get("acceptance"):
                 acc = AppliedAgeEstimate(**at_client["acceptance"])
+            # 0.1.4: the rate class is a diagnostic, never a verdict -- rate_subverdict() returns "undetermined"
+            # unconditionally.  The measurement below is unchanged from 0.1.3; only the label is withdrawn.
             sub["rate"] = rate_subverdict(acc, f_req)
             if acc is not None:
                 res.estimates["applied_setpoint_age_at_client_rate"] = acc.to_dict()
-            if sub["rate"] == "violated":
-                notes.append(f"source age of the applied setpoint at least {acc.age_lower_s*1e3:.0f} ms > required period {1e3/f_req:.0f} ms (eq. 9 with the age; setpoint_cp channel, {acc.accepted} of {acc.commands_sent} commands applied) while the client sustained {acc.client_rate_achieved_hz:.0f} Hz with send gaps <= {acc.client_max_send_gap_s*1e3:.0f} ms")
+            res.estimates["rate_note"] = RATE_VERDICT_WITHDRAWN_NOTE
+            notes.append("rate expectation not decided: " + RATE_VERDICT_WITHDRAWN_NOTE)
+            if acc is not None and acc.status == "ok" and not math.isnan(acc.age_lower_s) and not math.isnan(acc.age_upper_s):
+                diag = ("diagnostic: source age of the applied setpoint bracketed [%.1f, %.1f] ms against a required period of %.0f ms "
+                        "(setpoint_cp channel, %d of %d commands applied)" % (acc.age_lower_s * 1e3, acc.age_upper_s * 1e3, 1e3 / f_req, acc.accepted, acc.commands_sent))
+                if not math.isnan(acc.client_rate_achieved_hz):
+                    diag += "; the client's own stream sustained %.0f Hz" % acc.client_rate_achieved_hz
+                    if not math.isnan(acc.client_max_send_gap_s):
+                        diag += " with send gaps <= %.0f ms" % (acc.client_max_send_gap_s * 1e3)
                 if at_client.get("feedback_latency_allowance_conditional", True):
-                    margin = acc.age_lower_s - 1.0 / f_req
-                    notes.append(f"conditional: the age is measured at the probe's receipt of the channel sample; the verdict assumes the one-way transport delay of setpoint_cp is below the margin of {margin*1e3:.1f} ms (supply --latency-bound-s for an unconditional verdict)")
-                res.estimates["rate_verdict_conditional_on_feedback_transport_delay"] = bool(at_client.get("feedback_latency_allowance_conditional", True))
-            elif sub["rate"] == "satisfied":
-                notes.append(f"source age of the applied setpoint at most {acc.age_upper_s*1e3:.1f} ms <= required period {1e3/f_req:.0f} ms (setpoint_cp channel, {acc.accepted} of {acc.commands_sent} applied; bracket [{acc.age_lower_s*1e3:.1f}, {acc.age_upper_s*1e3:.1f}] ms)")
-            elif sub["rate"] == "undetermined" and at_client is not None:
-                if acc is not None and acc.reason:
-                    why = acc.reason
-                elif at_client.get("reason"):
-                    why = at_client["reason"]
-                elif acc is not None and not math.isnan(acc.client_max_send_gap_s) and acc.client_max_send_gap_s > 1.0 / f_req:
-                    why = "the client's own stream did not meet the requirement (achieved %.0f Hz, longest send gap %.0f ms): the client, not the implementation, is the limit" % (acc.client_rate_achieved_hz, acc.client_max_send_gap_s * 1e3)
-                elif acc is not None:
-                    why = "the source-age bracket of the applied setpoint [%.0f, %.0f] ms straddles the required period %.0f ms (the channel is sampled too sparsely to decide)" % (acc.age_lower_s * 1e3, acc.age_upper_s * 1e3, 1e3 / f_req)
-                else:
-                    why = "client rate below the required rate"
-                notes.append("rate expectation cannot be decided: " + why)
+                    diag += "; the lower end is the age at the probe's receipt of the channel sample, above the publication-side age by the unbounded transport delay of setpoint_cp (--latency-bound-s subtracts a client-supplied bound)"
+                notes.append(diag)
+            elif acc is not None and acc.reason:
+                notes.append("diagnostic: no source-age bracket for this run -- " + acc.reason)
+            elif at_client is not None and at_client.get("reason"):
+                notes.append("diagnostic: no source-age bracket for this run -- " + str(at_client["reason"]))
         res.estimates["sub_verdicts"] = sub
         res.outcome = Outcome(combine(sub))
         if not te.declared:

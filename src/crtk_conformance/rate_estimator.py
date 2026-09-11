@@ -328,8 +328,32 @@ def estimate_applied_age(targets: np.ndarray, setpoint_positions: np.ndarray, se
                               period, int(in_win.sum()), achieved, send_gap, "ok", "", unmatched_after, age_lower_receipt, L_fb, w0, w1)
 
 
+RATE_VERDICT_WITHDRAWN_NOTE = (
+    "reported as a diagnostic, not a conformance verdict (0.1.4). Two properties of the channel, not of this run, "
+    "prevent a verdict: setpoint_cp identifies the applied command by matching its VALUE against the history of "
+    "sent targets, carrying no explicit command identifier or send-time stamp, so a repeated or superseded target "
+    "cannot be attributed unambiguously; and age_lower is measured at the probe's receipt of the sample, exceeding "
+    "the setpoint's publication-side age by a transport delay that no CRTK artifact bounds for an arbitrary "
+    "implementation. The source-age bracket [age_lower_s, age_upper_s] is computed and reported exactly as before; "
+    "only the satisfied/violated label is withdrawn. Deciding this class needs an explicit command identifier or "
+    "send-time stamp on the channel (see the specification recommendation)."
+)
+
+
 def rate_subverdict(est: Optional[AppliedAgeEstimate], f_required_hz: float) -> str:
-    """'satisfied' | 'violated' | 'undetermined' for the rate part of a declared rate expectation (0.1.3).
+    """Always 'undetermined' (0.1.4): the rate class carries no conformance verdict.
+
+    0.1.3 decided this class on the source-age bracket of the applied setpoint (satisfied iff age_upper <= 1/f_req,
+    violated iff age_lower > 1/f_req while the client sustained the rate).  That decision rule is withdrawn for the
+    reasons in RATE_VERDICT_WITHDRAWN_NOTE.  Nothing about what is measured changes: estimate_applied_age() is
+    untouched and the bracket is still reported in full.  The 0.1.3 rule is kept verbatim as
+    rate_subverdict_v013_archival() so the archived v0.1.3 campaign re-derives exactly."""
+    return "undetermined"
+
+
+def rate_subverdict_v013_archival(est: Optional[AppliedAgeEstimate], f_required_hz: float) -> str:
+    """The 0.1.3 rule, kept ONLY so that the archived v0.1.3 campaign and the RC3/RC4 counterexample scripts can be
+    re-derived exactly; it decides no verdict in 0.1.4 (see rate_subverdict).
 
     Decided on the source-age bracket of the applied setpoint (eq. 9: e_ZOH <= v * age).  satisfied: the upper
     end of the bracket is within the required period 1/f_req, i.e. v * age_upper <= epsilon.  violated: the lower

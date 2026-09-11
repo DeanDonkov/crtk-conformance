@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.1.4 — 2026-09-11
+
+Labelling only. **No measurement, estimator or decision input changes**: `estimate_applied_age()` is untouched,
+and every reported quantity — the source-age bracket `[age_lower_s, age_upper_s]`, the acceptance counts, the
+client's achieved rate and send gaps, the ZOH error bound — is computed exactly as in 0.1.3. The archived
+v0.1.0–0.1.3 validation outputs are unchanged and are not regenerated.
+
+### The rate class no longer carries a conformance verdict
+- `rate_estimator.rate_subverdict()` returns `"undetermined"` unconditionally; `satisfied` / `violated` are no
+  longer emitted for the rate part of a declared temporal expectation, in the JSON report or the text summary.
+  Two properties of the channel, not of any particular run, make the decision unsound:
+  1. `setpoint_cp` identifies the applied command by matching its **value** against the history of sent targets.
+     It carries no explicit command identifier and no send-time stamp, so a repeated or superseded target cannot
+     be attributed unambiguously.
+  2. `age_lower` is measured at the probe's **receipt** of the sample and therefore exceeds the setpoint's
+     publication-side age by the channel's transport delay, which no CRTK artifact bounds for an arbitrary
+     implementation. `--latency-bound-s` subtracts a client-supplied bound but cannot establish one.
+- `probes/rate.py` reports the bracket as a diagnostic note and records the withdrawal reason verbatim in
+  `estimates.rate_note` (`rate_estimator.RATE_VERDICT_WITHDRAWN_NOTE`). The obsolete
+  `estimates.rate_verdict_conditional_on_feedback_transport_delay` key is removed — there is no verdict for it
+  to qualify.
+- **Consequence for the aggregate temporal outcome**: `combine()` is unchanged, so a run that declares
+  `rate: required` can no longer come out `conformant` — one declared class is now always undecided. A
+  `violated` state-machine or stop-behaviour sub-verdict still makes the temporal outcome `divergent`, and both
+  of those classes are still decided and reported per class in `estimates.sub_verdicts`.
+- Deciding this class needs a specification change, not another estimator revision: an explicit command
+  identifier or send-time stamp on the command channel (recommendation 3 in the manuscript).
+
+### Reproducibility of the archived campaign
+- The 0.1.3 rule is kept verbatim as `rate_estimator.rate_subverdict_v013_archival()`, used by
+  `validation/analyze_v013.py` (which scores the archived v0.1.3 campaign, produced under that rule) and by the
+  RC3/RC4 reviewer counterexample scripts, whose bodies are unchanged apart from the redirected import. Every
+  soundness/completeness figure derived from the v0.1.3 archive re-derives exactly.
+- `tests/test_rate_estimator.py` pins both: the 0.1.3 cases now assert against the archival rule, and
+  `test_rate_class_carries_no_verdict_0_1_4` asserts that the tool itself reports `undetermined` whatever the
+  bracket says, while the brackets themselves still order as before.
+
 ## 0.1.3 — 2026-09-10 (branch `rc5-temporal-semantics`)
 
 Response to the adversarial review of the RC4 manuscript (`preprint/rc5/RC4_ADVERSARIAL_REVIEW.md`, verdict

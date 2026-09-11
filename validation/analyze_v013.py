@@ -4,7 +4,8 @@
 Usage: python validation/analyze_v013.py validation/v0.1.3/mock [--live validation/v0.1.3/live-src-v1 ...] [--figdir figures]
 Nothing here talks to ROS; everything is computed from the archived JSON and the mock's event logs.  The decision
 rules reproduced here are the released ones (probes/base.py decide() with the 1e-9 boundary guard for the tolerance
-sweeps; rate_estimator.rate_subverdict for every rate window).
+sweeps; rate_estimator.rate_subverdict_v013_archival for every rate window -- the 0.1.3 rule, which is what
+this archive was produced under; 0.1.4 reports the rate class as a diagnostic only).
 
 Rate truth (RC4 adversarial review, finding 5).  For every rate window the truth is NOT derived from the mock's
 configuration but from the mock's own event log: the apply events are matched to the probe's sends by the client's
@@ -37,7 +38,10 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 from crtk_conformance import geometry as G  # noqa: E402
 from crtk_conformance.probes.base import decide as _decide, Outcome  # noqa: E402
-from crtk_conformance.rate_estimator import AppliedAgeEstimate, rate_subverdict  # noqa: E402
+# 0.1.4 withdrew the rate verdict; this analyzer re-derives the ARCHIVED v0.1.3 campaign, so it keeps the
+# 0.1.3 rule explicitly.  It scores that archive, not any run the current tool would report.
+from crtk_conformance.rate_estimator import AppliedAgeEstimate  # noqa: E402
+from crtk_conformance.rate_estimator import rate_subverdict_v013_archival as rate_subverdict  # noqa: E402
 
 C_BLUE, C_ORANGE, C_GREEN, C_PINK, C_GREY = "#0072B2", "#E69F00", "#009E73", "#CC79A7", "#6e6e6e"
 TOL_M = 1e-9  # containment is judged with a 1 nm tolerance: at zero noise the interval collapses to a point and the truth is the same number up to floating-point rounding

@@ -15,7 +15,6 @@ from crtk_conformance.rate_estimator import (
     estimate_noise_sigma,
     estimate_rate,
     match_tolerance_from_sigma,
-    rate_subverdict,
 )
 
 
@@ -200,7 +199,11 @@ def test_subverdict_legacy_crossing_rule():
 
 
 # ------------------------------------------------------------------ 0.1.3: applied-setpoint source age (RC3 finding 2; RC4 findings 1-3)
-from crtk_conformance.rate_estimator import estimate_applied_age, rate_subverdict  # noqa: E402
+# The cases below pin the 0.1.3 DECISION RULE, which 0.1.4 retains only for re-deriving the archived campaign;
+# test_rate_class_carries_no_verdict_0_1_4 pins what the tool reports now.
+from crtk_conformance.rate_estimator import estimate_applied_age  # noqa: E402
+from crtk_conformance.rate_estimator import rate_subverdict, rate_subverdict_v013_archival  # noqa: E402
+_rule = rate_subverdict_v013_archival
 
 
 def _held_channel(targets, send, apply_times, st, pre=None):
@@ -224,8 +227,8 @@ def test_rc3_reviewer_final_command_only_counterexample():
     sp = _held_channel(targets, send, [np.inf] * 99 + [0.995], st)  # only the last command is ever applied
     acc = estimate_applied_age(targets, sp, st, send, 5e-5)
     assert acc.accepted == 1 and acc.age_lower_s > 0.9
-    assert rate_subverdict(acc, 50.0) == "violated"
-    assert rate_subverdict(None, 50.0) == "undetermined"
+    assert _rule(acc, 50.0) == "violated"
+    assert _rule(None, 50.0) == "undetermined"
 
 
 def test_rc4_reviewer_source_age_not_update_cadence():
@@ -240,7 +243,7 @@ def test_rc4_reviewer_source_age_not_update_cadence():
     assert acc.accepted == 100 and acc.max_update_gap_s < 0.025
     # the last target (sent at 0.99 s) is applied at 1.99 s: the supremum of the source age over the window is 1.0 s
     assert acc.age_lower_s > 0.95 and acc.age_upper_s < 1.05
-    assert rate_subverdict(acc, 50.0) == "violated"
+    assert _rule(acc, 50.0) == "violated"
 
 
 def test_rc4_reviewer_publication_uncertainty_is_not_extra_allowance():
@@ -254,7 +257,7 @@ def test_rc4_reviewer_publication_uncertainty_is_not_extra_allowance():
     sp = _held_channel(targets, send, apply, st)
     acc = estimate_applied_age(targets, sp, st, send, 1e-7)
     assert acc.age_lower_s <= 0.024 + 1e-9 <= acc.age_upper_s + 1e-9
-    assert rate_subverdict(acc, 50.0) != "satisfied"
+    assert _rule(acc, 50.0) != "satisfied"
 
 
 def test_rc4_reviewer_preexisting_setpoint_is_not_a_future_acceptance():
@@ -267,7 +270,7 @@ def test_rc4_reviewer_preexisting_setpoint_is_not_a_future_acceptance():
     sp = _held_channel(targets, send, apply, st, pre=targets[-1])
     acc = estimate_applied_age(targets, sp, st, send, 1e-7)
     assert acc.accepted == 100 and acc.age_upper_s <= 0.015 + 1e-9
-    assert rate_subverdict(acc, 50.0) == "satisfied"
+    assert _rule(acc, 50.0) == "satisfied"
 
 
 def test_growing_queue_delay_is_violated_and_prompt_application_is_satisfied():
@@ -276,10 +279,10 @@ def test_growing_queue_delay_is_violated_and_prompt_application_is_satisfied():
     st = np.arange(0, 1.05, 0.002)
     prompt = _held_channel(targets, send, send + 0.003, st)
     acc = estimate_applied_age(targets, prompt, st, send, 1e-6)
-    assert rate_subverdict(acc, 50.0) == "satisfied" and acc.age_upper_s < 0.02
+    assert _rule(acc, 50.0) == "satisfied" and acc.age_upper_s < 0.02
     growing = _held_channel(targets, send, send * 1.5 + 0.003, st)  # delivery delay grows with time
     acc2 = estimate_applied_age(targets, growing, st, send, 1e-6)
-    assert acc2.age_lower_s > 0.3 and rate_subverdict(acc2, 50.0) == "violated"
+    assert acc2.age_lower_s > 0.3 and _rule(acc2, 50.0) == "violated"
 
 
 def test_client_send_stall_is_not_attributed_to_the_implementation():
@@ -289,7 +292,7 @@ def test_client_send_stall_is_not_attributed_to_the_implementation():
     sp = _held_channel(targets, send, send + 0.002, st)
     acc = estimate_applied_age(targets, sp, st, send, 1e-5)
     assert acc.accepted == 100 and acc.age_lower_s > 0.06 and acc.client_max_send_gap_s > 0.06
-    assert rate_subverdict(acc, 50.0) == "undetermined"
+    assert _rule(acc, 50.0) == "undetermined"
 
 
 def test_channel_never_showing_a_window_target_is_violated():
@@ -297,7 +300,7 @@ def test_channel_never_showing_a_window_target_is_violated():
     st = np.arange(0, 1.0, 0.002); sp = np.full((len(st), 3), -0.5)
     acc = estimate_applied_age(targets, sp, st, np.arange(50) * 0.02, 1e-5)
     assert acc.status == "ok" and acc.accepted == 0 and acc.age_lower_s >= 0.9
-    assert rate_subverdict(acc, 50.0) == "violated"
+    assert _rule(acc, 50.0) == "violated"
 
 
 def test_interpolating_low_level_setpoint_is_undetermined():
@@ -317,7 +320,7 @@ def test_sparse_channel_widens_the_bracket_towards_undetermined():
     sp = _held_channel(targets, send, send + 0.003, st)
     acc = estimate_applied_age(targets, sp, st, send, 1e-6)
     assert acc.age_upper_s >= 0.05 and acc.age_lower_s < 0.02
-    assert rate_subverdict(acc, 50.0) == "undetermined"
+    assert _rule(acc, 50.0) == "undetermined"
 
 
 def test_feedback_latency_allowance_lowers_only_the_lower_bound():
@@ -335,9 +338,9 @@ def test_feedback_latency_allowance_lowers_only_the_lower_bound():
     assert a1.age_upper_s == a0.age_upper_s
     # 40 ms of age against a 20 ms period: violated with or without the allowance; an allowance as large as the
     # excess makes it undetermined, never satisfied
-    assert rate_subverdict(a0, 50.0) == "violated" and rate_subverdict(a1, 50.0) == "violated"
+    assert _rule(a0, 50.0) == "violated" and _rule(a1, 50.0) == "violated"
     a2 = estimate_applied_age(targets, sp, st, send, 5e-5, feedback_latency_allowance_s=0.025)
-    assert rate_subverdict(a2, 50.0) == "undetermined"
+    assert _rule(a2, 50.0) == "undetermined"
 
 
 def test_rc4_reviewer_fifo_queue_at_half_the_client_rate_is_violated():
@@ -352,7 +355,7 @@ def test_rc4_reviewer_fifo_queue_at_half_the_client_rate_is_violated():
     acc = estimate_applied_age(targets, sp, st, send, 5e-5)
     assert acc.max_update_gap_s < 0.025  # the 0.1.2 statistic would have passed this
     assert acc.age_lower_s > 0.45 and acc.age_upper_s > acc.age_lower_s
-    assert rate_subverdict(acc, 50.0) == "violated"
+    assert _rule(acc, 50.0) == "violated"
 
 
 def test_window_end_uses_the_age_of_the_last_target_at_its_application():
@@ -368,10 +371,39 @@ def test_window_end_uses_the_age_of_the_last_target_at_its_application():
     sp = _held_channel(targets, send, apply, st)
     acc = estimate_applied_age(targets, sp, st, send, 5e-5)
     assert acc.age_lower_s < 0.015 and acc.age_upper_s > 0.05  # undetermined: the sparse channel cannot show satisfaction
-    assert rate_subverdict(acc, 50.0) == "undetermined"
+    assert _rule(acc, 50.0) == "undetermined"
     # the same channel on a FIFO buffer that applies the last target 0.7 s late: the lower bound keeps the delay
     apply2 = send + 0.7
     st2 = 0.049 + np.arange(0, 2.0, 0.05)
     sp2 = _held_channel(targets, send, apply2, st2)
     acc2 = estimate_applied_age(targets, sp2, st2, send, 5e-5)
-    assert acc2.age_lower_s > 0.64 and rate_subverdict(acc2, 50.0) == "violated"
+    assert acc2.age_lower_s > 0.64 and _rule(acc2, 50.0) == "violated"
+
+
+# ------------------------------------------------------------------ 0.1.4: the rate class carries no verdict
+def test_rate_class_carries_no_verdict_0_1_4():
+    """Whatever the bracket says, the reported rate sub-verdict is 'undetermined' (0.1.4).
+
+    The bracket itself is unchanged -- each case below still reproduces its 0.1.3 classification under the
+    archival rule, which is what the v0.1.3 validation archive was scored with."""
+    targets = np.zeros((100, 3)); targets[:, 0] = np.arange(1, 101) * 0.0005
+    send = np.arange(100) * 0.01
+    st = np.arange(0, 1.2, 0.005)
+
+    # (a) a channel that applies only the last command: 0.1.3 said "violated"
+    sp = _held_channel(targets, send, [np.inf] * 99 + [0.995], st)
+    late = estimate_applied_age(targets, sp, st, send, 5e-5)
+    assert rate_subverdict_v013_archival(late, 50.0) == "violated"
+    assert rate_subverdict(late, 50.0) == "undetermined"
+
+    # (b) a channel that applies every command promptly: 0.1.3 said "satisfied"
+    sp = _held_channel(targets, send, list(send + 0.001), st)
+    prompt = estimate_applied_age(targets, sp, st, send, 5e-5)
+    assert rate_subverdict_v013_archival(prompt, 50.0) == "satisfied"
+    assert rate_subverdict(prompt, 50.0) == "undetermined"
+
+    # (c) no setpoint channel at all
+    assert rate_subverdict(None, 50.0) == "undetermined"
+
+    # the measurement survives the withdrawal: the brackets still differ, and still order as before
+    assert late.age_lower_s > prompt.age_upper_s

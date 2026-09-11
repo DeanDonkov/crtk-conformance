@@ -15,7 +15,7 @@ import numpy as np
 
 repo = Path(sys.argv[1]).resolve()
 sys.path.insert(0, str(repo / "src"))
-from crtk_conformance.rate_estimator import estimate_acceptance, rate_subverdict
+from crtk_conformance.rate_estimator import estimate_acceptance, rate_subverdict_v013_archival as rate_subverdict  # 0.1.4: the rule this review was answered under
 from crtk_conformance.spatial import spatial_decision
 from crtk_conformance.geometry import make_pose, axis_angle
 from crtk_conformance.probes.base import decide

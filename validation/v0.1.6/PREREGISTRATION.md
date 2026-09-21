@@ -229,3 +229,18 @@ Test: `tests/test_enable_v016.py` (a fake depth-one state channel).
 - **Archived evidence.** The reference node processes every state command, so no archived verdict depends on this change. The integration suite is re-run on this commit.
 - **SRC.** The SRC releases publish no `operating_state`, so `ensure_enabled` returns before sending anything, as before.
 - **Reporting.** The paper reports the finding as an interface semantic: the queue depth of the state channel. It is not a verdict of any probe.
+
+## Addendum B (21 September 2026): reference-node campaigns, before any of them was run
+
+This addendum changes no parameter or code.
+
+1. **The mixture cells of the live boundary confirmation (WP5) are not the Monte Carlo model.**
+   - The reference node holds each mixture draw for `mix_hold_s` = 0.2 s (the default, as committed).
+   - A frame trial of five samples at 100 Hz lasts about 50 ms, so about four consecutive trials share one draw. Within a run the trial errors are therefore correlated, whereas the offline Monte Carlo draws the mixture independently per trial.
+   - Agreement with the Monte Carlo within the Clopper–Pearson intervals is expected for the **Gaussian** cells only. The mixture cells are reported as a correlated-error stress case, with this difference stated. Their false-divergent rate at ratio 1.00 may exceed the per-trial Monte Carlo rate.
+2. **The WP6 scope is smaller than in the RC9 brief**, and was fixed in section 3 before any run:
+   - one fault timeout (0.25 s) instead of three;
+   - loss {none, iid 2 %, iid 5 %, Gilbert–Elliott 5 %} instead of also iid 1 % and Gilbert–Elliott 2 %;
+   - N = 8 per cell instead of at least 20.
+
+   The reason is the time budget of the 2-vCPU host: each temporal run takes about 1–2 min. The paper states N and the Clopper–Pearson intervals.

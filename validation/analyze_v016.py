@@ -204,9 +204,29 @@ def classify(outcome, truth_conformant):
     return "false_D" if truth_conformant else "correct_D"
 
 
+def _endpoint(v):
+    """An interval endpoint as a float, or None if it is missing or NaN.  0.0 is a legitimate endpoint (the scale
+    interval's lower end is 0 whenever the declared unit lies inside the unit interval), so this must not be a
+    truthiness test: RC9 used `e.get("ci_low") or 1`, which turned every 0.0 lower end into 1 m and under-counted
+    the live scale coverage (27/25/27 instead of 30/28/30 of 30)."""
+    if v is None:
+        return None
+    v = float(v)
+    return None if math.isnan(v) else v
+
+
+def interval_covers(lo, hi, x, tol=1e-9):
+    """1 if [lo, hi] (absolute slack tol) contains x; 0 if it does not or if either endpoint is missing or NaN."""
+    lo, hi = _endpoint(lo), _endpoint(hi)
+    if lo is None or hi is None:
+        return 0
+    return int(lo - tol <= x <= hi + tol)
+
+
 def B():
     cells = defaultdict(Counter)
     cover = defaultdict(int)
+    missing = defaultdict(int)
     for name, r in load_dir(os.path.join(V16, "mock", "B")):
         parts = name.split("_")
         probe = "frame" if parts[0] == "BF" else "scale"
@@ -216,10 +236,12 @@ def B():
         cells[(probe, model, sig, ratio)][classify(o, tr["truth_conformant"])] += 1
         if probe == "frame":
             sd = r["result"]["estimates"].get("spatial_decision") or {}
-            cover[(probe, model, sig, ratio)] += int(sd.get("ci_low_m", 1) - 1e-9 <= tr["E_true_m"] <= sd.get("ci_high_m", -1) + 1e-9)
+            lo, hi = sd.get("ci_low_m"), sd.get("ci_high_m")
         else:
-            e = r["result"]["estimates"].get("predicted_error_at_workspace_edge_m", {})
-            cover[(probe, model, sig, ratio)] += int((e.get("ci_low") or 1) - 1e-9 <= tr["E_true_m"] <= (e.get("ci_high") or -1) + 1e-9)
+            e = r["result"]["estimates"].get("predicted_error_at_workspace_edge_m") or {}
+            lo, hi = e.get("ci_low"), e.get("ci_high")
+        cover[(probe, model, sig, ratio)] += interval_covers(lo, hi, tr["E_true_m"])
+        missing[(probe, model, sig, ratio)] += int(_endpoint(lo) is None or _endpoint(hi) is None)
     mc = {}
     mcp = os.path.join(V16, "boundary", "boundary_montecarlo.json")
     if os.path.exists(mcp):
@@ -230,7 +252,7 @@ def B():
     for key, c in sorted(cells.items()):
         n = sum(c.values())
         row = {"probe": key[0], "noise_model": key[1], "sigma": key[2], "ratio": key[3], "n": n, **{k: c.get(k, 0) for k in ("correct_C", "correct_D", "false_C", "false_D", "U")},
-               "coverage": cover[key] / n}
+               "covered": cover[key], "interval_missing": missing[key], "coverage": cover[key] / n}
         for k in ("false_C", "false_D", "U"):
             row[f"{k}_ci95"] = cp(c.get(k, 0), n)
         m = mc.get(key)

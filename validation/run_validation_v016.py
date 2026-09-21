@@ -37,7 +37,7 @@ def run_probe(*args, **kw):
     retries = []
     for attempt in range(3):
         rec = _run_probe(*args, **kw)
-        if rec["result"].get("decision_basis") not in ("missing topics", "no data", "no measured_cp data"):
+        if rec["result"].get("decision_basis") not in ("missing topics", "no data", "no measured_cp data", "missing measured_cp", "no local data"):
             break
         retries.append(rec["result"].get("decision_basis"))
         log(f"start-up failure ({rec['result'].get('decision_basis')}): retrying")

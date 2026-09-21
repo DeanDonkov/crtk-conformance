@@ -57,6 +57,10 @@ class Stack:
         self.v, self.logdir, self.procs = version, logdir, []
 
     def _p(self, cmd, log, cwd=None):
+        # as run_live.sh (RC3/RC8): the AMBF catkin environment and the ambf_client Python module (addendum D: the first
+        # v1 attempt lacked both, launch_crtk_interface.py failed with ModuleNotFoundError: ambf_client)
+        amb = os.path.join(LIVE, "ambf-2.0")
+        cmd = (f"source {amb}/build/devel/setup.bash; export PYTHONPATH={amb}/ambf_ros_modules/ambf_client/python:$PYTHONPATH; " + cmd)
         self.procs.append(subprocess.Popen(["bash", "-c", cmd], cwd=cwd, stdout=open(os.path.join(self.logdir, log), "w"), stderr=subprocess.STDOUT,
                                            preexec_fn=os.setsid, env=os.environ.copy()))
 
@@ -72,6 +76,7 @@ class Stack:
                 cwd=os.path.join(src, "scripts", "surgical_robotics_challenge"))
         time.sleep(15)
         subprocess.run(f"rostopic list > {self.logdir}/topics.txt 2>&1", shell=True)
+        self.q_work = move_to_work(self.v, self.logdir)
         return self
 
     def __exit__(self, *a):
@@ -88,6 +93,30 @@ class Stack:
                 pass
         subprocess.run("pkill -9 -f ambf_simulator; pkill -9 -f Xvfb; pkill -9 -f rosmaster", shell=True)
         time.sleep(2)
+
+
+def move_to_work(version, logdir):
+    """RC8 precondition (live_aux.py): the initially near-singular arm is moved by servo_jp to q_work = [0, 0, q3, 0, 0, 0]
+    (about 42 % of the insertion range) before any probe runs; streamed at 100 Hz for 4 s, then the measured joints
+    are recorded."""
+    import rospy
+    from sensor_msgs.msg import JointState
+    if not rospy.core.is_initialized():
+        rospy.init_node("src_live_harness", anonymous=True, disable_signals=True)
+    last = {}
+    sub = rospy.Subscriber(NS + "/measured_js", JointState, lambda m: last.__setitem__("js", m))
+    pub = rospy.Publisher(NS + "/servo_jp", JointState, queue_size=10)
+    time.sleep(1.5)
+    q = [0.0, 0.0, Q_INS[version], 0.0, 0.0, 0.0]
+    t0 = time.monotonic()
+    while time.monotonic() - t0 < 4.0:
+        m = JointState(); m.header.stamp = rospy.Time.now(); m.position = q  # positions only, as live_aux.py
+        pub.publish(m); time.sleep(0.01)
+    time.sleep(1.0)
+    out = {"q_work_commanded": q, "measured_js": None if "js" not in last else {"name": list(last["js"].name), "position": list(last["js"].position)}}
+    json.dump(out, open(os.path.join(logdir, "q_work.json"), "w"), indent=1)
+    sub.unregister(); pub.unregister()
+    return out
 
 
 def cli(name, outdir, probes, exp, tol_mm):

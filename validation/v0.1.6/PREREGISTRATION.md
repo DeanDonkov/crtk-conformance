@@ -268,3 +268,14 @@ The campaign ran with the frozen code at `99583e4`: 3 × 14 cases on `jhu` and 3
 - All three `nobase` cases: one new launch (launch 4). With launches 2 and 3, this gives three `nobase` launches in which the cases ran.
 
 The report counts launch 1 of `nobase` as a failed start-up, not as a result.
+
+## Addendum D (21 September 2026): SRC harness, before any probe reached an SRC interface
+
+The first SRC v1.0.0 attempt (`src_live/live-src-v1-run1-failed-startup/`) started no CRTK interface. `launch_crtk_interface.py` failed with `ModuleNotFoundError: ambf_client`, because the harness did not source AMBF's catkin environment or add the `ambf_client` Python module to `PYTHONPATH`, as `validation/environment/run_live.sh` (RC3/RC8) does. The three CLI runs found no topics and returned U/U/U in about 1.5 s each. They are not results.
+
+Harness fixes (no tool or declaration change):
+
+1. Source the AMBF environment and add `ambf_client`, as in `run_live.sh`.
+2. Before any probe, move the arm by `servo_jp` to q_work = [0, 0, q3, 0, 0, 0], as `live_aux.py` did in RC8 ("the initially near-singular arm was moved to approximately 42 % of insertion range"). The move is streamed at 100 Hz for 4 s with positions only, and the measured joints are recorded in `logs/q_work.json`.
+
+Predictions, parameters and cases are unchanged.

@@ -306,6 +306,13 @@ CASES_NOBASE = [
 def campaign(out: str, launches: int, only: str = None):
     os.makedirs(out, exist_ok=True)
     rows = []
+    from crtk_conformance import __version__
+    rev = subprocess.run(["git", "-C", REPO, "rev-parse", "HEAD"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True).stdout.strip()
+    dirty = subprocess.run(["git", "-C", REPO, "status", "--porcelain", "--untracked-files=no", "src", "validation/dvrk_sim_v016.py"], stdout=subprocess.PIPE,
+                           stderr=subprocess.DEVNULL, text=True).stdout.strip()
+    json.dump({"crtk_conformance_version": __version__, "repo_commit": rev, "tracked_changes_in_src_or_harness": dirty, "launches": launches, "only": only,
+               "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "python": sys.version, "dvrk_ws": DVRK_WS},
+              open(os.path.join(out, f"campaign_meta{'_' + only if only else ''}.json"), "w"), indent=1)
     for cfg, cases in (("jhu", CASES_JHU), ("nobase", CASES_NOBASE)):
         if only and cfg != only:
             continue

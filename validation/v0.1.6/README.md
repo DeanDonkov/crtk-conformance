@@ -1,4 +1,4 @@
-# validation/v0.1.6: the RC9 archive (crtk-conformance 0.1.6.dev0)
+# validation/v0.1.6: the RC9 archive (runs made with crtk-conformance 0.1.6.dev0; released as 0.1.6, whose probe and decision code are unchanged)
 
 All runs here were planned in `PREREGISTRATION.md` (committed at `efdd062`) and its addenda A–D, each committed before the runs it affects. Exploratory runs are kept apart and are never pooled with results.
 
@@ -14,7 +14,7 @@ All runs here were planned in `PREREGISTRATION.md` (committed at `efdd062`) and 
 | `boundary/` | Offline Monte Carlo of the released decision rules, N = 2000 per cell |
 | `reanalysis/` | Archived v0.1.3 liveness intervals under the 0.1.6 rule; width/τ_w |
 | `rescoring/` | Fig. 1(d) sweeps with exact decimal truth, including ε = 1 mm; mixture decisions |
-| `analysis/` | `analyze_v016.py` outputs, and `L_state_bounded_posthoc.json` (**post hoc**, not pre-registered) |
+| `analysis/` | `analyze_v016.py` outputs, and `L_state_bounded_posthoc.json` (**post hoc**, not pre-registered). `B_live_boundary.csv` was regenerated for RC10: its coverage column had turned legitimate 0.0 lower interval ends into non-coverage (scale 27/25/27 → 30/28/30 of 30); counts and verdicts are unchanged |
 | `figures/` | `fig05_validation` (0.1.6) |
 | `tests/` | pytest logs; the two intermittent timing tests |
 

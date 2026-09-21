@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.1.6.dev0 — 2026-09-21 (branch `rc9`; not released)
+## 0.1.6 — 2026-09-21
 
-RC9 response to the external review of the RC8 review copy. Every change is listed in `validation/v0.1.6/PREREGISTRATION.md`
+RC9 response to the external review of the RC8 review copy, with the RC10 reporting corrections (below). Every change is listed in `validation/v0.1.6/PREREGISTRATION.md`
 (and its addenda A–D) with the order in which it was made relative to the pre-registered runs. The v0.1.3 archive and the
 0.1.5 verification campaign are unchanged; all new measurements are in `validation/v0.1.6/`.
 
@@ -35,6 +35,19 @@ RC9 response to the external review of the RC8 review copy. Every change is list
 
 ### Fixed
 - `RateSensitivityProbe.run()` raised `KeyError('per_rate')` with `--skip-rate-sweep` (addendum C).
+
+### Analysis and reporting (RC10; external review of the RC9 copy; no run repeated, no verdict changed)
+- `validation/analyze_v016.py`, live boundary coverage: `e.get("ci_low") or 1` replaced every legitimate 0.0 lower
+  interval end of the scale probe by 1 m. Endpoints are now tested explicitly for missing or NaN values
+  (`interval_covers`). Live scale coverage is 30/30, 28/30 and 30/30 at 0.95, 1.00 and 1.05 ε (0.93–1.00), not
+  27/25/27 (0.83–0.90). `analysis/B_live_boundary.csv` regenerated (new columns `covered`, `interval_missing`).
+- `validation/verify_reporting_v016.py` (`--tag`): recomputes that coverage from the raw records and cross-checks the
+  analysis CSV; checks the live per-cell counts against the supplement text (previously only printed), the Monte Carlo
+  coverage ranges, the RC10 wording corrections and the final test log.
+
+### Tests
+- 98 ROS-free unit tests (+1 skipped without ROS); 137 with ROS. Two timing tests fail intermittently on a 2-vCPU host
+  under pytest, with the 0.1.5 code as well (`validation/v0.1.6/tests/README.md`).
 
 ## 0.1.5 — 2026-09-19
 

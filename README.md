@@ -153,6 +153,7 @@ python validation/src_live_v016.py run v1|v2                                   #
 python validation/run_validation_v016.py --only K,B,L                          # reference node: command-side mismatch, boundary, command loss
 python validation/boundary_montecarlo_v016.py                                  # offline Monte Carlo of the released decision rules near epsilon
 python validation/reanalyze_liveness_v016.py; python validation/rescore_v016.py; python validation/analyze_v016.py all
+python validation/verify_reporting_v016.py --paper <manuscript dir> --tag rc10  # paper numbers recomputed from the raw v0.1.6 archive
 python validation/analyze_v013.py validation/v0.1.3/mock --live validation/v0.1.3/live-src-v1 validation/v0.1.3/live-src-v2
 ```
 

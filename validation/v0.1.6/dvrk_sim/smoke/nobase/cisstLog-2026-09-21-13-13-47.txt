@@ -1,0 +1,1407 @@
+M- osaThread::CreateInternal: create thread named: Unnamed
+M- osaThread::CreateInternal: create thread named: Unnamed
+M- Class dvrk_system: Configure: system using file "/repo/validation/v0.1.6/dvrk_sim/configs/system-PSM2_KIN_SIM-nobase.json"
+----> content of configuration file: 
+{
+	"$id" : "dvrk-system.schema.json",
+	"$version" : "1",
+	"arms" : 
+	[
+		{
+			"arm_file" : "arm/PSM_KIN_SIMULATED_LARGE_NEEDLE_DRIVER_400006.json",
+			"name" : "PSM2",
+			"simulation" : "KINEMATIC",
+			"type" : "PSM"
+		}
+	]
+}
+<----
+M- Class dvrk_system: Configure, loaded:
+------>
+{
+	"IOs" : null,
+	"ISI_focus_controller" : 
+	{
+		"IO" : "",
+		"IO_file" : "",
+		"name" : "ISI_focus_controller"
+	},
+	"arms" : 
+	[
+		{
+			"IO" : "",
+			"IO_file" : "",
+			"IO_gripper_file" : "",
+			"PID_file" : "",
+			"PID_period" : 0,
+			"arm_file" : "arm/PSM_KIN_SIMULATED_LARGE_NEEDLE_DRIVER_400006.json",
+			"base_frame" : 
+			{
+				"component" : "",
+				"interface" : "",
+				"reference_frame" : "",
+				"transform" : 
+				[
+					[
+						1,
+						0,
+						0,
+						0
+					],
+					[
+						0,
+						1,
+						0,
+						0
+					],
+					[
+						0,
+						0,
+						1,
+						0
+					],
+					[
+						0,
+						0,
+						0,
+						1
+					]
+				]
+			},
+			"component" : "",
+			"interface" : "",
+			"name" : "PSM2",
+			"name_on_IO" : "",
+			"period" : 0.0006066666666666666,
+			"serial" : "",
+			"simulation" : "KINEMATIC",
+			"skip_ROS_bridge" : false,
+			"type" : "PSM"
+		}
+	],
+	"component_manager" : null,
+	"consoles" : null,
+	"settings" : 
+	{
+		"audio_volume" : 0.5,
+		"chatty" : false,
+		"path" : null
+	}
+}
+<------
+D- Class mtsIntuitiveResearchKitPSM: AddStateTable: added state table "State" and corresponding interface "StateTableState" to task "PSM2"
+D- Class mtsIntuitiveResearchKitPSM: AddStateTable: added state table "Configuration" and corresponding interface "StateTableConfiguration" to task "PSM2"
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #1: PSM2: desired state DISABLED
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #2: PSM2: current state DISABLED
+-M Class mtsIntuitiveResearchKitPSM: RemoveInterfaceRequired: removed required interface "RobotIO"
+-M Class mtsIntuitiveResearchKitPSM: RemoveInterfaceRequired: removed required interface "arm_clutch"
+-M Class mtsIntuitiveResearchKitPSM: RemoveInterfaceRequired: removed required interface "adapter"
+-M Class mtsIntuitiveResearchKitPSM: RemoveInterfaceRequired: removed required interface "tool"
+-M Class mtsIntuitiveResearchKitPSM: RemoveInterfaceRequired: removed required interface "dallas"
+M- Class mtsIntuitiveResearchKitPSM: Configure: PSM2 using file "/ws/dvrk_ws/src/cisst-saw/sawIntuitiveResearchKit/core/components/../../share/arm/PSM_KIN_SIMULATED_LARGE_NEEDLE_DRIVER_400006.json"
+----> content of configuration file: 
+/* -*- Mode: Javascript; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+{
+	"$id" : "dvrk-psm.schema.json",
+	"$version" : "1",
+	"generation" : "Classic",
+	"kinematic" : "kinematic/PSM.json",
+	"tool" : "LARGE_NEEDLE_DRIVER:400006",
+	"tool_detection" : "FIXED"
+}
+<----
+M- Class mtsIntuitiveResearchKitPSM: ConfigureDH: PSM2 using file "/ws/dvrk_ws/src/cisst-saw/sawIntuitiveResearchKit/core/components/../../share/kinematic/PSM.json"
+----> content of kinematic (GC) configuration file: 
+/* -*- Mode: Javascript; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+{
+	// see dVRK user guide
+	"DH" : 
+	{
+		"convention" : "modified",
+		"joints" : 
+		[
+			{
+				"A" : 0,
+				"D" : 0,
+				"alpha" : 1.5708,
+				"ftmax" : 3.3161010000000002,
+				"mode" : "active",
+				"name" : "yaw",
+				"offset" : 1.5708, // "D" + 90
+				"qmax" : 1.5880000000000001, //  91
+				"qmin" : -1.5880000000000001, // -91
+				"theta" : 0,
+				"type" : "revolute"
+			},
+			{
+				"A" : 0,
+				"D" : 0,
+				"alpha" : -1.5708,
+				"ftmax" : 3.3161010000000002,
+				"mode" : "active",
+				"name" : "pitch",
+				"offset" : -1.5708,
+				"qmax" : 0.92502499999999999, //  53
+				"qmin" : -0.92502499999999999, // -53
+				"theta" : 0,
+				"type" : "revolute"
+			},
+			{
+				"A" : 0,
+				"D" : 0,
+				"alpha" : 1.5708,
+				"ftmax" : 9.8779260000000004,
+				"mode" : "active",
+				"name" : "insertion",
+				"offset" : -0.43180000000000002,
+				"qmax" : 0.23999999999999999, // 240 mm
+				"qmin" : 0,
+				"theta" : 0,
+				"type" : "prismatic"
+			}
+		]
+	}
+}
+<----
+M- Class mtsIntuitiveResearchKitPSM: ConfigureDH PSM2: loaded kinematics
+    MODIFIED DH    1.5708         0         0         0         hinge active        1.5708       -1.588        1.588       3.3161
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708    -0.925025     0.925025       3.3161
+    MODIFIED DH    1.5708         0         0         0        slider active       -0.4318            0         0.24      9.87793
+
+M- Class mtsIntuitiveResearchKitPSM: ConfigureDH PSM2: saved base configuration file name: /ws/dvrk_ws/src/cisst-saw/sawIntuitiveResearchKit/core/components/../../share/kinematic/PSM.json
+M- Class mtsIntuitiveResearchKitPSM: ConfigureGC: PSM2: no GC kinematics specified, so gravity compensation is not available
+M- Class mtsIntuitiveResearchKitPSM: ToolList::Load: using file "/ws/dvrk_ws/src/cisst-saw/sawIntuitiveResearchKit/core/components/../../share/tool/index.json"
+----> content of configuration file: 
+/* -*- Mode: Javascript; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+{
+	//
+	// WARNING:
+	// Most users shouldn't edit this file.
+	// Make sure you know what you're doing before editing!
+	//
+	// sorted by generation and model number
+	"instruments" : 
+	[
+		// Classic instruments
+		{
+			"description" : "Potts Scissors",
+			"file" : "POTTS_SCISSORS_400001.json",
+			"generation" : "Classic",
+			"model" : "400001",
+			"names" : 
+			[
+				"POTTS_SCISSORS"
+			]
+		},
+		{
+			"description" : "Small Clip Applier",
+			"file" : "SMALL_CLIP_APPLIER_400003.json",
+			"generation" : "Classic",
+			"model" : "400003",
+			"names" : 
+			[
+				"SMALL_CLIP_APPLIER"
+			]
+		},
+		{
+			"description" : "Large Needle Driver",
+			"file" : "LARGE_NEEDLE_DRIVER_400006.json",
+			"generation" : "Classic",
+			"model" : "400006",
+			"names" : 
+			[
+				"LARGE_NEEDLE_DRIVER"
+			]
+		},
+		{
+			"description" : "Round Tip Scissors",
+			"file" : "ROUND_TIP_SCISSORS_400007.json",
+			"generation" : "Classic",
+			"model" : "400007",
+			"names" : 
+			[
+				"ROUND_TIP_SCISSORS"
+			]
+		},
+		{
+			"description" : "Black Diamond Micro Forceps",
+			"file" : "MICRO_FORCEPS_400033.json",
+			"generation" : "Classic",
+			"model" : "400033",
+			"names" : 
+			[
+				"MICRO_FORCEPS",
+				"BLACK_DIAMOND_MICRO_FORCEPS"
+			]
+		},
+		{
+			"description" : "Round Tooth Forceps",
+			"file" : "ROUND_TOOTH_FORCEPS_400035.json",
+			"generation" : "Classic",
+			"model" : "400035",
+			"names" : 
+			[
+				"ROUND_TOOTH_FORCEPS"
+			]
+		},
+		{
+			"description" : "DeBakey Forceps",
+			"file" : "DEBAKEY_FORCEPS_400036.json",
+			"generation" : "Classic",
+			"model" : "400036",
+			"names" : 
+			[
+				"DEBAKEY_FORCEPS"
+			]
+		},
+		{
+			"description" : "Long Tip Forceps",
+			"file" : "LONG_TIP_FORCEPS_400048.json",
+			"generation" : "Classic",
+			"model" : "400048",
+			"names" : 
+			[
+				"LONG_TIP_FORCEPS"
+			]
+		},
+		{
+			"description" : "Cadiere Forceps",
+			"file" : "CADIERE_FORCEPS_400049.json",
+			"generation" : "Classic",
+			"model" : "400049",
+			"names" : 
+			[
+				"CADIERE_FORCEPS"
+			]
+		},
+		{
+			"description" : "Prograsp Forceps",
+			"file" : "PROGRASP_FORCEPS_400093.json",
+			"generation" : "Classic",
+			"model" : "400093",
+			"names" : 
+			[
+				"PROGRASP_FORCEPS"
+			]
+		},
+		{
+			"description" : "5mm Needle Driver",
+			"file" : "NEEDLE_DRIVER_400117.json",
+			"generation" : "Classic",
+			"model" : "400117",
+			"names" : 
+			[
+				"NEEDLE_DRIVER",
+				"5MM_NEEDLE_DRIVER"
+			]
+		},
+		{
+			"description" : "Bowel Grasper",
+			"file" : "BOWEL_GRASPER_400127.json",
+			"generation" : "Classic",
+			"model" : "400127",
+			"names" : 
+			[
+				"BOWEL_GRASPER"
+			]
+		},
+		{
+			"description" : "5mm Maryland Dissector",
+			"file" : "MARYLAND_DISSECTOR_400143.json",
+			"generation" : "Classic",
+			"model" : "400143",
+			"names" : 
+			[
+				"MARYLAND_DISSECTOR",
+				"5MM_MARYLAND_DISSECTOR"
+			]
+		},
+		{
+			"description" : "Maryland Bipolar Forceps",
+			"file" : "MARYLAND_BIPOLAR_FORCEPS_400172.json",
+			"generation" : "Classic",
+			"model" : "400172",
+			"names" : 
+			[
+				"MARYLAND_BIPOLAR_FORCEPS",
+				"BIPOLAR_MARYLAND_FORCEPS"
+			]
+		},
+		{
+			"description" : "Curved Scissors",
+			"file" : "CURVED_SCISSORS_400178.json",
+			"generation" : "Classic",
+			"model" : "400178",
+			"names" : 
+			[
+				"CURVED_SCISSORS"
+			]
+		},
+		{
+			"description" : "Monopolar Curved Scissors",
+			"file" : "MONOPOLAR_CURVED_SCISSORS_400179.json",
+			"generation" : "Classic",
+			"model" : "400179",
+			"names" : 
+			[
+				"MONOPOLAR_CURVED_SCISSORS",
+				"MONOPOLAR_CURVED_SCISSOR"
+			]
+		},
+		{
+			"description" : "Resano Forceps",
+			"file" : "RESANO_FORCEPS_400181.json",
+			"generation" : "Classic",
+			"model" : "400181",
+			"names" : 
+			[
+				"RESANO_FORCEPS"
+			]
+		},
+		{
+			"description" : "Permanent Cautery Hook",
+			"file" : "PERMANENT_CAUTERY_HOOK_400183.json",
+			"generation" : "Classic",
+			"model" : "400183",
+			"names" : 
+			[
+				"PERMANENT_CAUTERY_HOOK"
+			]
+		},
+		{
+			"description" : "Permanent Cautery Spatula",
+			"file" : "PERMANENT_CAUTERY_SPATULA_400184.json",
+			"generation" : "Classic",
+			"model" : "400184",
+			"names" : 
+			[
+				"PERMANENT_CAUTERY_SPATULA"
+			]
+		},
+		{
+			"description" : "Double Fenestrated Grasper",
+			"file" : "DOUBLE_FENESTRATED_GRASPER_400189.json",
+			"generation" : "Classic",
+			"model" : "400189",
+			"names" : 
+			[
+				"DOUBLE_FENESTRATED_GRASPER"
+			]
+		},
+		{
+			"description" : "Mega Needle Driver",
+			"file" : "MEGA_NEEDLE_DRIVER_400194.json",
+			"generation" : "Classic",
+			"model" : "400194",
+			"names" : 
+			[
+				"MEGA_NEEDLE_DRIVER"
+			]
+		},
+		{
+			"description" : "Fenestrated Bipolar Forceps",
+			"file" : "FENESTRATED_BIPOLAR_FORCEPS_400205.json",
+			"generation" : "Classic",
+			"model" : "400205",
+			"names" : 
+			[
+				"FENESTRATED_BIPOLAR_FORCEPS"
+			]
+		},
+		{
+			"description" : "Tenaculum Forceps",
+			"file" : "TENACULUM_FORCEPS_400207.json",
+			"generation" : "Classic",
+			"model" : "400207",
+			"names" : 
+			[
+				"TENACULUM_FORCEPS"
+			]
+		},
+		{
+			"description" : "Thoracic Grasper",
+			"file" : "THORACIC_GRASPER_400208.json",
+			"generation" : "Classic",
+			"model" : "400208",
+			"names" : 
+			[
+				"THORACIC_GRASPER"
+			]
+		},
+		{
+			"description" : "Large Clip Applier",
+			"file" : "LARGE_CLIP_APPLIER_400230.json",
+			"generation" : "Classic",
+			"model" : "400230",
+			"names" : 
+			[
+				"LARGE_CLIP_APPLIER"
+			]
+		},
+		{
+			"description" : "Large Suturecut Needle Driver",
+			"file" : "LRG_SUTURECUT_NEEDLE_DRIVER_400296.json",
+			"generation" : "Classic",
+			"model" : "400296",
+			"names" : 
+			[
+				"LRG_SUTURECUT_NEEDLE_DRIVER"
+			]
+		},
+		{
+			"description" : "Mega Suturecut Needle Driver",
+			"file" : "MEGA_SUTURECUT_NEEDLE_DRIVER_400309.json",
+			"generation" : "Classic",
+			"model" : "400309",
+			"names" : 
+			[
+				"MEGA_SUTURECUT_NEEDLE_DRIVER"
+			]
+		},
+		{
+			"description" : "Stapler 45",
+			"file" : "STAPLER_45_410298.json",
+			"generation" : "S",
+			"model" : "410298",
+			"names" : 
+			[
+				"STAPLER_45"
+			]
+		},
+		{
+			"description" : "Potts Scissors",
+			"file" : "POTTS_SCISSORS_420001.json",
+			"generation" : "S",
+			"model" : "420001",
+			"names" : 
+			[
+				"POTTS_SCISSORS"
+			]
+		},
+		{
+			"description" : "Large Needle Driver",
+			"file" : "LARGE_NEEDLE_DRIVER_420006.json",
+			"generation" : "S",
+			"model" : "420006",
+			"names" : 
+			[
+				"LARGE_NEEDLE_DRIVER"
+			],
+			"version_max" : 11
+		},
+		{
+			"description" : "Large Needle Driver (Geared)",
+			"file" : "LARGE_NEEDLE_DRIVER_420006_GEARED.json",
+			"generation" : "S",
+			"model" : "420006",
+			"names" : 
+			[
+				"LARGE_NEEDLE_DRIVER"
+			],
+			"version_min" : 12
+		},
+		{
+			"description" : "Round Tip Scissors",
+			"file" : "ROUND_TIP_SCISSORS_420007.json",
+			"generation" : "S",
+			"model" : "420007",
+			"names" : 
+			[
+				"ROUND_TIP_SCISSORS"
+			]
+		},
+		{
+			"description" : "Black Diamond Micro Forceps",
+			"file" : "MICRO_FORCEPS_420033.json",
+			"generation" : "S",
+			"model" : "420033",
+			"names" : 
+			[
+				"MICRO_FORCEPS",
+				"BLACK_DIAMOND_MICRO_FORCEPS"
+			]
+		},
+		{
+			"description" : "DeBakey Forceps",
+			"file" : "DEBAKEY_FORCEPS_420036.json",
+			"generation" : "S",
+			"model" : "420036",
+			"names" : 
+			[
+				"DEBAKEY_FORCEPS"
+			]
+		},
+		{
+			"description" : "Long Tip Forceps",
+			"file" : "LONG_TIP_FORCEPS_420048.json",
+			"generation" : "S",
+			"model" : "420048",
+			"names" : 
+			[
+				"LONG_TIP_FORCEPS"
+			]
+		},
+		{
+			"description" : "Cadiere Forceps",
+			"file" : "CADIERE_FORCEPS_420049.json",
+			"generation" : "S",
+			"model" : "420049",
+			"names" : 
+			[
+				"CADIERE_FORCEPS"
+			]
+		},
+		{
+			"description" : "Prograsp Forceps",
+			"file" : "PROGRASP_FORCEPS_420093.json",
+			"generation" : "S",
+			"model" : "420093",
+			"names" : 
+			[
+				"PROGRASP_FORCEPS"
+			],
+			"version_max" : 13
+		},
+		{
+			"description" : "Prograsp Forceps",
+			"file" : "PROGRASP_FORCEPS_420093_GEARED.json",
+			"generation" : "S",
+			"model" : "420093",
+			"names" : 
+			[
+				"PROGRASP_FORCEPS"
+			],
+			"version_min" : 14
+		},
+		{
+			"description" : "5mm Needle Driver",
+			"file" : "NEEDLE_DRIVER_420117.json",
+			"generation" : "S",
+			"model" : "420117",
+			"names" : 
+			[
+				"NEEDLE_DRIVER"
+			]
+		},
+		{
+			"description" : "Maryland Bipolar Forceps",
+			"file" : "MARYLAND_BIPOLAR_FORCEPS_420172.json",
+			"generation" : "S",
+			"model" : "420172",
+			"names" : 
+			[
+				"MARYLAND_BIPOLAR_FORCEPS"
+			]
+		},
+		{
+			"description" : "Curved Scissors",
+			"file" : "CURVED_SCISSORS_420178.json",
+			"generation" : "S",
+			"model" : "420178",
+			"names" : 
+			[
+				"CURVED_SCISSORS"
+			]
+		},
+		{
+			"description" : "Monopolar Curved Scissors",
+			"file" : "MONOPOLAR_CURVED_SCISSORS_420179.json",
+			"generation" : "S",
+			"model" : "420179",
+			"names" : 
+			[
+				"MONOPOLAR_CURVED_SCISSORS"
+			]
+		},
+		{
+			"description" : "Resano Forceps",
+			"file" : "RESANO_FORCEPS_420181.json",
+			"generation" : "S",
+			"model" : "420181",
+			"names" : 
+			[
+				"RESANO_FORCEPS"
+			]
+		},
+		{
+			"description" : "Permanent Cautery Hook",
+			"file" : "PERMANENT_CAUTERY_HOOK_420183.json",
+			"generation" : "S",
+			"model" : "420183",
+			"names" : 
+			[
+				"PERMANENT_CAUTERY_HOOK"
+			],
+			"version_max" : 10
+		},
+		{
+			"description" : "Permanent Cautery Hook (Geared)",
+			"file" : "PERMANENT_CAUTERY_HOOK_420183_GEARED.json",
+			"generation" : "S",
+			"model" : "420183",
+			"names" : 
+			[
+				"PERMANENT_CAUTERY_HOOK"
+			],
+			"version_min" : 11
+		},
+		{
+			"description" : "Permanent Cautery Spatula",
+			"file" : "PERMANENT_CAUTERY_SPATULA_420184.json",
+			"generation" : "S",
+			"model" : "420184",
+			"names" : 
+			[
+				"PERMANENT_CAUTERY_SPATULA"
+			]
+		},
+		{
+			"description" : "Mega Needle Driver",
+			"file" : "MEGA_NEEDLE_DRIVER_420194.json",
+			"generation" : "S",
+			"model" : "420194",
+			"names" : 
+			[
+				"MEGA_NEEDLE_DRIVER"
+			],
+			"version_max" : 11
+		},
+		{
+			"description" : "Mega Needle Driver (Geared)",
+			"file" : "MEGA_NEEDLE_DRIVER_420194_GEARED.json",
+			"generation" : "S",
+			"model" : "420194",
+			"names" : 
+			[
+				"MEGA_NEEDLE_DRIVER"
+			],
+			"version_min" : 12
+		},
+		{
+			"description" : "Fenestrated Bipolar Forceps",
+			"file" : "FENESTRATED_BIPOLAR_FORCEPS_420205.json",
+			"generation" : "S",
+			"model" : "420205",
+			"names" : 
+			[
+				"FENESTRATED_BIPOLAR_FORCEPS"
+			]
+		},
+		{
+			"description" : "Large Clip Applier",
+			"file" : "LARGE_CLIP_APPLIER_420230.json",
+			"generation" : "S",
+			"model" : "420230",
+			"names" : 
+			[
+				"LARGE_CLIP_APPLIER"
+			]
+		},
+		{
+			"description" : "Large Suturecut Needle Driver",
+			"file" : "LARGE_SUTURECUT_NEEDLEDRIVER_420296.json",
+			"generation" : "S",
+			"model" : "420296",
+			"names" : 
+			[
+				"LARGE_SUTURECUT_NEEDLEDRIVER"
+			]
+		},
+		{
+			"description" : "Mega Suturecut Needle Driver",
+			"file" : "MEGA_SUTURECUT_NEEDLE_DRIVER_420309.json",
+			"generation" : "S",
+			"model" : "420309",
+			"names" : 
+			[
+				"MEGA_SUTURECUT_NEEDLE_DRIVER"
+			],
+			"version_max" : 6
+		},
+		{
+			"description" : "Mega Suturecut Needle Driver (Geared)",
+			"file" : "MEGA_SUTURECUT_NEEDLE_DRIVER_420309_GEARED.json",
+			"generation" : "S",
+			"model" : "420309",
+			"names" : 
+			[
+				"MEGA_SUTURECUT_NEEDLE_DRIVER"
+			],
+			"version_min" : 7
+		},
+		{
+			"description" : "Medium-large Clip Applier",
+			"file" : "MEDIUM-LARGE_CLIP_APPLIER_420327.json",
+			"generation" : "S",
+			"model" : "420327",
+			"names" : 
+			[
+				"MEDIUM-LARGE_CLIP_APPLIER"
+			]
+		}
+	]
+}
+<----
+M- ConfigurePID: no "PID" file name for arm "PSM2", using default based on type and generation: "pid/sawControllersPID-PSM.json"
+M- configure_PID: found file /ws/dvrk_ws/src/cisst-saw/sawIntuitiveResearchKit/core/components/../../share/pid/sawControllersPID-PSM.json
+D- Class mtsPID: AddStateTable: added state table "Configuration" and corresponding interface "StateTableConfiguration" to task "PSM2_PID"
+M- Class mtsPID: PSM2_PID Configure: using /ws/dvrk_ws/src/cisst-saw/sawIntuitiveResearchKit/core/components/../../share/pid/sawControllersPID-PSM.json
+M- Class mtsPID: Configure: PSM2_PID using file "/ws/dvrk_ws/src/cisst-saw/sawIntuitiveResearchKit/core/components/../../share/pid/sawControllersPID-PSM.json"
+----> content of configuration file: 
+{
+	"$id" : "saw-controllers-pid.schema.json",
+	"$version" : "1",
+	"pid" : 
+	[
+		{
+			"d_gain" : 6,
+			"i_gain" : 0,
+			"index" : 0,
+			"name" : "yaw",
+			"p_gain" : 120,
+			"p_measured_setpoint_tolerance" : 0.5, // ~30 degrees
+			"pid_max_output" : -1, // disabled, motors are not that powerful
+			"type" : "REVOLUTE"
+		},
+		{
+			"d_gain" : 5,
+			"i_gain" : 0,
+			"index" : 1,
+			"name" : "pitch",
+			"p_gain" : 120,
+			"p_measured_setpoint_tolerance" : 0.5, // ~30 degrees
+			"pid_max_output" : -1, // disabled, motors are not that powerful
+			"type" : "REVOLUTE"
+		},
+		{
+			"d_gain" : 200,
+			"i_gain" : 0,
+			"index" : 2,
+			"name" : "insertion",
+			"p_gain" : 6000,
+			"p_measured_setpoint_tolerance" : 0.050000000000000003, // ~5 cm
+			"pid_max_output" : -1, // disabled, motors are not that powerful
+			"type" : "PRISMATIC"
+		},
+		{
+			"d_gain" : 0.089999999999999997,
+			"i_gain" : 0,
+			"index" : 3,
+			"name" : "disc_1",
+			"p_gain" : 6,
+			"p_measured_setpoint_tolerance" : 0.59999999999999998, // ~35 degrees
+			"pid_max_output" : -1, // disabled, motors are not that powerful
+			"type" : "REVOLUTE"
+		},
+		{
+			"d_gain" : 0.089999999999999997,
+			"i_gain" : 0,
+			"index" : 4,
+			"name" : "disc_2",
+			"p_gain" : 6,
+			"p_measured_setpoint_tolerance" : 0.59999999999999998, // ~35 degrees
+			"pid_max_output" : -1, // disabled, motors are not that powerful
+			"type" : "REVOLUTE"
+		},
+		{
+			"d_gain" : 0.089999999999999997,
+			"i_gain" : 0,
+			"index" : 5,
+			"name" : "disc_3",
+			"p_gain" : 6,
+			"p_measured_setpoint_tolerance" : 0.59999999999999998, // ~35 degrees
+			"pid_max_output" : -1, // disabled, motors are not that powerful
+			"type" : "REVOLUTE"
+		},
+		{
+			"d_gain" : 0.089999999999999997,
+			"i_gain" : 0,
+			"index" : 6,
+			"name" : "disc_4",
+			"p_gain" : 6,
+			"p_measured_setpoint_tolerance" : 0.59999999999999998, // ~35 degrees
+			"pid_max_output" : -1, // disabled, motors are not that powerful
+			"type" : "REVOLUTE"
+		}
+	]
+}
+<----
+-M Class mtsPID: PSM2_PID reset_controller
+-M Class mtsPID: RemoveInterfaceRequired: removed required interface "RobotJointTorqueInterface"
+M- Class dvrk_system_ROS: add_topics_IO called
+M- osaThread::CreateInternal: create thread named: Unnamed
+M- osaThread::CreateInternal: create thread named: Unnamed
+-M Class mtsIntuitiveResearchKitPSM: RemoveInterfaceRequired: removed required interface "ExecIn"
+M- Class mtsIntuitiveResearchKitPSM: Create: creating thread for task PSM2
+M- osaThread::CreateInternal: create thread named: Unnamed
+-M Class mtsPID: RemoveInterfaceRequired: removed required interface "ExecIn"
+M- Class mtsPID: Create: creating thread for task PSM2_PID
+M- osaThread::CreateInternal: create thread named: Unnamed
+ Class mtsIntuitiveResearchKitPSM: Starting StartupInternal (periodic) for PSM2
+M- Class mtsIntuitiveResearchKitPSM: StartupInternal: started for task "PSM2"
+-M Class dvrk_system_ROS: RemoveInterfaceRequired: removed required interface "ExecIn"
+M- Class dvrk_system_ROS: Create: creating thread for task dvrk_robot
+1.79e+09s, #3: PSM2: desired state DISABLED
+1.79e+09s, #3: PSM2: desired state DISABLED
+M- osaThread::CreateInternal: create thread named: Unnamed
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #4: PSM2: current state DISABLED
+M- osaThread::CreateInternal: create thread named: Unnamed
+M- osaThread::CreateInternal: create thread named: Unnamed
+M- osaThread::CreateInternal: create thread named: Unnamed
+M- Class mtsIntuitiveResearchKitPSM: StartupInternal: ended for task "PSM2"
+osaThread::CreateInternal: create thread named: Unnamed
+M-M- Class dvrk_system_ROS: Starting StartupInternal (periodic) for dvrk_robot
+M- Class dvrk_system_ROS: StartupInternal: started for task "dvrk_robot"
+M- Class dvrk_system_ROS: StartupInternal: ended for task "dvrk_robot"
+M- osaThread::CreateInternal: create thread named: Unnamed
+M- osaThread::CreateInternal: create thread named: Unnamed
+ Class mtsPID: Starting StartupInternal (periodic) for PSM2_PID
+M- Class mtsPID: StartupInternal: started for task "PSM2_PID"
+M- Class mtsPID: StartupInternal: ended for task "PSM2_PID"
+-M Class dvrk_system: RemoveInterfaceRequired: removed required interface "ExecIn"
+M- Class dvrk_system: Create: creating thread for task system
+M- osaThread::CreateInternal: create thread named: Unnamed
+M- Class dvrk_system: RunInternal: begin task system
+M- Class dvrk_system: StartupInternal: started for task "system"
+-M Class dvrk_system: system:Main: 1.79e+09s, #1: system started, dVRK 2.4.0 / cisst 1.4.0
+M- Class dvrk_system: StartupInternal: ended for task "system"
+M- Class dvrk_system: RunInternal: wait to start task "system"
+M- Class dvrk_system: RunInternal: wait to start task "system"
+M- osaThread::CreateInternal: create thread named: Unnamed
+M- Class mtsIntuitiveResearchKitPSM: Start: starting task PSM2
+M- Class mtsIntuitiveResearchKitPSM: Start: started task PSM2
+M- Class mtsPID: Start: starting task PSM2_PID
+M- Class mtsPID: Start: started task PSM2_PID
+M- Class dvrk_system_ROS: Start: starting task dvrk_robot
+M- Class dvrk_system_ROS: Start: started task dvrk_robot
+M- Class dvrk_system: Start: starting task system
+M- Class dvrk_system: Start: started task system
+M- Class mtsPID: PSM2_PID enforce_position_limits: using configuration prmConfigurationJoint
+Timestamp (auto): 0.00000 (invalid)
+  Name:[yaw, pitch, insertion, disc_1, disc_2, disc_3, disc_4]  Type:[REVOLUTE, REVOLUTE, PRISMATIC, REVOLUTE, REVOLUTE, REVOLUTE, REVOLUTE]  PositionMin:[0, 0, 0, 0, 0, 0, 0]  PositionMax:[0, 0, 0, 0, 0, 0, 0]  VelocityMin:[]  VelocityMax:[]  AccelerationMin:[]  AccelerationMax:[]  EffortMin:[0, 0, 0, 0, 0, 0, 0]  EffortMax:[0, 0, 0, 0, 0, 0, 0]
+M- Class mtsPID: PSM2_PID enforce_position_limits: using configuration prmConfigurationJoint
+Timestamp (auto): 0.00000 (invalid)
+  Name:[yaw, pitch, insertion, disc_1, disc_2, disc_3, disc_4]  Type:[REVOLUTE, REVOLUTE, PRISMATIC, REVOLUTE, REVOLUTE, REVOLUTE, REVOLUTE]  PositionMin:[0, 0, 0, 0, 0, 0, 0]  PositionMax:[0, 0, 0, 0, 0, 0, 0]  VelocityMin:[]  VelocityMax:[]  AccelerationMin:[]  AccelerationMax:[]  EffortMin:[0, 0, 0, 0, 0, 0, 0]  EffortMax:[0, 0, 0, 0, 0, 0, 0]
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #5: PSM2: current state DISABLED
+-M Class dvrk_system: system:Main: 1.79e+09s, #2: PSM2: desired state DISABLED
+-M Class dvrk_system: system:Main: 1.79e+09s, #3: PSM2: current state DISABLED
+-M Class dvrk_system: system:Main: 1.79e+09s, #4: PSM2: current state DISABLED
+M- Class mtsPID: PSM2_PID enforce_position_limits: using configuration prmConfigurationJoint
+Timestamp (auto): 0.00000 (invalid)
+  Name:[yaw, pitch, insertion, disc_1, disc_2, disc_3, disc_4]  Type:[REVOLUTE, REVOLUTE, PRISMATIC, REVOLUTE, REVOLUTE, REVOLUTE, REVOLUTE]  PositionMin:[0, 0, 0, 0, 0, 0, 0]  PositionMax:[0, 0, 0, 0, 0, 0, 0]  VelocityMin:[]  VelocityMax:[]  AccelerationMin:[]  AccelerationMax:[]  EffortMin:[0, 0, 0, 0, 0, 0, 0]  EffortMax:[0, 0, 0, 0, 0, 0, 0]
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #6: PSM2: desired state ENABLED
+-M Class dvrk_system: system:Main: 1.79e+09s, #5: PSM2: desired state ENABLED
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #7: PSM2: current state POWERING
+-M Class dvrk_system: system:Main: 1.79e+09s, #6: PSM2: current state POWERING
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #8: PSM2: current state ENABLED
+-M Class dvrk_system: system:Main: 1.79e+09s, #7: PSM2: current state ENABLED
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #9: PSM2: desired state HOMED
+-M Class dvrk_system: system:Main: 1.79e+09s, #8: PSM2: desired state HOMED
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #10: PSM2: simulated mode, no need to calibrate encoders
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #11: PSM2: current state CALIBRATING_ENCODERS_FROM_POTS
+-M Class dvrk_system: system:Main: 1.79e+09s, #9: PSM2: simulated mode, no need to calibrate encoders
+-M Class dvrk_system: system:Main: 1.79e+09s, #10: PSM2: current state CALIBRATING_ENCODERS_FROM_POTS
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #12: PSM2: current state ENCODERS_BIASED
+-M Class dvrk_system: system:Main: 1.79e+09s, #11: PSM2: current state ENCODERS_BIASED
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #13: PSM2: control JOINT_SPACE/TRAJECTORY_MODE
+-M Class dvrk_system: system:Main: 1.79e+09-Ms, # Class 12: : PSM2:Arm: 
+-M Class dvrk_system: system:Main: 1.79e+09-Ms, # Class 12: : PSM2:Arm: 
+1.79e+09s, #14: PSM2: current state HOMING
+-M Class dvrk_system: system:Main: 1.79e+09s, #13: PSM2: current state HOMING
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #15: PSM2: control UNDEFINED_SPACE/UNDEFINED_MODE
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #16: PSM2: using tool file "LARGE_NEEDLE_DRIVER_400006.json" for fixed tool: Large Needle Driver for da Vinci Classic (400006[..])
+M- Class mtsIntuitiveResearchKitPSM: Configure: PSM2 using file "/ws/dvrk_ws/src/cisst-saw/sawIntuitiveResearchKit/core/components/../../share/tool/LARGE_NEEDLE_DRIVER_400006.json"
+----> content of configuration file: 
+/* -*- Mode: Javascript; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+{
+	// see dVRK user guide
+	"DH" : 
+	{
+		"convention" : "modified",
+		"joints" : 
+		[
+			{
+				"A" : 0,
+				"D" : 0.41620000000000001,
+				"alpha" : 0,
+				"ftmax" : 0.33000000000000002,
+				"mode" : "active",
+				"name" : "roll",
+				"offset" : 0,
+				"qmax" : 4.5378600000000002, //  260 degrees
+				"qmin" : -4.5378600000000002, // -260 degrees
+				"theta" : 0,
+				"type" : "revolute"
+			},
+			{
+				"A" : 0,
+				"D" : 0,
+				"alpha" : -1.5708,
+				"ftmax" : 0.25,
+				"mode" : "active",
+				"name" : "wrist_pitch",
+				"offset" : -1.5708,
+				"qmax" : 1.3962600000000001, //  80 degrees
+				"qmin" : -1.3962600000000001, // -80 degrees
+				"theta" : 0,
+				"type" : "revolute"
+			},
+			{
+				"A" : 0.0091000000000000004,
+				"D" : 0,
+				"alpha" : -1.5708,
+				"ftmax" : 0.20000000000000001,
+				"mode" : "active",
+				"name" : "wrist_yaw",
+				"offset" : -1.5708,
+				"qmax" : 1.3962600000000001, //  80 degrees
+				"qmin" : -1.3962600000000001, // -80 degrees
+				"theta" : 0,
+				"type" : "revolute"
+			}
+		]
+	},
+	// values from the dVRK user guide, see tool appendix C
+	"coupling" : 
+	{
+		"ActuatorToJointPosition" : 
+		[
+			[
+				-1.5631999999999999,
+				0,
+				0,
+				0
+			],
+			[
+				0,
+				1.0185999999999999,
+				0,
+				0
+			],
+			[
+				0,
+				-0.8306,
+				0.6089,
+				0.6089
+			],
+			[
+				0,
+				0,
+				-1.2177,
+				1.2177
+			]
+		]
+	},
+	"jaw" : 
+	{
+		"ftmax" : 0.16,
+		"qmax" : 1.3962600000000001, //  80 degrees - overriding ISI values
+		// for last joint, manual says [0, 30] but we need -40 to allow stronger torque, 80 to open wide
+		"qmin" : -0.69813199999999997 // -40 degrees - overriding ISI values
+	},
+	// angles used to engage the tool, in radians
+	// make sure these are within the range of motion IN the cannula
+	// max range on roll, 15, 15, 0 degrees
+	"tool_engage_position" : 
+	{
+		"lower" : 
+		[
+			-4.5377999999999998,
+			-0.261799,
+			-0.261799,
+			0
+		],
+		"upper" : 
+		[
+			4.5377999999999998,
+			0.261799,
+			0.261799,
+			0
+		]
+	},
+	// rotation to match ISI convention (for read-only research API on commercial da Vinci)
+	"tooltip_offset" : 
+	[
+		[
+			0,
+			-1,
+			0,
+			0
+		],
+		[
+			0,
+			0,
+			1,
+			0
+		],
+		[
+			-1,
+			0,
+			0,
+			0
+		],
+		[
+			0,
+			0,
+			0,
+			1
+		]
+	]
+}
+<----
+M- Class mtsIntuitiveResearchKitPSM: ConfigureDH PSM2: loaded kinematics
+    MODIFIED DH    1.5708         0         0         0         hinge active        1.5708       -1.588        1.588       3.3161
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708    -0.925025     0.925025       3.3161
+    MODIFIED DH    1.5708         0         0         0        slider active       -0.4318            0         0.24      9.87793
+    MODIFIED DH         0         0         0    0.4162         hinge active             0     -4.53786      4.53786         0.33
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708     -1.39626      1.39626         0.25
+    MODIFIED DH   -1.5708    0.0091         0         0         hinge active       -1.5708     -1.39626      1.39626          0.2
+
+M- Class mtsIntuitiveResearchKitPSM: ConfigureTool PSM2: loaded kinematics
+    MODIFIED DH    1.5708         0         0         0         hinge active        1.5708       -1.588        1.588       3.3161
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708    -0.925025     0.925025       3.3161
+    MODIFIED DH    1.5708         0         0         0        slider active       -0.4318            0         0.24      9.87793
+    MODIFIED DH         0         0         0    0.4162         hinge active             0     -4.53786      4.53786         0.33
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708     -1.39626      1.39626         0.25
+    MODIFIED DH   -1.5708    0.0091         0         0         hinge active       -1.5708     -1.39626      1.39626          0.2
+
+-M Class dvrk_system: system:Main: 1.79e+09s, #14: PSM2: control UNDEFINED_SPACE/UNDEFINED_MODE
+-M Class dvrk_system: system:Main: 1.79e+09s, #15: PSM2: using tool file "LARGE_NEEDLE_DRIVER_400006.json" for fixed tool: Large Needle Driver for da Vinci Classic (400006[..])
+M- Class mtsPID: PSM2_PID enforce_position_limits: using configuration prmConfigurationJoint
+Timestamp (auto): 0.00000 (invalid)
+  Name:[yaw, pitch, insertion, disc_1, disc_2, disc_3, disc_4]  Type:[REVOLUTE, REVOLUTE, PRISMATIC, REVOLUTE, REVOLUTE, REVOLUTE, REVOLUTE]  PositionMin:[0, 0, 0, 0, 0, 0, 0]  PositionMax:[0, 0, 0, 0, 0, 0, 0]  VelocityMin:[]  VelocityMax:[]  AccelerationMin:[]  AccelerationMax:[]  EffortMin:[0, 0, 0, 0, 0, 0, 0]  EffortMax:[0, 0, 0, 0, 0, 0, 0]
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #17: PSM2: tool detected
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #18: PSM2: current state HOMED
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #18: PSM2: current state HOMED
+-M Class dvrk_system: system:Main: 1.79e+09s, #16: PSM2: tool detected
+-M Class dvrk_system: system:Main: 1.79e+09s, #17: PSM2: current state HOMED
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #19: PSM2: current state ENGAGING_ADAPTER
+-M Class dvrk_system: system:Main: 1.79e+09s, #18: PSM2: current state ENGAGING_ADAPTER
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #20: PSM2: using tool file "LARGE_NEEDLE_DRIVER_400006.json" for fixed tool: Large Needle Driver for da Vinci Classic (400006[..])
+-M Class dvrk_system: system:Main: 1.79e+09s, #19: PSM2: using tool file "LARGE_NEEDLE_DRIVER_400006.json" for fixed tool: Large Needle Driver for da Vinci Classic (400006[..])
+M- Class mtsIntuitiveResearchKitPSM: Configure: PSM2 using file "/ws/dvrk_ws/src/cisst-saw/sawIntuitiveResearchKit/core/components/../../share/tool/LARGE_NEEDLE_DRIVER_400006.json"
+----> content of configuration file: 
+/* -*- Mode: Javascript; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+{
+	// see dVRK user guide
+	"DH" : 
+	{
+		"convention" : "modified",
+		"joints" : 
+		[
+			{
+				"A" : 0,
+				"D" : 0.41620000000000001,
+				"alpha" : 0,
+				"ftmax" : 0.33000000000000002,
+				"mode" : "active",
+				"name" : "roll",
+				"offset" : 0,
+				"qmax" : 4.5378600000000002, //  260 degrees
+				"qmin" : -4.5378600000000002, // -260 degrees
+				"theta" : 0,
+				"type" : "revolute"
+			},
+			{
+				"A" : 0,
+				"D" : 0,
+				"alpha" : -1.5708,
+				"ftmax" : 0.25,
+				"mode" : "active",
+				"name" : "wrist_pitch",
+				"offset" : -1.5708,
+				"qmax" : 1.3962600000000001, //  80 degrees
+				"qmin" : -1.3962600000000001, // -80 degrees
+				"theta" : 0,
+				"type" : "revolute"
+			},
+			{
+				"A" : 0.0091000000000000004,
+				"D" : 0,
+				"alpha" : -1.5708,
+				"ftmax" : 0.20000000000000001,
+				"mode" : "active",
+				"name" : "wrist_yaw",
+				"offset" : -1.5708,
+				"qmax" : 1.3962600000000001, //  80 degrees
+				"qmin" : -1.3962600000000001, // -80 degrees
+				"theta" : 0,
+				"type" : "revolute"
+			}
+		]
+	},
+	// values from the dVRK user guide, see tool appendix C
+	"coupling" : 
+	{
+		"ActuatorToJointPosition" : 
+		[
+			[
+				-1.5631999999999999,
+				0,
+				0,
+				0
+			],
+			[
+				0,
+				1.0185999999999999,
+				0,
+				0
+			],
+			[
+				0,
+				-0.8306,
+				0.6089,
+				0.6089
+			],
+			[
+				0,
+				0,
+				-1.2177,
+				1.2177
+			]
+		]
+	},
+	"jaw" : 
+	{
+		"ftmax" : 0.16,
+		"qmax" : 1.3962600000000001, //  80 degrees - overriding ISI values
+		// for last joint, manual says [0, 30] but we need -40 to allow stronger torque, 80 to open wide
+		"qmin" : -0.69813199999999997 // -40 degrees - overriding ISI values
+	},
+	// angles used to engage the tool, in radians
+	// make sure these are within the range of motion IN the cannula
+	// max range on roll, 15, 15, 0 degrees
+	"tool_engage_position" : 
+	{
+		"lower" : 
+		[
+			-4.5377999999999998,
+			-0.261799,
+			-0.261799,
+			0
+		],
+		"upper" : 
+		[
+			4.5377999999999998,
+			0.261799,
+			0.261799,
+			0
+		]
+	},
+	// rotation to match ISI convention (for read-only research API on commercial da Vinci)
+	"tooltip_offset" : 
+	[
+		[
+			0,
+			-1,
+			0,
+			0
+		],
+		[
+			0,
+			0,
+			1,
+			0
+		],
+		[
+			-1,
+			0,
+			0,
+			0
+		],
+		[
+			0,
+			0,
+			0,
+			1
+		]
+	]
+}
+<----
+M- Class mtsIntuitiveResearchKitPSM: ConfigureDH PSM2: loaded kinematics
+    MODIFIED DH    1.5708         0         0         0         hinge active        1.5708       -1.588        1.588       3.3161
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708    -0.925025     0.925025       3.3161
+    MODIFIED DH    1.5708         0         0         0        slider active       -0.4318            0         0.24      9.87793
+    MODIFIED DH         0         0         0    0.4162         hinge active             0     -4.53786      4.53786         0.33
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708     -1.39626      1.39626         0.25
+    MODIFIED DH   -1.5708    0.0091         0         0         hinge active       -1.5708     -1.39626      1.39626          0.2
+
+M- Class mtsIntuitiveResearchKitPSM: ConfigureTool PSM2: loaded kinematics
+    MODIFIED DH    1.5708         0         0         0         hinge active        1.5708       -1.588        1.588       3.3161
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708    -0.925025     0.925025       3.3161
+    MODIFIED DH    1.5708         0         0         0        slider active       -0.4318            0         0.24      9.87793
+    MODIFIED DH         0         0         0    0.4162         hinge active             0     -4.53786      4.53786         0.33
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708     -1.39626      1.39626         0.25
+    MODIFIED DH   -1.5708    0.0091         0         0         hinge active       -1.5708     -1.39626      1.39626          0.2
+
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #21: PSM2: current state HOMED
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #22: PSM2: current state ENGAGING_TOOL
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #23: PSM2: current state TOOL_ENGAGED
+-M Class dvrk_system: system:Main: 1.79e+09s, #20: PSM2: current state HOMED
+-M Class dvrk_system: system:Main: 1.79e+09s, #21: PSM2: current state ENGAGING_TOOL
+-M Class dvrk_system: system:Main: 1.79e+09s, #22: PSM2: current state TOOL_ENGAGED
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #24: PSM2: using tool file "LARGE_NEEDLE_DRIVER_400006.json" for fixed tool: Large Needle Driver for da Vinci Classic (400006[..])
+-M Class dvrk_system: system:Main: 1.79e+09s, #23: PSM2: using tool file "LARGE_NEEDLE_DRIVER_400006.json" for fixed tool: Large Needle Driver for da Vinci Classic (400006[..])
+M- Class mtsIntuitiveResearchKitPSM: Configure: PSM2 using file "/ws/dvrk_ws/src/cisst-saw/sawIntuitiveResearchKit/core/components/../../share/tool/LARGE_NEEDLE_DRIVER_400006.json"
+----> content of configuration file: 
+/* -*- Mode: Javascript; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+{
+	// see dVRK user guide
+	"DH" : 
+	{
+		"convention" : "modified",
+		"joints" : 
+		[
+			{
+				"A" : 0,
+				"D" : 0.41620000000000001,
+				"alpha" : 0,
+				"ftmax" : 0.33000000000000002,
+				"mode" : "active",
+				"name" : "roll",
+				"offset" : 0,
+				"qmax" : 4.5378600000000002, //  260 degrees
+				"qmin" : -4.5378600000000002, // -260 degrees
+				"theta" : 0,
+				"type" : "revolute"
+			},
+			{
+				"A" : 0,
+				"D" : 0,
+				"alpha" : -1.5708,
+				"ftmax" : 0.25,
+				"mode" : "active",
+				"name" : "wrist_pitch",
+				"offset" : -1.5708,
+				"qmax" : 1.3962600000000001, //  80 degrees
+				"qmin" : -1.3962600000000001, // -80 degrees
+				"theta" : 0,
+				"type" : "revolute"
+			},
+			{
+				"A" : 0.0091000000000000004,
+				"D" : 0,
+				"alpha" : -1.5708,
+				"ftmax" : 0.20000000000000001,
+				"mode" : "active",
+				"name" : "wrist_yaw",
+				"offset" : -1.5708,
+				"qmax" : 1.3962600000000001, //  80 degrees
+				"qmin" : -1.3962600000000001, // -80 degrees
+				"theta" : 0,
+				"type" : "revolute"
+			}
+		]
+	},
+	// values from the dVRK user guide, see tool appendix C
+	"coupling" : 
+	{
+		"ActuatorToJointPosition" : 
+		[
+			[
+				-1.5631999999999999,
+				0,
+				0,
+				0
+			],
+			[
+				0,
+				1.0185999999999999,
+				0,
+				0
+			],
+			[
+				0,
+				-0.8306,
+				0.6089,
+				0.6089
+			],
+			[
+				0,
+				0,
+				-1.2177,
+				1.2177
+			]
+		]
+	},
+	"jaw" : 
+	{
+		"ftmax" : 0.16,
+		"qmax" : 1.3962600000000001, //  80 degrees - overriding ISI values
+		// for last joint, manual says [0, 30] but we need -40 to allow stronger torque, 80 to open wide
+		"qmin" : -0.69813199999999997 // -40 degrees - overriding ISI values
+	},
+	// angles used to engage the tool, in radians
+	// make sure these are within the range of motion IN the cannula
+	// max range on roll, 15, 15, 0 degrees
+	"tool_engage_position" : 
+	{
+		"lower" : 
+		[
+			-4.5377999999999998,
+			-0.261799,
+			-0.261799,
+			0
+		],
+		"upper" : 
+		[
+			4.5377999999999998,
+			0.261799,
+			0.261799,
+			0
+		]
+	},
+	// rotation to match ISI convention (for read-only research API on commercial da Vinci)
+	"tooltip_offset" : 
+	[
+		[
+			0,
+			-1,
+			0,
+			0
+		],
+		[
+			0,
+			0,
+			1,
+			0
+		],
+		[
+			-1,
+			0,
+			0,
+			0
+		],
+		[
+			0,
+			0,
+			0,
+			1
+		]
+	]
+}
+<----
+M- Class mtsIntuitiveResearchKitPSM: ConfigureDH PSM2: loaded kinematics
+    MODIFIED DH    1.5708         0         0         0         hinge active        1.5708       -1.588        1.588       3.3161
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708    -0.925025     0.925025       3.3161
+    MODIFIED DH    1.5708         0         0         0        slider active       -0.4318            0         0.24      9.87793
+    MODIFIED DH         0         0         0    0.4162         hinge active             0     -4.53786      4.53786         0.33
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708     -1.39626      1.39626         0.25
+    MODIFIED DH   -1.5708    0.0091         0         0         hinge active       -1.5708     -1.39626      1.39626          0.2
+
+M- Class mtsIntuitiveResearchKitPSM: ConfigureTool PSM2: loaded kinematics
+    MODIFIED DH    1.5708         0         0         0         hinge active        1.5708       -1.588        1.588       3.3161
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708    -0.925025     0.925025       3.3161
+    MODIFIED DH    1.5708         0         0         0        slider active       -0.4318            0         0.24      9.87793
+    MODIFIED DH         0         0         0    0.4162         hinge active             0     -4.53786      4.53786         0.33
+    MODIFIED DH   -1.5708         0         0         0         hinge active       -1.5708     -1.39626      1.39626         0.25
+    MODIFIED DH   -1.5708    0.0091         0         0         hinge active       -1.5708     -1.39626      1.39626          0.2
+
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #25: PSM2: current state HOMED
+-M Class dvrk_system: system:Main: 1.79e+09s, #24: PSM2: current state HOMED
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #26: PSM2: control JOINT_SPACE/POSITION_MODE
+-M Class dvrk_system: system:Main: 1.79e+09s, #25: PSM2: control JOINT_SPACE/POSITION_MODE
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #27: PSM2: control CARTESIAN_SPACE/POSITION_MODE
+-M Class dvrk_system: system:Main: 1.79e+09s, #26: PSM2: control CARTESIAN_SPACE/POSITION_MODE
+-M Class mtsIntuitiveResearchKitPSM: PSM2:Arm: 1.79e+09s, #28: PSM2: control JOINT_SPACE/POSITION_MODE
+-M Class dvrk_system: system:Main: 1.79e+09s, #27: PSM2: control JOINT_SPACE/POSITION_MODE

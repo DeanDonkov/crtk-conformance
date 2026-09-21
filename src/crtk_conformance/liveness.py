@@ -1,4 +1,4 @@
-"""Liveness interval logic that needs no ROS (0.1.5): the departure-guarded response latency of the last streamed
+"""Liveness interval logic that needs no ROS (0.1.5; 0.1.6 adds the confirmation rule for non-responses): the departure-guarded response latency of the last streamed
 command and the deterministic-timeout enclosure formed from the gap trials.  probes/rate.py collects the observations;
 these two functions decide, so that the decision can be replayed offline on archived trial records
 (validation/reanalyze_liveness_v015.py, tests/test_liveness_v015.py).
@@ -46,14 +46,49 @@ def drift_evaluated(trial) -> bool:
     return float(trial.get("gap_s", 0.0)) > float(trial.get("reference_window_s", 0.0) or 0.0)
 
 
-def attributable(trial, baseline_loss: int) -> bool:
+def loss_upper_bound(n_commands: int, n_lost: int, conf: float = 0.95) -> float:
+    """One-sided Clopper-Pearson upper confidence bound on the per-command loss probability from n_commands sent
+    without a preceding silence, n_lost of which drew no response (0.1.6).  With no loss it is 1 - (1 - conf)^(1/n):
+    12 answered commands only bound the loss at 22.1 %, 30 at 9.5 % (RC9 / external review, point 4)."""
+    if n_commands <= 0:
+        return 1.0
+    if n_lost <= 0:
+        return 1.0 - (1.0 - conf) ** (1.0 / n_commands)
+    if n_lost >= n_commands:
+        return 1.0
+    from scipy.stats import beta
+
+    return float(beta.ppf(conf, n_lost + 1, n_commands - n_lost))
+
+
+def required_confirmations(n_commands: int, n_lost: int, alpha: float = 0.01, r_max: int = 4, conf: float = 0.95):
+    """(r, p_up): the number of non-responses at the same gap needed before a non-response without a state change is read
+    as a stop policy (0.1.6 confirmation rule), r = max(2, ceil(ln alpha / ln p_up)) with p_up the loss upper bound above,
+    so that under independent loss the probability that r losses mimic a confirmed trip is at most alpha.  r is None
+    when it would exceed r_max: rejection is then unattributable, as in 0.1.5."""
+    p_up = loss_upper_bound(n_commands, n_lost, conf)
+    if p_up >= 1.0:
+        return None, p_up
+    if p_up <= 0.0:
+        return 2, p_up
+    r = max(2, int(math.ceil(math.log(alpha) / math.log(p_up))))
+    return (r if r <= r_max else None), p_up
+
+
+def attributable(trial, baseline_loss: int, rule: str = "0.1.5") -> bool:
     """Whether a tripped trial's evidence can be attributed to a silence-triggered stop policy (0.1.5, RC7 review,
     finding F10).  Without baseline command loss every tripped trial is.  With it, a non-response without a visible
     state change (`rejected`) may be the loss of the post-gap command itself and is not; a `faulted` trial is, when the
     time of the FAULT observation was recorded (the fault is seen in the operating state, which loss cannot forge);
-    a `drifted` trial is (the drift is seen in the pose)."""
+    a `drifted` trial is (the drift is seen in the pose).
+
+    0.1.6 rule (RC9 / external review, point 4): a `rejected` trial is attributable only when its non-response was
+    confirmed -- repeated at the same gap in the required number of attempts (required_confirmations), each preceded by
+    an answered stream -- whether or not the calibration commands showed loss; `faulted` and `drifted` as before."""
     if trial["class"] not in ("rejected", "faulted", "drifted"):
         return False
+    if rule == "0.1.6" and trial["class"] == "rejected":
+        return bool((trial.get("confirmation") or {}).get("confirmed"))
     if baseline_loss <= 0:
         return True
     if trial["class"] == "rejected":
@@ -63,7 +98,7 @@ def attributable(trial, baseline_loss: int) -> bool:
     return True
 
 
-def timeout_interval_from_trials(trials, L: float, G: float, fp: float, hold_tol: float, stop_class: str, baseline_loss: int = 0):
+def timeout_interval_from_trials(trials, L: float, G: float, fp: float, hold_tol: float, stop_class: str, baseline_loss: int = 0, rule: str = "0.1.5"):
     """The deterministic-timeout enclosure from the gap trials (0.1.5; the interval logic of probe_liveness, kept as a
     pure function so that it can be replayed offline on archived trial records).
 
@@ -91,8 +126,8 @@ def timeout_interval_from_trials(trials, L: float, G: float, fp: float, hold_tol
     that began inside the reference window is censored, its onset is then the first observable sample and bounds
     tau_w from above only (v0.1.5 verification campaign, delayed-application drift case)."""
     passing = [t for t in trials if t["class"] == "held" and (stop_class != "drifted" or drift_evaluated(t))]
-    tripping = [t for t in trials if attributable(t, baseline_loss)]
-    unattributable = [t for t in trials if t["class"] in ("rejected", "faulted", "drifted") and not attributable(t, baseline_loss)]
+    tripping = [t for t in trials if attributable(t, baseline_loss, rule)]
+    unattributable = [t for t in trials if t["class"] in ("rejected", "faulted", "drifted") and not attributable(t, baseline_loss, rule)]
     drifted = [t for t in tripping if t["class"] == "drifted"]
     speeds = [t["drift_speed_m_s"] for t in drifted if t.get("drift_speed_m_s") is not None and t["drift_speed_m_s"] > 0]
     v_min = min(speeds) if speeds else None

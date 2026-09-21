@@ -91,6 +91,7 @@ class PlatformAdapter:
         "servo_cp": PoseStamped,
         "servo_cr": PoseStamped,
         "measured_js": JointState,
+        "servo_jp": JointState,  # 0.1.6: joint-space goals for the instrument-geometry anchor
         "operating_state": OperatingState,
         "state_command": StringStamped,
         "T_b_w": PoseStamped,
@@ -214,6 +215,15 @@ class PlatformAdapter:
         harness can match the command to the implementation's own event log (0.1.3)."""
         m = matrix_to_pose_msg(T, frame_id)
         self.publisher("servo_cp").publish(m)
+        return m.header.stamp.to_sec()
+
+    def servo_jp(self, names, positions) -> float:
+        """0.1.6: publish a servo_jp goal (joint names and positions as reported by measured_js); returns the stamp."""
+        m = JointState()
+        m.header.stamp = rospy.Time.now()
+        m.name = list(names)
+        m.position = [float(v) for v in positions]
+        self.publisher("servo_jp").publish(m)
         return m.header.stamp.to_sec()
 
     def state_command(self, cmd: str):

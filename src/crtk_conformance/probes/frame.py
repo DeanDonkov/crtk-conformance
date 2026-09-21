@@ -89,6 +89,7 @@ class FrameSemanticsProbe:
             trial_tnorm: List[float] = []
             trial_theta: List[float] = []
             unpaired = 0
+            zero_stamps = 0
             for _ in range(self.trials):
                 Ts = []
                 deadline = time.time() + self.timeout
@@ -96,8 +97,14 @@ class FrameSemanticsProbe:
                     mm = self.a.wait_for(buf_m, self.timeout)
                     if mm is None:
                         break
+                    # 0.1.6: an unset header stamp (0) cannot be paired by time.  The released dVRK publishes an identity
+                    # pose with stamp 0 on both topics until the arm is homed; two zero stamps would pair trivially and
+                    # report T_hat = I (RC9 feasibility check).  Such samples are skipped and counted.
+                    if mm.header.stamp.to_nsec() == 0:
+                        zero_stamps += 1
+                        continue
                     # pair with the local sample closest in header stamp
-                    cands = buf_l.since(time.monotonic() - 0.5)
+                    cands = [c for c in buf_l.since(time.monotonic() - 0.5) if c[1].header.stamp.to_nsec() != 0]
                     if not cands:
                         continue
                     ml = min(cands, key=lambda c: abs((c[1].header.stamp - mm.header.stamp).to_sec()))[1]
@@ -113,6 +120,9 @@ class FrameSemanticsProbe:
                 th = G.rotation_angle(T[:3, :3])
                 trial_tnorm.append(tn)
                 trial_theta.append(th)
+            if zero_stamps:
+                res.notes.append(f"{zero_stamps} measured_cp sample(s) with an unset (zero) header stamp were skipped: they cannot be paired by time")
+            res.observations["zero_stamp_samples_skipped"] = zero_stamps
             if not trial_T:
                 res.notes.append("could not pair measured_cp with local/measured_cp samples")
                 res.decision_basis = "no paired data"

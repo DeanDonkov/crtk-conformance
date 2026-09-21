@@ -55,7 +55,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 SPATIAL_MODES = ("identity", "expected_transform", "discover_only")
-DIMENSIONAL_MODES = ("si", "discover_only")
+DIMENSIONAL_MODES = ("si", "geometry_anchor", "discover_only")  # 0.1.6: geometry_anchor (instrument-geometry unit anchor, probes/geometry.py)
 STATE_MACHINE = ("required", "forbidden", "any")
 STOP_BEHAVIOUR = ("hold", "fault", "drift", "release", "any")
 RATE = ("required", "any")
@@ -95,10 +95,19 @@ class SpatialExpectation:
 class DimensionalExpectation:
     mode: str = "discover_only"
     expected_unit_m: float = 1.0
+    # 0.1.6, mode geometry_anchor: the instrument dimension that grounds the unit (probes/geometry.py, dimensional.py)
+    L_m: Optional[float] = None  # physical pitch-to-yaw length of the instrument (m), with its source recorded in L_source
+    u_rel: Optional[float] = None  # declared relative uncertainty of L_m (e.g. 0.015); widens the interval multiplicatively
+    L_source: str = ""
+    pitch_joint: str = "wrist_pitch"  # measured_js name (substring match) or an integer index as a string
+    yaw_joint: str = "wrist_yaw"
+    delta_q_rad: float = 0.5
+    axes_angle_deg: Optional[float] = 90.0  # angle between the two wrist axes in the instrument model (gate)
+    reference_joints: Optional[List[float]] = None  # joint configuration the steps start from (default: the current one)
 
     @property
     def declared(self) -> bool:
-        return self.mode == "si"
+        return self.mode in ("si", "geometry_anchor")
 
 
 @dataclass
@@ -157,6 +166,24 @@ class Expectations:
             if unit <= 0:
                 raise ExpectationError("dimensional.expected_unit_m must be positive")
             e.dimensional = DimensionalExpectation(mode=mode, expected_unit_m=unit)
+            if mode == "geometry_anchor":
+                L = di.get("L_m")
+                u = di.get("u_rel")
+                if L is None or float(L) <= 0:
+                    raise ExpectationError("dimensional.L_m (the instrument's physical pitch-to-yaw length, m) is required for geometry_anchor")
+                if u is None or not (0.0 <= float(u) < 1.0):
+                    raise ExpectationError("dimensional.u_rel (declared relative uncertainty of L_m, 0 <= u_rel < 1) is required for geometry_anchor")
+                dq = float(di.get("delta_q_rad", 0.5))
+                if not (0.0 < abs(dq) < math.pi):
+                    raise ExpectationError("dimensional.delta_q_rad must lie in (0, pi)")
+                ref = di.get("reference_joints")
+                aa = di.get("axes_angle_deg", 90.0)
+                e.dimensional.L_m, e.dimensional.u_rel, e.dimensional.delta_q_rad = float(L), float(u), dq
+                e.dimensional.L_source = str(di.get("L_source", ""))
+                e.dimensional.pitch_joint = str(di.get("pitch_joint", "wrist_pitch"))
+                e.dimensional.yaw_joint = str(di.get("yaw_joint", "wrist_yaw"))
+                e.dimensional.axes_angle_deg = (float(aa) if aa is not None else None)
+                e.dimensional.reference_joints = ([float(v) for v in ref] if ref is not None else None)
         if te:
             sm = te.get("state_machine", "any")
             sb = te.get("stop_behaviour", "any")

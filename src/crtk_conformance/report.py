@@ -45,8 +45,14 @@ def _clean(o):
 def build_report(namespace: str, tol: Tolerance, discovery: Dict[str, Any], results: List[ProbeResult], ros_master_uri: str = "",
                  expectations=None, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
     summary = {"spatial": "undetermined", "dimensional": "undetermined", "temporal": "undetermined"}
+    # 0.1.6: a class may be decided by more than one probe (dimensional: scale probe with an SI-pose anchor, geometry
+    # anchor probe).  Any divergent -> divergent; otherwise any conformant -> conformant; otherwise undetermined.  With
+    # one probe per class (every run before 0.1.6) this is the probe's own outcome.
+    by_class = {}
     for r in results:
-        summary[r.binding_class] = r.outcome.value
+        by_class.setdefault(r.binding_class, []).append(r.outcome.value)
+    for cls, outs in by_class.items():
+        summary[cls] = "divergent" if "divergent" in outs else ("conformant" if "conformant" in outs else "undetermined")
     rep = {
         "tool": "crtk-conformance",
         "version": __version__,

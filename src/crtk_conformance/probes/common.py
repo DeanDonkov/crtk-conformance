@@ -10,9 +10,14 @@ from .. import geometry as G
 from ..adapter import PlatformAdapter, Buffer, pose_msg_to_matrix
 
 
-def ensure_enabled(a: PlatformAdapter, timeout_s: float = 3.0) -> dict:
+ENABLE_TIMEOUT_S = 3.0  # implementation constant (0.1.6: settable with --enable-timeout-s; a homing sequence may take longer)
+
+
+def ensure_enabled(a: PlatformAdapter, timeout_s: float = None) -> dict:
     """Bring the arm to ENABLED/homed through the public operating-state interface, if it exists.
     Returns a dict describing what was found and done."""
+    if timeout_s is None:
+        timeout_s = ENABLE_TIMEOUT_S
     info = {"operating_state_present": a.has("operating_state"), "state_before": None, "state_after": None, "enable_latency_s": None}
     if not info["operating_state_present"]:
         return info

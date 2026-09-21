@@ -33,7 +33,7 @@ from ..adapter import PlatformAdapter, pose_msg_to_matrix
 from ..stats import estimate
 from ..thresholds import Tolerance
 from ..expectations import Expectations
-from .base import Outcome, ProbeResult, decide
+from .base import Outcome, ProbeResult, decide  # noqa: F401
 from .common import ensure_enabled, step_and_measure, stream_goal
 
 MIN_VALID_TRIALS = 3
@@ -92,6 +92,8 @@ class ScalingUnitsProbe:
         per_axis = {0: [], 1: [], 2: []}
         latencies: List[float] = []
         trial_log = []
+        abs_res: List[float] = []  # 0.1.6: |settled feedback - commanded absolute goal| per trial (interface units)
+        dir_ang: List[float] = []  # 0.1.6: angle between commanded and measured step (deg)
         no_response = 0
         hold = self.a.latest_pose(buf, 1.0)
         for k in range(self.trials):
@@ -118,6 +120,13 @@ class ScalingUnitsProbe:
                 latencies.append(r["first_motion_s"])
             entry = {"trial": k, "ok": True, "axis": ax, "delta_cmd_if": delta.tolist(), "delta_meas_if": r["delta_meas"].tolist(), "r_int": ratio, "first_motion_s": r["first_motion_s"],
                      "n_pre": r["n_pre"], "n_post": r["n_post"], "post_std_if": r["post_std_m"]}
+            # 0.1.6 (command/feedback consistency diagnostic): the commanded absolute goal against the settled feedback
+            goal_p = r["p0"][:3, 3] + delta
+            abs_res.append(float(np.linalg.norm(r["p1"][:3, 3] - goal_p)))
+            dm = np.asarray(r["delta_meas"], dtype=float)
+            if np.linalg.norm(dm) > 0:
+                dir_ang.append(float(math.degrees(math.acos(max(-1.0, min(1.0, float(dm @ delta) / (np.linalg.norm(dm) * np.linalg.norm(delta))))))))
+            entry["goal_residual_if"] = abs_res[-1]
             if anchor_buf is not None and pa0 is not None:
                 A1 = [pose_msg_to_matrix(m)[:3, 3] for _, m in anchor_buf.since(time.monotonic() - 0.3)]
                 pa1 = None
@@ -142,6 +151,24 @@ class ScalingUnitsProbe:
         res.estimates["internal_ratio_per_axis"] = {str(k): estimate(v).to_dict() for k, v in per_axis.items()}
         if latencies:
             res.estimates["response_latency_s"] = estimate(latencies).to_dict()
+        if abs_res:
+            # 0.1.6 diagnostic (not a verdict): under a SHARED command/feedback binding and exact tracking the settled
+            # feedback equals the commanded goal whatever that binding is (Section IV-C), so a residual far above the noise
+            # flags a NON-shared binding (or a tracking deficit, which it cannot be told apart from).  It cannot detect a
+            # shared mismatch.  The flag compares the lower 95% bound of the mean residual, converted with the declared
+            # unit, with epsilon.
+            e_ar = estimate(abs_res)
+            e_da = estimate(dir_ang) if dir_ang else None
+            unit = float(self.exp.dimensional.expected_unit_m)
+            flag = bool(e_ar.n >= MIN_VALID_TRIALS and e_ar.ci_low * unit > self.tol.epsilon_m)
+            res.estimates["command_feedback_consistency"] = {
+                "goal_residual_if": e_ar.to_dict(), "step_direction_angle_deg": (e_da.to_dict() if e_da else None),
+                "assumed_unit_m": unit, "flag_non_shared_binding_or_tracking_deficit": flag,
+                "semantics": "diagnostic, not a verdict: settled feedback vs commanded absolute goal; zero under any shared binding with exact tracking"}
+            if flag:
+                res.notes.append(f"command/feedback consistency: settled feedback differs from the commanded goal by {e_ar.mean*unit*1e3:.3f} mm on average "
+                                 f"(>= {e_ar.ci_low*unit*1e3:.3f} mm at 95%): commands and feedback do not share one binding, or tracking is deficient -- "
+                                 "an anchored scale outcome may then misattribute this to units")
         if len(r_int) < MIN_VALID_TRIALS:
             res.decision_basis = f"only {len(r_int)} valid trial(s) ({no_response} no-response): undetermined"
             res.notes.append("fewer than %d trials produced a response; the implementation may drop or reject commands" % MIN_VALID_TRIALS)
@@ -155,15 +182,13 @@ class ScalingUnitsProbe:
                 u = self.exp.dimensional.expected_unit_m
                 # scale divergence relative to the unit the client assumes: s = s_hat / u; predicted error |1 - s| r_ws
                 # from the *mean* estimate with its CI mapped through the model (per-trial |1 - s_i| would bias upward).
-                cands = [self.tol.dimensional_error(v / u) for v in (e_s.ci_low, e_s.ci_high)]
-                lo = 0.0 if (e_s.ci_low <= u <= e_s.ci_high) else min(cands)
-                from ..stats import Estimate
-                e_pred = Estimate(e_s.n, self.tol.dimensional_error(e_s.mean / u), float("nan"), lo, max(cands), e_s.alpha)
+                # 0.1.6: the decision is dimensional.scale_decision (moved there unchanged, shared with the geometry anchor)
+                from ..dimensional import scale_decision
+                res.outcome, e_pred = scale_decision(e_s, u, self.tol)
                 res.estimates["expected_unit_m"] = u
                 res.estimates["predicted_error_at_workspace_edge_m"] = e_pred.to_dict()
                 res.predicted_error_m = e_pred.mean
                 res.predicted_error_ci = [e_pred.ci_low, e_pred.ci_high]
-                res.outcome = decide(e_pred.ci_low, e_pred.ci_high, self.tol.epsilon_m)
                 res.decision_basis = (
                     f"eq. (6) with anchored s_hat = {e_s.mean:.4f} (95% CI {e_s.ci_low:.4f}..{e_s.ci_high:.4f}) against the client's unit {u}: "
                     f"|1-s| r_ws = {e_pred.mean*1e3:.3f} mm vs epsilon = {self.tol.epsilon_m*1e3:.3f} mm"

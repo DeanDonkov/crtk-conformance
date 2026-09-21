@@ -51,7 +51,7 @@ import numpy as np
 
 from ..adapter import PlatformAdapter, pose_msg_to_matrix
 from ..expectations import Expectations, TemporalExpectation, combine
-from ..liveness import attributable, drift_evaluated, last_command_latency, timeout_interval_from_trials  # noqa: F401 (0.1.5: ROS-free liveness decision logic)
+from ..liveness import attributable, drift_evaluated, last_command_latency, required_confirmations, timeout_interval_from_trials  # noqa: F401 (0.1.5/0.1.6: ROS-free liveness decision logic)
 from ..rate_estimator import (
     AppliedAgeEstimate,
     estimate_applied_age,
@@ -96,8 +96,22 @@ class RateSensitivityProbe:
         expect_state_machine: Optional[str] = None,  # legacy alias: 'yes' | 'no' | 'any'
         still_tol_m: float = 1e-5,
         latency_bound_s: Optional[float] = None,
+        calibration_commands: int = 30,
+        liveness_rule: str = "0.1.6",
+        confirm_alpha: float = 0.01,
+        confirm_max: int = 4,
+        skip_rate_sweep: bool = False,
     ):
         self.a = adapter
+        # 0.1.6 (RC9 / external review, point 4): calibration commands sent without a preceding silence (0.1.5: 12), the
+        # liveness rule ('0.1.6': a non-response without a state change counts as a stop policy only when it is confirmed
+        # at the same gap, liveness.required_confirmations; '0.1.5': the archived rule) and its confirmation parameters
+        self.n_calib = int(calibration_commands)
+        self.liveness_rule = liveness_rule
+        self.confirm_alpha = confirm_alpha
+        self.confirm_max = confirm_max
+        self.skip_rate_sweep = skip_rate_sweep
+        self._r_confirm = None
         self.latency_bound_s = latency_bound_s  # 0.1.3: an externally justified bound on the one-way transport latency; None = use the run maximum of the observed response latencies and label the estimate conditional
         self._latencies: List[float] = []  # every response latency observed during the run (calibration probes, post-gap responses, stream tails)
         self.still_tol = still_tol_m  # implementation constant: motion below max(this, 3 sigma_hat) is 'still' (drift onset threshold)
@@ -279,7 +293,7 @@ class RateSensitivityProbe:
         # tau_w < 1 s had no latency measurement for this reason); recover before the first probe and after any
         # probe that did not respond, so that the latency allowance of the liveness interval is measured
         self._recover(buf, base_T)
-        for k in range(12):
+        for k in range(self.n_calib):  # 0.1.6: self.n_calib (0.1.5: 12)
             ax, sg = dirs[k % len(dirs)]
             cur = self.a.latest_pose(buf, 1.0)
             goal = (cur if cur is not None else base_T).copy()
@@ -484,9 +498,51 @@ class RateSensitivityProbe:
                 "reference_window_motion": ref_motion, "reference_window_still": ref_still, "drift_evaluated": drift_eval, "reference_window_s": ref_len,
                 "samples_in_gap": n_gap, "class": cls, "state": state}
 
-    @staticmethod
-    def _tripped(r: dict) -> bool:
+    def _tripped(self, r: dict) -> bool:
+        if self.liveness_rule == "0.1.6" and r["class"] == "rejected":
+            return bool((r.get("confirmation") or {}).get("confirmed"))
         return r["class"] in ("rejected", "faulted", "drifted")
+
+    def _trial(self, buf, base_T, gap_s: float, sink: list) -> dict:
+        """0.1.6: a gap trial with the confirmation rule.  Under rule 0.1.6 a trial classified `rejected` (no response and
+        no state change: indistinguishable from the loss of the post-gap command) is repeated at the same requested gap,
+        each repeat preceded by its own answered stream (the stream that starts every _gap_trial), until the required
+        number r of rejections is reached or a repeat is not a rejection.  Every attempt is recorded in `sink` (the
+        trial list the interval is formed from); the rejections of the group carry confirmation.confirmed = (count >= r).
+        A repeat that is held is a passing trial at that gap; one that faulted or drifted is attributable on its own.
+        Returns the record that stands for the gap in the bisection: the confirmed rejection, a tripping repeat, a
+        passing repeat, or the unconfirmed rejection (which moves neither end of the bracket)."""
+        r = self._gap_trial(buf, base_T, gap_s)
+        sink.append(r)
+        if self.liveness_rule != "0.1.6" or r["class"] != "rejected":
+            return r
+        group = [r]
+        need = self._r_confirm
+        if need is None:
+            r["confirmation"] = {"required": None, "rejected_attempts": 1, "confirmed": False,
+                                 "reason": "baseline command loss too high for confirmation (required repeats exceed the maximum): unattributable"}
+            return r
+        other = None
+        while sum(1 for g in group if g["class"] == "rejected") < need:
+            rr = self._gap_trial(buf, base_T, gap_s)
+            rr["repeat_of_gap_s"] = gap_s
+            sink.append(rr)
+            if rr["class"] != "rejected":
+                other = rr
+                break
+            group.append(rr)
+        n_rej = sum(1 for g in group if g["class"] == "rejected")
+        confirmed = n_rej >= need
+        for g in group:
+            g["confirmation"] = {"required": need, "rejected_attempts": n_rej, "confirmed": confirmed}
+        if confirmed:
+            return r
+        if other is not None and other["class"] in ("held", "faulted", "drifted"):
+            return other
+        return r
+
+    def _is_passing(self, r: dict) -> bool:
+        return r["class"] == "held"
 
     def probe_liveness(self, buf, base_T) -> dict:
         """0.1.3: the timeout is reported as an INTERVAL that contains it under a deterministic-timeout model, with
@@ -513,9 +569,14 @@ class RateSensitivityProbe:
         fp = float(self.resolution.get("feedback_period_s", 0.01) or 0.01)
         G = fp
         out = {"gap_max_s": self.gap_max, "resolution_floor_s": r_floor, "response_timeout_s": self.response_timeout,
-               "hold_tolerance_m": self.hold_tol, "granularity_allowance_s": G, "trials": []}
-        big = [self._gap_trial(buf, base_T, self.gap_max) for _ in range(self.trials)]
-        out["trials"] += big
+               "hold_tolerance_m": self.hold_tol, "granularity_allowance_s": G, "trials": [], "liveness_rule": self.liveness_rule}
+        # 0.1.6: the confirmation requirement follows from the calibration (commands sent without a preceding silence)
+        n_resp0 = int(self.resolution.get("latency_probes_responded", self.n_calib) or 0)
+        if self.liveness_rule == "0.1.6":
+            self._r_confirm, p_up = required_confirmations(self.n_calib, max(0, self.n_calib - n_resp0), self.confirm_alpha, self.confirm_max)
+            out["confirmation_rule"] = {"calibration_commands": self.n_calib, "lost": max(0, self.n_calib - n_resp0), "loss_upper_bound_95": p_up,
+                                        "alpha": self.confirm_alpha, "required_rejections_per_gap": self._r_confirm, "max_repeats": self.confirm_max}
+        big = [self._trial(buf, base_T, self.gap_max, out["trials"]) for _ in range(self.trials)]
         n_trip = sum(1 for b in big if self._tripped(b))
         out["tripped_at_gap_max"] = rate_estimate(n_trip, len(big))
         drifts = [b["drift_m"] for b in big if not math.isnan(b["drift_m"])]
@@ -523,6 +584,18 @@ class RateSensitivityProbe:
         classes = [b["class"] for b in big]
 
         allowance = self._latency_allowance
+        n_big_records = len(out["trials"])  # 0.1.6: every record of the gap_max trials, confirmation repeats included
+        unconfirmed = [b for b in big if b["class"] == "rejected" and not self._tripped(b)]
+        if n_trip == 0 and unconfirmed:
+            # 0.1.6: non-responses that could not be confirmed (baseline loss too high to require a finite number of repeats)
+            # are neither passes nor trips: the stop behaviour is not observable
+            out["stop_class"] = "not_observable"
+            out["tau_w_estimate_s"] = None
+            L, Lsrc, cond = allowance()
+            out["latency_allowance_s"], out["latency_allowance_source"], out["latency_allowance_conditional"] = L, Lsrc, cond
+            out["finding"] = (f"{len(unconfirmed)} non-response(s) at the largest gap could not be confirmed "
+                              f"({(unconfirmed[0].get('confirmation') or {}).get('reason', 'unconfirmed')}): stop behaviour not observable")
+            return out
         if n_trip == 0:
             out["stop_class"] = "not_observable" if all(c == "not_observable" for c in classes) else "held_through_range"
             out["tau_w_estimate_s"] = None
@@ -545,8 +618,7 @@ class RateSensitivityProbe:
                 return min(r["gap_s"], r["drift_onset_s"])
             return r["gap_s"]
         for _ in range(self.trials):
-            r = self._gap_trial(buf, base_T, lo0)
-            out["trials"].append(r)
+            r = self._trial(buf, base_T, lo0, out["trials"])
             if self._tripped(r):
                 below += 1  # trips even at the smallest resolvable gap
                 continue
@@ -557,10 +629,9 @@ class RateSensitivityProbe:
                 if hi_real - lo_real <= max(2 * fp, 0.5 * r_floor):
                     break  # the bracket is already at the feedback resolution
                 mid = 0.5 * (lo + hi)
-                r = self._gap_trial(buf, base_T, mid)
-                out["trials"].append(r)
-                if r["class"] == "not_observable":
-                    continue  # 0.1.5: an unobservable trial moves neither end of the bracket
+                r = self._trial(buf, base_T, mid, out["trials"])
+                if r["class"] == "not_observable" or (r["class"] == "rejected" and not self._tripped(r)):
+                    continue  # 0.1.5: an unobservable trial moves neither end of the bracket; 0.1.6: nor does an unconfirmed rejection
                 if self._tripped(r):
                     hi, hi_real = mid, min(hi_real, hi_of(r))
                 else:
@@ -577,11 +648,11 @@ class RateSensitivityProbe:
         # attributable (a faulted trial then bounds tau_w by the time its state was observed, since the post-gap
         # command may itself have been lost); a `rejected` trial is not, and the run is confounded when no attributable
         # tripping trial remains.
-        n_probes = 12
+        n_probes = self.n_calib  # 0.1.6: the configured count (0.1.5: 12)
         n_resp = int(self.resolution.get("latency_probes_responded", n_probes) or 0)
         baseline_loss = max(0, n_probes - n_resp)
         tripped_trials = [b for b in out["trials"] if self._tripped(b)]
-        n_attrib = sum(1 for b in tripped_trials if attributable(b, baseline_loss))
+        n_attrib = sum(1 for b in tripped_trials if attributable(b, baseline_loss, self.liveness_rule))
         confounded = baseline_loss > 0 and n_attrib == 0
         out["baseline_command_loss"] = {"calibration_commands": n_probes, "responded": n_resp, "lost": baseline_loss,
                                         "tripped_trials": len(tripped_trials), "attributable_tripped_trials": n_attrib}
@@ -594,7 +665,7 @@ class RateSensitivityProbe:
                                        f"the {len(tripped_trials) - n_attrib} non-responses without a state change are not"))
         if below > 0 and not brackets:
             status = "undetermined" if confounded else "upper_bound"
-            below_trials = [b for b in out["trials"][len(big):] if self._tripped(b)]
+            below_trials = [b for b in out["trials"][n_big_records:] if self._tripped(b)]
             ub = lo0 + L
             if baseline_loss > 0 and not confounded:
                 highs = [float(b["state_observed_at_s"]) for b in below_trials if b["class"] == "faulted" and b.get("state_observed_at_s") is not None]
@@ -633,7 +704,8 @@ class RateSensitivityProbe:
             out["tau_w_estimate_s"] = est
             out["finding"] = f"{out['stop_class']} observed but tau_w undetermined ({est['reason']}; n={len(brackets)})"
             return out
-        iv = timeout_interval_from_trials(trials, L=L, G=G, fp=fp, hold_tol=self.hold_tol, stop_class=out["stop_class"], baseline_loss=baseline_loss)
+        iv = timeout_interval_from_trials(trials, L=L, G=G, fp=fp, hold_tol=self.hold_tol, stop_class=out["stop_class"], baseline_loss=baseline_loss,
+                                          rule=self.liveness_rule)
         est.update({k: iv[k] for k in ("drift_speed_min_m_s", "detection_delay_s", "n_trials_with_own_last_latency", "onset_based_lower_bounds_s",
                                        "reference_window_motion_trials", "passing_lower_bounds_s", "tripping_upper_bounds_s", "lower_bound_uses_L_for_all_trials",
                                        "unattributable_trials", "attributable_tripping_trials")})
@@ -809,7 +881,7 @@ class RateSensitivityProbe:
         if base_T is None:
             base_T = self.a.latest_pose(buf, 2.0)
         B = self.probe_liveness(buf, base_T)
-        C = self.probe_effective_rate(buf, base_T)
+        C = {"skipped": True, "reason": "--skip-rate-sweep (0.1.6 campaign option); the rate sub-verdict is undetermined in every case"} if self.skip_rate_sweep else self.probe_effective_rate(buf, base_T)
         res.observations.update({"state_precondition": A, "resolution": R, "liveness": B, "effective_rate": C})
 
         # ---- sub-verdicts against declared expectations

@@ -27,7 +27,13 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--temporal-trials", type=int, default=5, help="trials for the liveness sub-probe (default 5)")
     r.add_argument("--anchor-topic", default=None, help="PoseStamped topic with an out-of-band SI reference pose of the same tool (enables the unit estimate)")
     r.add_argument("--expect-state-machine", choices=["yes", "no", "any"], default=None, help="(legacy) overrides temporal.state_machine in the expectations file")
-    r.add_argument("--probes", default="frame,scale,rate")
+    r.add_argument("--probes", default="frame,scale,rate", help="comma-separated: frame, scale, rate, geometry (0.1.6: instrument-geometry unit anchor; needs dimensional.mode geometry_anchor)")
+    r.add_argument("--geometry-trials", type=int, default=5, help="trials of the instrument-geometry anchor (0.1.6)")
+    r.add_argument("--geometry-settle-s", type=float, default=1.0, help="settle time per joint step of the geometry anchor (0.1.6)")
+    r.add_argument("--calibration-commands", type=int, default=30, help="commands sent without a preceding silence to estimate baseline command loss (0.1.6; 0.1.5 used 12)")
+    r.add_argument("--liveness-rule", choices=["0.1.6", "0.1.5"], default="0.1.6", help="0.1.6: a non-response counts as a stop policy only when confirmed at the same gap (see liveness.py); 0.1.5: the archived rule")
+    r.add_argument("--enable-timeout-s", type=float, default=3.0, help="how long ensure_enabled waits for ENABLED and homed after enable/home (0.1.6; implementation constant)")
+    r.add_argument("--skip-rate-sweep", action="store_true", help="skip the effective-rate diagnostic sweep (campaign speed; the rate sub-verdict is undetermined in every case)")
     r.add_argument("--gap-max-s", type=float, default=2.0)
     r.add_argument("--gap-min-s", type=float, default=0.0, help="smallest gap to request (the measured resolution floor applies if larger)")
     r.add_argument("--bisection-steps", type=int, default=7)
@@ -54,6 +60,7 @@ def run(args) -> int:
     from .probes.frame import FrameSemanticsProbe
     from .probes.scale import ScalingUnitsProbe
     from .probes.rate import RateSensitivityProbe
+    from .probes.geometry import GeometryAnchorProbe
     from .report import build_report, text_summary
 
     tol = Tolerance(
@@ -66,6 +73,8 @@ def run(args) -> int:
     exp = Expectations.load(args.expectations)
     if args.expect_state_machine is not None:
         exp.temporal.state_machine = {"yes": "required", "no": "forbidden", "any": "any"}[args.expect_state_machine]
+    from .probes import common as _common
+    _common.ENABLE_TIMEOUT_S = float(args.enable_timeout_s)
     a = PlatformAdapter(args.namespace, anchor_topic=args.anchor_topic)
     disc = a.discover()
     results = []
@@ -75,6 +84,8 @@ def run(args) -> int:
     if "scale" in wanted:
         results.append(ScalingUnitsProbe(a, tol, trials=args.trials, step_if=args.step_mm / 1000.0, settle_s=args.settle_s, expectations=exp,
                                          still_tol_m=args.still_tol_mm / 1000.0).run())
+    if "geometry" in wanted:
+        results.append(GeometryAnchorProbe(a, tol, trials=args.geometry_trials, settle_s=args.geometry_settle_s, expectations=exp).run())
     if "rate" in wanted:
         rates = tuple(float(x) for x in args.rates_hz.split(",") if x.strip())
         results.append(RateSensitivityProbe(a, tol, trials=args.temporal_trials, gap_max_s=args.gap_max_s, gap_min_s=args.gap_min_s,
@@ -82,7 +93,8 @@ def run(args) -> int:
                                             step_if=args.temporal_step_mm / 1000.0, response_timeout_s=args.response_timeout_s,
                                             rate_match_tolerance_m=(args.rate_match_tolerance_mm / 1000.0) if args.rate_match_tolerance_mm is not None else None,
                                             rate_window_s=args.rate_window_s, rate_max_step_if=args.rate_max_step_mm / 1000.0, still_tol_m=args.still_tol_mm / 1000.0,
-                                            latency_bound_s=args.latency_bound_s).run())
+                                            latency_bound_s=args.latency_bound_s, calibration_commands=args.calibration_commands,
+                                            liveness_rule=args.liveness_rule, skip_rate_sweep=args.skip_rate_sweep).run())
     params = {k: v for k, v in vars(args).items() if k not in ("cmd",)}
     rep = build_report(args.namespace, tol, disc, results, os.environ.get("ROS_MASTER_URI", ""), expectations=exp, parameters=params)
     with open(args.out, "w") as f:

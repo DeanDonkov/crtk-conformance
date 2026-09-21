@@ -48,6 +48,10 @@ class MockCRTKNode:
         self.ns = cfg.namespace.rstrip("/")
         self.T_bind = cfg.bind_T()
         self.T_bind_inv = G.invert(self.T_bind)
+        self.T_cmd_inv = G.invert(cfg.cmd_bind_T())  # 0.1.6: equals T_bind_inv unless a separate command binding is configured
+        self.ge_bad = False  # 0.1.6: Gilbert-Elliott loss state
+        self.mix_value = 0.0  # 0.1.6: current mixture error (held for mix_hold_s)
+        self.mix_next = 0.0
         self.rng = random.Random(cfg.seed)
         self.nrng = np.random.default_rng(cfg.seed)
         self.lock = threading.Lock()
@@ -96,7 +100,18 @@ class MockCRTKNode:
         with self.lock:
             self.received += 1
             T_if = pose_msg_to_matrix(msg)  # interface units, bound frame
-            if self.cfg.drop_prob > 0 and self.rng.random() < self.cfg.drop_prob:
+            if self.cfg.drop_model == "gilbert_elliott":
+                # 0.1.6: two-state burst loss, state advanced once per received command
+                if self.ge_bad:
+                    if self.rng.random() < self.cfg.ge_p_bg:
+                        self.ge_bad = False
+                elif self.rng.random() < self.cfg.ge_p_gb:
+                    self.ge_bad = True
+                p_loss = self.cfg.ge_loss_bad if self.ge_bad else self.cfg.ge_loss_good
+                if p_loss > 0 and self.rng.random() < p_loss:
+                    self._log("drop", now, stamp, self.received, T_if[:3, 3])
+                    return
+            elif self.cfg.drop_prob > 0 and self.rng.random() < self.cfg.drop_prob:
                 self._log("drop", now, stamp, self.received, T_if[:3, 3])
                 return
             if self.cfg.require_enabled and not (self.state == "ENABLED" and self.homed):
@@ -109,7 +124,7 @@ class MockCRTKNode:
                 return  # silently ignored (0.1.2: counterexample of the RC3 review, finding 2)
             goal_if = T_if.copy()
             T_if[:3, 3] *= self.cfg.unit_m  # -> metres
-            T_local = self.T_bind_inv @ T_if  # -> arm-base frame
+            T_local = self.T_cmd_inv @ T_if  # -> arm-base frame (0.1.6: through the command binding, = T_bind unless configured)
             delay = self.cfg.response_delay_s + self.rng.uniform(0.0, self.cfg.response_jitter_s)
             self.seq += 1
             # 0.1.3: the goal in interface units travels with the queued command and becomes the reported setpoint
@@ -233,6 +248,13 @@ class MockCRTKNode:
             T_if = self.T_bind @ pose
             if self.cfg.noise_m > 0:
                 T_if[:3, 3] += self.nrng.normal(0.0, self.cfg.noise_m, 3)
+            if self.cfg.noise_model == "mixture":
+                tnow = time.monotonic()
+                if tnow >= self.mix_next:
+                    self.mix_value = self.cfg.mix_b_m if self.rng.random() < self.cfg.mix_p else self.cfg.mix_a_m
+                    self.mix_next = tnow + self.cfg.mix_hold_s
+                if not self.cfg.mix_on_anchor:
+                    T_if[0, 3] += self.mix_value
             if self.cfg.orientation_noise_deg > 0:
                 T_if[:3, :3] = self._rot_noise() @ T_if[:3, :3]
             T_if[:3, 3] /= self.cfg.unit_m
@@ -270,6 +292,8 @@ class MockCRTKNode:
             T_truth = pose.copy()
             if self.cfg.anchor_noise_m > 0:
                 T_truth[:3, 3] += self.nrng.normal(0.0, self.cfg.anchor_noise_m, 3)
+            if self.cfg.noise_model == "mixture" and self.cfg.mix_on_anchor:
+                T_truth[0, 3] += self.mix_value
             self.pub_truth.publish(matrix_to_pose_msg(T_truth, "mock_ground_truth_base"))
             if self.pub_tf is not None:
                 tr = TransformStamped()

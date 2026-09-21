@@ -31,7 +31,8 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--geometry-trials", type=int, default=5, help="trials of the instrument-geometry anchor (0.1.6)")
     r.add_argument("--geometry-settle-s", type=float, default=1.0, help="settle time per joint step of the geometry anchor (0.1.6)")
     r.add_argument("--calibration-commands", type=int, default=30, help="commands sent without a preceding silence to estimate baseline command loss (0.1.6; 0.1.5 used 12)")
-    r.add_argument("--liveness-rule", choices=["0.1.6", "0.1.5"], default="0.1.6", help="0.1.6: a non-response counts as a stop policy only when confirmed at the same gap (see liveness.py); 0.1.5: the archived rule")
+    r.add_argument("--liveness-rule", choices=["0.1.7", "0.1.6", "0.1.5"], default="0.1.7", help="0.1.7: the 0.1.6 confirmation rule, and every faulted trial bounded by the time its FAULT was observed (sound under command loss); 0.1.6: a non-response counts as a stop policy only when confirmed at the same gap (see liveness.py); 0.1.5: the archived rule")
+    r.add_argument("--no-consistency-gate", action="store_true", help="(0.1.6 behaviour) keep a unit verdict when the command/feedback consistency diagnostic is raised")
     r.add_argument("--enable-timeout-s", type=float, default=3.0, help="how long ensure_enabled waits for ENABLED and homed after enable/home (0.1.6; implementation constant)")
     r.add_argument("--skip-rate-sweep", action="store_true", help="skip the effective-rate diagnostic sweep (campaign speed; the rate sub-verdict is undetermined in every case)")
     r.add_argument("--gap-max-s", type=float, default=2.0)
@@ -83,7 +84,7 @@ def run(args) -> int:
         results.append(FrameSemanticsProbe(a, tol, trials=args.trials, expectations=exp, pairing_window_s=args.pairing_window_ms / 1000.0).run())
     if "scale" in wanted:
         results.append(ScalingUnitsProbe(a, tol, trials=args.trials, step_if=args.step_mm / 1000.0, settle_s=args.settle_s, expectations=exp,
-                                         still_tol_m=args.still_tol_mm / 1000.0).run())
+                                         still_tol_m=args.still_tol_mm / 1000.0, consistency_gate=not args.no_consistency_gate).run())
     if "geometry" in wanted:
         results.append(GeometryAnchorProbe(a, tol, trials=args.geometry_trials, settle_s=args.geometry_settle_s, expectations=exp).run())
     if "rate" in wanted:
@@ -96,7 +97,8 @@ def run(args) -> int:
                                             latency_bound_s=args.latency_bound_s, calibration_commands=args.calibration_commands,
                                             liveness_rule=args.liveness_rule, skip_rate_sweep=args.skip_rate_sweep).run())
     params = {k: v for k, v in vars(args).items() if k not in ("cmd",)}
-    rep = build_report(args.namespace, tol, disc, results, os.environ.get("ROS_MASTER_URI", ""), expectations=exp, parameters=params)
+    rep = build_report(args.namespace, tol, disc, results, os.environ.get("ROS_MASTER_URI", ""), expectations=exp, parameters=params,
+                       consistency_gate=not args.no_consistency_gate)
     with open(args.out, "w") as f:
         json.dump(rep, f, indent=2)
     if not args.quiet:

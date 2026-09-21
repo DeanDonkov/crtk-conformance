@@ -51,7 +51,7 @@ import numpy as np
 
 from ..adapter import PlatformAdapter, pose_msg_to_matrix
 from ..expectations import Expectations, TemporalExpectation, combine
-from ..liveness import attributable, drift_evaluated, last_command_latency, required_confirmations, timeout_interval_from_trials  # noqa: F401 (0.1.5/0.1.6: ROS-free liveness decision logic)
+from ..liveness import attributable, drift_evaluated, fault_horizon_decision, fault_observation_window, last_command_latency, required_confirmations, timeout_interval_from_trials, trip_upper_bound  # noqa: F401 (0.1.5/0.1.6: ROS-free liveness decision logic)
 from ..rate_estimator import (
     AppliedAgeEstimate,
     estimate_applied_age,
@@ -97,7 +97,7 @@ class RateSensitivityProbe:
         still_tol_m: float = 1e-5,
         latency_bound_s: Optional[float] = None,
         calibration_commands: int = 30,
-        liveness_rule: str = "0.1.6",
+        liveness_rule: str = "0.1.7",
         confirm_alpha: float = 0.01,
         confirm_max: int = 4,
         skip_rate_sweep: bool = False,
@@ -105,7 +105,10 @@ class RateSensitivityProbe:
         self.a = adapter
         # 0.1.6 (RC9 / external review, point 4): calibration commands sent without a preceding silence (0.1.5: 12), the
         # liveness rule ('0.1.6': a non-response without a state change counts as a stop policy only when it is confirmed
-        # at the same gap, liveness.required_confirmations; '0.1.5': the archived rule) and its confirmation parameters
+        # at the same gap, liveness.required_confirmations; '0.1.5': the archived rule) and its confirmation parameters.
+        # 0.1.7 (RC12 review): the 0.1.6 confirmation rule, and every faulted trial bounds tau_w by the time its FAULT was
+        # observed (sound whether or not the post-gap command arrived); the 0.1.6 interval is reported as an estimate
+        # conditional on every faulted trial's post-gap command having arrived, and decides nothing
         self.n_calib = int(calibration_commands)
         self.liveness_rule = liveness_rule
         self.confirm_alpha = confirm_alpha
@@ -499,7 +502,7 @@ class RateSensitivityProbe:
                 "samples_in_gap": n_gap, "class": cls, "state": state}
 
     def _tripped(self, r: dict) -> bool:
-        if self.liveness_rule == "0.1.6" and r["class"] == "rejected":
+        if self.liveness_rule in ("0.1.6", "0.1.7") and r["class"] == "rejected":
             return bool((r.get("confirmation") or {}).get("confirmed"))
         return r["class"] in ("rejected", "faulted", "drifted")
 
@@ -514,7 +517,7 @@ class RateSensitivityProbe:
         passing repeat, or the unconfirmed rejection (which moves neither end of the bracket)."""
         r = self._gap_trial(buf, base_T, gap_s)
         sink.append(r)
-        if self.liveness_rule != "0.1.6" or r["class"] != "rejected":
+        if self.liveness_rule not in ("0.1.6", "0.1.7") or r["class"] != "rejected":
             return r
         group = [r]
         need = self._r_confirm
@@ -572,7 +575,7 @@ class RateSensitivityProbe:
                "hold_tolerance_m": self.hold_tol, "granularity_allowance_s": G, "trials": [], "liveness_rule": self.liveness_rule}
         # 0.1.6: the confirmation requirement follows from the calibration (commands sent without a preceding silence)
         n_resp0 = int(self.resolution.get("latency_probes_responded", self.n_calib) or 0)
-        if self.liveness_rule == "0.1.6":
+        if self.liveness_rule in ("0.1.6", "0.1.7"):
             self._r_confirm, p_up = required_confirmations(self.n_calib, max(0, self.n_calib - n_resp0), self.confirm_alpha, self.confirm_max)
             out["confirmation_rule"] = {"calibration_commands": self.n_calib, "lost": max(0, self.n_calib - n_resp0), "loss_upper_bound_95": p_up,
                                         "alpha": self.confirm_alpha, "required_rejections_per_gap": self._r_confirm, "max_repeats": self.confirm_max}
@@ -652,7 +655,10 @@ class RateSensitivityProbe:
         n_resp = int(self.resolution.get("latency_probes_responded", n_probes) or 0)
         baseline_loss = max(0, n_probes - n_resp)
         tripped_trials = [b for b in out["trials"] if self._tripped(b)]
-        n_attrib = sum(1 for b in tripped_trials if attributable(b, baseline_loss, self.liveness_rule))
+        # 0.1.7: the record-level bound on when a FAULT classified by a trial was observed (for records without the time)
+        fw = fault_observation_window(self.response_timeout, G) if self.liveness_rule == "0.1.7" else None
+        out["fault_observation_window_s"] = fw
+        n_attrib = sum(1 for b in tripped_trials if attributable(b, baseline_loss, self.liveness_rule, fw))
         confounded = baseline_loss > 0 and n_attrib == 0
         out["baseline_command_loss"] = {"calibration_commands": n_probes, "responded": n_resp, "lost": baseline_loss,
                                         "tripped_trials": len(tripped_trials), "attributable_tripped_trials": n_attrib}
@@ -667,7 +673,15 @@ class RateSensitivityProbe:
             status = "undetermined" if confounded else "upper_bound"
             below_trials = [b for b in out["trials"][n_big_records:] if self._tripped(b)]
             ub = lo0 + L
-            if baseline_loss > 0 and not confounded:
+            if self.liveness_rule == "0.1.7" and not confounded:
+                # 0.1.7: every attributable trip supplies its sound bound (a fault: the time it was observed)
+                highs = [trip_upper_bound(b, L, baseline_loss, "0.1.7", fw) for b in below_trials if attributable(b, baseline_loss, "0.1.7", fw)]
+                highs = [h for h in highs if h is not None]
+                if not highs:
+                    status = "undetermined"
+                else:
+                    ub = min(highs)
+            elif baseline_loss > 0 and not confounded:
                 highs = [float(b["state_observed_at_s"]) for b in below_trials if b["class"] == "faulted" and b.get("state_observed_at_s") is not None]
                 highs += [float(min(b["gap_s"], b["drift_onset_s"])) for b in below_trials if b["class"] == "drifted" and b.get("drift_onset_s") is not None]
                 if not highs:
@@ -705,7 +719,14 @@ class RateSensitivityProbe:
             out["finding"] = f"{out['stop_class']} observed but tau_w undetermined ({est['reason']}; n={len(brackets)})"
             return out
         iv = timeout_interval_from_trials(trials, L=L, G=G, fp=fp, hold_tol=self.hold_tol, stop_class=out["stop_class"], baseline_loss=baseline_loss,
-                                          rule=self.liveness_rule)
+                                          rule=self.liveness_rule, fault_window_s=fw)
+        if self.liveness_rule == "0.1.7":
+            # the 0.1.6 interval (a faulted trial bounded by gap + L unless the calibration saw loss): tighter, but it
+            # assumes that every faulted trial's post-gap command arrived; reported, never used for a decision
+            iv6 = timeout_interval_from_trials(trials, L=L, G=G, fp=fp, hold_tol=self.hold_tol, stop_class=out["stop_class"], baseline_loss=baseline_loss,
+                                               rule="0.1.6")
+            est["conditional_estimate_s"] = {"interval_low_s": iv6["interval_low_s"], "interval_high_s": iv6["interval_high_s"], "status": iv6["status"],
+                                             "semantics": "0.1.6 bound: conditional on the post-gap command of every faulted trial having arrived; decides nothing"}
         est.update({k: iv[k] for k in ("drift_speed_min_m_s", "detection_delay_s", "n_trials_with_own_last_latency", "onset_based_lower_bounds_s",
                                        "reference_window_motion_trials", "passing_lower_bounds_s", "tripping_upper_bounds_s", "lower_bound_uses_L_for_all_trials",
                                        "unattributable_trials", "attributable_tripping_trials")})
@@ -938,17 +959,14 @@ class RateSensitivityProbe:
 
                     loss_ = int((B.get("baseline_command_loss") or {}).get("lost", 0) or 0)
 
-                    def _hi(t):
-                        # a drift onset needs no latency term (the drift cannot precede the policy); a rejection/fault
-                        # is evidenced by a command that drew no response, so the allowance L is added; under baseline
-                        # command loss a fault is evidenced by the time its state was observed (0.1.5)
-                        if t["class"] == "drifted" and t.get("drift_onset_s") is not None:
-                            return min(t["gap_s"], t["drift_onset_s"])
-                        if t["class"] == "faulted" and loss_ > 0:
-                            return float(t["state_observed_at_s"])
-                        return t["gap_s"] + L_
-                    trips = [t for t in B.get("trials", []) if self._tripped(t) and attributable(t, loss_)]
-                    trip_hi = min((_hi(t) for t in trips), default=None)
+                    # a drift onset needs no latency term (the drift cannot precede the policy); a rejection/fault
+                    # is evidenced by a command that drew no response, so the allowance L is added; under baseline
+                    # command loss a fault is evidenced by the time its state was observed (0.1.5); 0.1.7: always
+                    rule_h = "0.1.7" if self.liveness_rule == "0.1.7" else "0.1.5"
+                    fw_h = B.get("fault_observation_window_s") if rule_h == "0.1.7" else None
+                    trips = [t for t in B.get("trials", []) if self._tripped(t) and attributable(t, loss_, rule_h, fw_h)]
+                    his = [trip_upper_bound(t, L_, loss_, rule_h, fw_h) for t in trips]
+                    trip_hi = min((h for h in his if h is not None), default=None)
                     tau_lo = tau.get("interval_low_s") if isinstance(tau, dict) and tau.get("status") == "ok" else None
                     if B.get("rejection_confounded_by_command_loss"):
                         # 0.1.5: the non-responses that would evidence the trip also occur without a silence
@@ -970,32 +988,9 @@ class RateSensitivityProbe:
                     # horizon -- decided on the timeout interval, not on the class alone; (ii) eq. (7): the client's
                     # own stream survives the policy -- decided against the interval, not a point
                     need = 1.0 / self.tol.client_rate_hz + self.tol.jitter_max_s
-                    within = None
-                    ok_margin = None
-                    if isinstance(tau, dict) and tau.get("status") == "ok":
-                        if tau["interval_high_s"] <= horizon + 1e-9:
-                            within = True
-                        elif tau["interval_low_s"] > horizon + 1e-9:
-                            within = False
-                            notes.append(f"the {stop_class} policy fires only after the claimed horizon {horizon} s (tau_w interval [{tau['interval_low_s']:.3f}, {tau['interval_high_s']:.3f}] s)")
-                        else:
-                            notes.append(f"whether the {stop_class} policy fires within the claimed horizon {horizon} s is undetermined (tau_w interval [{tau['interval_low_s']:.3f}, {tau['interval_high_s']:.3f}] s straddles it)")
-                        if need < tau["interval_low_s"]:
-                            ok_margin = True
-                        elif need >= tau["interval_high_s"]:
-                            ok_margin = False
-                            notes.append(f"eq. (7) violated: client period + J_max = {need:.3f} s >= tau_w interval high {tau['interval_high_s']:.3f} s")
-                        else:
-                            notes.append(f"eq. (7) undecided: client period + J_max = {need:.3f} s lies inside the tau_w interval [{tau['interval_low_s']:.3f}, {tau['interval_high_s']:.3f}] s")
-                    elif isinstance(tau, dict) and tau.get("status") == "upper_bound":
-                        within = True if tau["upper_bound_s"] <= horizon + 1e-9 else None
-                        ok_margin = False if need >= tau["upper_bound_s"] else None
-                    if within is True and ok_margin is True:
-                        sub["stop_behaviour"] = "satisfied"
-                    elif within is False or ok_margin is False:
-                        sub["stop_behaviour"] = "violated"
-                    else:
-                        sub["stop_behaviour"] = "undetermined"
+                    # 0.1.7: the decision is liveness.fault_horizon_decision (moved there unchanged; replayable offline)
+                    sub["stop_behaviour"], fd_notes = fault_horizon_decision(tau, horizon, need)
+                    notes.extend(f"{stop_class}: {n}" for n in fd_notes)
                     if isinstance(tau, dict) and tau.get("conditional"):
                         notes.append(f"the tau_w interval is conditional on the listed assumptions (latency allowance {tau.get('latency_allowance_s', float('nan'))*1e3:.0f} ms is a run maximum, not a bound)")
                 elif stop_class == "held_through_range":

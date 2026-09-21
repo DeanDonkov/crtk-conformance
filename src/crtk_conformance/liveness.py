@@ -1,4 +1,5 @@
-"""Liveness interval logic that needs no ROS (0.1.5; 0.1.6 adds the confirmation rule for non-responses): the departure-guarded response latency of the last streamed
+"""Liveness interval logic that needs no ROS (0.1.5; 0.1.6 adds the confirmation rule for non-responses; 0.1.7 bounds every
+faulted trial by the time its FAULT was observed): the departure-guarded response latency of the last streamed
 command and the deterministic-timeout enclosure formed from the gap trials.  probes/rate.py collects the observations;
 these two functions decide, so that the decision can be replayed offline on archived trial records
 (validation/reanalyze_liveness_v015.py, tests/test_liveness_v015.py).
@@ -75,7 +76,43 @@ def required_confirmations(n_commands: int, n_lost: int, alpha: float = 0.01, r_
     return (r if r <= r_max else None), p_up
 
 
-def attributable(trial, baseline_loss: int, rule: str = "0.1.5") -> bool:
+# 0.1.7: the gap trial reads the operating state with operating_state(0.2) after the post-gap response wait (probes/rate.py,
+# unchanged since 0.1.3); a FAULT classified by a trial was therefore observed at most W + STATE_QUERY_S after the post-gap
+# send, W the run's response wait (response_timeout_s).
+STATE_QUERY_S = 0.2
+
+
+def fault_observation_window(response_timeout_s: float, G: float) -> float:
+    """0.1.7: an upper bound on how long after the post-gap send a FAULT that a gap trial classified can have been
+    observed: the response wait W, the state query (STATE_QUERY_S) and one feedback period G of processing slack.  Used
+    only for trial records that predate `state_observed_at_s` (the v0.1.3 archive); newer records carry the time."""
+    return float(response_timeout_s) + STATE_QUERY_S + float(G)
+
+
+def trip_upper_bound(trial, L: float, baseline_loss: int = 0, rule: str = "0.1.5", fault_window_s=None):
+    """The upper bound on tau_w that a tripped trial supplies (seconds from the last streamed command), or None if it
+    supplies none.
+      drift with onset o:  min(gap, o)   (the drift cannot precede the policy; no latency term)
+      rejection at gap g:  g + L         (the unanswered post-gap command arrived within L and found the policy fired)
+      fault at gap g:      0.1.5/0.1.6: g + L without baseline loss, else t_state (the time the FAULT was observed);
+                           0.1.7: always t_state, or g + fault_window_s for a record without it.
+    g + L is sound only if the post-gap command arrived: if it was lost and the fault fired during the response wait,
+    tau_w can exceed g + L (RC9 loss experiment, one excluding interval).  t_state is sound whether or not the post-gap
+    command arrived (the fault fired before it was observed), at the cost of the response wait (0.1.7; RC12 review)."""
+    g = float(trial["gap_s"])
+    if trial["class"] == "drifted":
+        return min(g, trial["drift_onset_s"]) if trial.get("drift_onset_s") is not None else g
+    if trial["class"] == "faulted":
+        if rule == "0.1.7":
+            if trial.get("state_observed_at_s") is not None:
+                return float(trial["state_observed_at_s"])
+            return g + float(fault_window_s) if fault_window_s is not None else None
+        if baseline_loss > 0:
+            return float(trial["state_observed_at_s"])
+    return g + L
+
+
+def attributable(trial, baseline_loss: int, rule: str = "0.1.5", fault_window_s=None) -> bool:
     """Whether a tripped trial's evidence can be attributed to a silence-triggered stop policy (0.1.5, RC7 review,
     finding F10).  Without baseline command loss every tripped trial is.  With it, a non-response without a visible
     state change (`rejected`) may be the loss of the post-gap command itself and is not; a `faulted` trial is, when the
@@ -87,8 +124,12 @@ def attributable(trial, baseline_loss: int, rule: str = "0.1.5") -> bool:
     an answered stream -- whether or not the calibration commands showed loss; `faulted` and `drifted` as before."""
     if trial["class"] not in ("rejected", "faulted", "drifted"):
         return False
-    if rule == "0.1.6" and trial["class"] == "rejected":
+    if rule in ("0.1.6", "0.1.7") and trial["class"] == "rejected":
         return bool((trial.get("confirmation") or {}).get("confirmed"))
+    if rule == "0.1.7" and trial["class"] == "faulted":
+        # 0.1.7: a fault needs no confirmation that a policy exists (loss cannot forge it), but its bound needs the
+        # time of its observation (or a record-level bound on it)
+        return trial.get("state_observed_at_s") is not None or fault_window_s is not None
     if baseline_loss <= 0:
         return True
     if trial["class"] == "rejected":
@@ -98,7 +139,8 @@ def attributable(trial, baseline_loss: int, rule: str = "0.1.5") -> bool:
     return True
 
 
-def timeout_interval_from_trials(trials, L: float, G: float, fp: float, hold_tol: float, stop_class: str, baseline_loss: int = 0, rule: str = "0.1.5"):
+def timeout_interval_from_trials(trials, L: float, G: float, fp: float, hold_tol: float, stop_class: str, baseline_loss: int = 0, rule: str = "0.1.5",
+                                 fault_window_s=None):
     """The deterministic-timeout enclosure from the gap trials (0.1.5; the interval logic of probe_liveness, kept as a
     pure function so that it can be replayed offline on archived trial records).
 
@@ -126,8 +168,8 @@ def timeout_interval_from_trials(trials, L: float, G: float, fp: float, hold_tol
     that began inside the reference window is censored, its onset is then the first observable sample and bounds
     tau_w from above only (v0.1.5 verification campaign, delayed-application drift case)."""
     passing = [t for t in trials if t["class"] == "held" and (stop_class != "drifted" or drift_evaluated(t))]
-    tripping = [t for t in trials if attributable(t, baseline_loss, rule)]
-    unattributable = [t for t in trials if t["class"] in ("rejected", "faulted", "drifted") and not attributable(t, baseline_loss, rule)]
+    tripping = [t for t in trials if attributable(t, baseline_loss, rule, fault_window_s)]
+    unattributable = [t for t in trials if t["class"] in ("rejected", "faulted", "drifted") and not attributable(t, baseline_loss, rule, fault_window_s)]
     drifted = [t for t in tripping if t["class"] == "drifted"]
     speeds = [t["drift_speed_m_s"] for t in drifted if t.get("drift_speed_m_s") is not None and t["drift_speed_m_s"] > 0]
     v_min = min(speeds) if speeds else None
@@ -145,11 +187,7 @@ def timeout_interval_from_trials(trials, L: float, G: float, fp: float, hold_tol
         return t["gap_s"]
 
     def high_of(t):
-        if t["class"] == "drifted":
-            return hi_of(t)
-        if t["class"] == "faulted" and baseline_loss > 0:
-            return float(t["state_observed_at_s"])
-        return hi_of(t) + L
+        return trip_upper_bound(t, L, baseline_loss, rule, fault_window_s)
 
     lows = [t["gap_s"] - l1_of(t) - G - t_det for t in passing]
     highs = [high_of(t) for t in tripping]
@@ -167,3 +205,37 @@ def timeout_interval_from_trials(trials, L: float, G: float, fp: float, hold_tol
            "lower_bound_uses_L_for_all_trials": all(l1_of(t) == L for t in passing + drifted) if (passing or drifted) else None,
            "status": "inconsistent" if lo_all > hi_all else ("no_attributable_trip" if not tripping else "formed")}
     return est
+
+
+def fault_horizon_decision(tau, horizon: float, need: float):
+    """The stop sub-verdict for a fault or drift expectation whose policy was observed (probes/rate.py; a pure function
+    since 0.1.7 so that it can be replayed offline).  Two independent conditions (RC4 review, finding 4): (i) the
+    policy fires WITHIN the claimed horizon, decided on the timeout interval; (ii) eq. (7), the client's own stream
+    (period + J_max = need) survives the policy, decided against the interval.  Returns (verdict, notes)."""
+    notes = []
+    within = None
+    ok_margin = None
+    if isinstance(tau, dict) and tau.get("status") == "ok":
+        lo, hi = tau["interval_low_s"], tau["interval_high_s"]
+        if hi <= horizon + 1e-9:
+            within = True
+        elif lo > horizon + 1e-9:
+            within = False
+            notes.append(f"the policy fires only after the claimed horizon {horizon} s (tau_w interval [{lo:.3f}, {hi:.3f}] s)")
+        else:
+            notes.append(f"whether the policy fires within the claimed horizon {horizon} s is undetermined (tau_w interval [{lo:.3f}, {hi:.3f}] s straddles it)")
+        if need < lo:
+            ok_margin = True
+        elif need >= hi:
+            ok_margin = False
+            notes.append(f"eq. (7) violated: client period + J_max = {need:.3f} s >= tau_w interval high {hi:.3f} s")
+        else:
+            notes.append(f"eq. (7) undecided: client period + J_max = {need:.3f} s lies inside the tau_w interval [{lo:.3f}, {hi:.3f}] s")
+    elif isinstance(tau, dict) and tau.get("status") == "upper_bound":
+        within = True if tau["upper_bound_s"] <= horizon + 1e-9 else None
+        ok_margin = False if need >= tau["upper_bound_s"] else None
+    if within is True and ok_margin is True:
+        return "satisfied", notes
+    if within is False or ok_margin is False:
+        return "violated", notes
+    return "undetermined", notes

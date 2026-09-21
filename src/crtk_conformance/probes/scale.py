@@ -43,8 +43,9 @@ class ScalingUnitsProbe:
     name = "ScalingUnitsProbe"
 
     def __init__(self, adapter: PlatformAdapter, tol: Tolerance, trials: int = 10, step_if: float = 0.005, settle_s: float = 1.0,
-                 expectations: Optional[Expectations] = None, still_tol_m: float = 1e-5):
-        """step_if: commanded displacement in *interface units* (the probe does not know the unit)."""
+                 expectations: Optional[Expectations] = None, still_tol_m: float = 1e-5, consistency_gate: bool = True):
+        """step_if: commanded displacement in *interface units* (the probe does not know the unit).  consistency_gate
+        (0.1.7): withhold the unit verdict when the command/feedback consistency diagnostic is raised (False = 0.1.6)."""
         self.a = adapter
         self.tol = tol
         self.trials = trials
@@ -52,6 +53,7 @@ class ScalingUnitsProbe:
         self.settle = settle_s
         self.exp = expectations or Expectations()
         self.still_tol = still_tol_m  # implementation constant: motion below this is 'no response'
+        self.consistency_gate = consistency_gate
 
     def run(self) -> ProbeResult:
         t0 = time.time()
@@ -151,6 +153,7 @@ class ScalingUnitsProbe:
         res.estimates["internal_ratio_per_axis"] = {str(k): estimate(v).to_dict() for k, v in per_axis.items()}
         if latencies:
             res.estimates["response_latency_s"] = estimate(latencies).to_dict()
+        flag = False
         if abs_res:
             # 0.1.6 diagnostic (not a verdict): under a SHARED command/feedback binding and exact tracking the settled
             # feedback equals the commanded goal whatever that binding is (Section IV-C), so a residual far above the noise
@@ -168,7 +171,7 @@ class ScalingUnitsProbe:
             if flag:
                 res.notes.append(f"command/feedback consistency: settled feedback differs from the commanded goal by {e_ar.mean*unit*1e3:.3f} mm on average "
                                  f"(>= {e_ar.ci_low*unit*1e3:.3f} mm at 95%): commands and feedback do not share one binding, or tracking is deficient -- "
-                                 "an anchored scale outcome may then misattribute this to units")
+                                 "an anchored scale outcome would then misattribute this to units (0.1.7: the unit verdict is withheld)")
         if len(r_int) < MIN_VALID_TRIALS:
             res.decision_basis = f"only {len(r_int)} valid trial(s) ({no_response} no-response): undetermined"
             res.notes.append("fewer than %d trials produced a response; the implementation may drop or reject commands" % MIN_VALID_TRIALS)
@@ -193,6 +196,14 @@ class ScalingUnitsProbe:
                     f"eq. (6) with anchored s_hat = {e_s.mean:.4f} (95% CI {e_s.ci_low:.4f}..{e_s.ci_high:.4f}) against the client's unit {u}: "
                     f"|1-s| r_ws = {e_pred.mean*1e3:.3f} mm vs epsilon = {self.tol.epsilon_m*1e3:.3f} mm"
                 )
+                if self.consistency_gate:
+                    from ..dimensional import consistency_gate
+                    before = res.outcome
+                    res.outcome, withheld = consistency_gate(res.outcome, flag)
+                    if withheld:
+                        res.estimates["unit_outcome_without_consistency_gate"] = before.value
+                        res.decision_basis += (f"; withheld (0.1.7): the command/feedback consistency diagnostic is raised, so the shared binding "
+                                               f"that a unit verdict assumes is contradicted ({before.value} without the gate)")
         else:
             res.decision_basis = "no unit anchor: uniform scale is invariant under every interface ratio (Section 5.2) -> undetermined by construction"
             res.notes.append(f"internal consistency ratio {e_int.mean:.4f} (n={e_int.n}) says nothing about the unit; supply --anchor-topic to test units")

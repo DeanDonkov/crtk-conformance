@@ -169,3 +169,14 @@ def geometry_anchor_decision(pitch_axes: Sequence[ScrewAxis], yaw_axes: Sequence
     outcome, e_pred = scale_decision(widened, expected_unit_m, tol)
     return GeometryAnchorDecision(e.n, dmean, e.mean, [e.ci_low, e.ci_high], [lo_w, hi_w], u_rel, L_phys_m, float(expected_unit_m),
                                   e_pred.mean, [e_pred.ci_low, e_pred.ci_high], outcome.value, gates, fails, assumptions)
+
+
+def consistency_gate(outcome: Outcome, flagged: bool) -> Tuple[Outcome, bool]:
+    """0.1.7 (RC12 review, point 1): a unit verdict assumes that commands and feedback share one binding (the scale probe
+    moves the arm with absolute goals; the geometry anchor measures the feedback unit).  When the command/feedback
+    consistency diagnostic is raised that assumption is contradicted, and a conformant or divergent unit verdict would
+    attribute an inconsistency of unknown cause to units (case K1: a command-frame error reported as a unit error).
+    Returns (outcome, withheld): undetermined and True when a determinate verdict is withheld."""
+    if flagged and outcome in (Outcome.CONFORMANT, Outcome.DIVERGENT):
+        return Outcome.UNDETERMINED, True
+    return outcome, False

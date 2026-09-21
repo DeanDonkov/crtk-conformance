@@ -121,7 +121,8 @@ def move_to_work(version, logdir):
 
 def cli(name, outdir, probes, exp, tol_mm):
     cmd = [sys.executable, "-m", "crtk_conformance.cli", "run", "--namespace", NS, "--tolerance-mm", str(tol_mm), "--probes", probes,
-           *RC8_PARAMS, "--out", os.path.join(outdir, f"{name}.json"), "--quiet"]
+           *RC8_PARAMS, "--out", os.path.join(outdir, f"{name}.json"), "--quiet",
+           "--liveness-rule", "0.1.6", "--no-consistency-gate"]  # 0.1.7: pin the rules of the archived v0.1.6 campaign
     if exp:
         cmd += ["--expectations", exp]
     t0 = time.time()

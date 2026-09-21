@@ -198,7 +198,11 @@ def test_liveness_fault_estimate_and_resolution(master):
     # 0.1.2: the interval must CONTAIN the injected timeout (RC3 review, finding 3), and be tight
     assert tau["status"] == "ok" and tau["n"] == 3
     assert tau["interval_low_s"] <= 0.25 <= tau["interval_high_s"], tau
-    assert tau["interval_high_s"] - tau["interval_low_s"] < 0.15
+    # 0.1.7: faulted trials are bounded by the time the FAULT was observed (sound whether or not the post-gap command
+    # arrived; wider by about the response wait); the 0.1.6 interval, conditional on post-gap arrival, stays tight
+    ce = tau["conditional_estimate_s"]
+    assert ce["interval_low_s"] <= 0.25 <= ce["interval_high_s"] and ce["interval_high_s"] - ce["interval_low_s"] < 0.15, ce
+    assert tau["interval_high_s"] - tau["interval_low_s"] < 0.15 + L["fault_observation_window_s"], tau
     assert r.observations["resolution"]["resolution_floor_s"] < 0.1
     assert r.outcome == Outcome.CONFORMANT  # the client's 100 Hz stream keeps well inside 0.25 s
 

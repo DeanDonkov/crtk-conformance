@@ -43,7 +43,7 @@ def _clean(o):
 
 
 def build_report(namespace: str, tol: Tolerance, discovery: Dict[str, Any], results: List[ProbeResult], ros_master_uri: str = "",
-                 expectations=None, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
+                 expectations=None, parameters: Dict[str, Any] = None, consistency_gate: bool = True) -> Dict[str, Any]:
     summary = {"spatial": "undetermined", "dimensional": "undetermined", "temporal": "undetermined"}
     # 0.1.6: a class may be decided by more than one probe (dimensional: scale probe with an SI-pose anchor, geometry
     # anchor probe).  Any divergent -> divergent; otherwise any conformant -> conformant; otherwise undetermined.  With
@@ -53,6 +53,23 @@ def build_report(namespace: str, tol: Tolerance, discovery: Dict[str, Any], resu
         by_class.setdefault(r.binding_class, []).append(r.outcome.value)
     for cls, outs in by_class.items():
         summary[cls] = "divergent" if "divergent" in outs else ("conformant" if "conformant" in outs else "undetermined")
+    # 0.1.7 (RC12 review, point 1): verdict kinds.  summary.spatial is the frame probe's feedback-binding verdict; read as a
+    # statement about commands it needs the shared-binding assumption [A], and so does every dimensional verdict.  A raised
+    # command/feedback consistency diagnostic contradicts [A]: the command-semantic reading and the dimensional class are
+    # then undetermined (consistency_gate=False reproduces 0.1.6).
+    cons = [(r.estimates or {}).get("command_feedback_consistency") for r in results]
+    cons = [c for c in cons if isinstance(c, dict)]
+    flagged = any(c.get("flag_non_shared_binding_or_tracking_deficit") for c in cons)
+    if flagged and consistency_gate and summary["dimensional"] != "undetermined":
+        summary["dimensional"] = "undetermined"
+    verdict_kinds = {
+        "spatial_feedback_binding": summary["spatial"],
+        "spatial_command_semantic": ("undetermined" if (flagged and consistency_gate) else summary["spatial"]),
+        "shared_binding_assumption": ("contradicted by the command/feedback consistency diagnostic" if flagged else
+                                      ("not contradicted by the command/feedback consistency diagnostic" if cons else "assumed; not tested")),
+        "semantics": "spatial_feedback_binding decides the relation between measured_cp and local/measured_cp; spatial_command_semantic "
+                     "is the same verdict read for servo_cp, valid only under a shared command/feedback binding; a diagnostic never decides",
+    }
     rep = {
         "tool": "crtk-conformance",
         "version": __version__,
@@ -65,6 +82,7 @@ def build_report(namespace: str, tol: Tolerance, discovery: Dict[str, Any], resu
         "discovery": discovery,
         "probes": [r.to_dict() for r in results],
         "summary": summary,
+        "verdict_kinds": verdict_kinds,
         "semantics": "conformant = the discovered binding satisfies an explicitly declared client expectation within the stated tolerance; "
                      "no declared expectation -> undetermined (observations reported, no verdict)",
     }

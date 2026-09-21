@@ -86,7 +86,7 @@ def exp_K(out):
         if RERUN and name not in RERUN:
             continue
         rf = run_probe(lambda a, e=e: FrameSemanticsProbe(a, TOL, trials=10, samples_per_trial=5, expectations=e), preset, over, expectation=e)
-        rs = run_probe(lambda a, e=e: ScalingUnitsProbe(a, TOL, trials=9, step_if=0.005, settle_s=0.6, expectations=e), preset, over, expectation=e)
+        rs = run_probe(lambda a, e=e: ScalingUnitsProbe(a, TOL, trials=9, step_if=0.005, settle_s=0.6, expectations=e, consistency_gate=False), preset, over, expectation=e)
         cc = rs["result"]["estimates"].get("command_feedback_consistency", {})
         rec = {"case": name, "what": what, "preset": preset, "overrides": over, "frame": rf, "scale": rs,
                "truth": {"command_binding_differs": name.startswith("K1"), "E_residual_max_m": exact_max_error(E[:3, :3], E[:3, 3], 0.10) if name.startswith("K1") else 0.0}}
@@ -125,7 +125,7 @@ def exp_B(out, n_rep):
             k += 1
             if RERUN and name not in RERUN:
                 continue
-            rec = run_probe(lambda a: ScalingUnitsProbe(a, TOL, trials=9, step_if=0.005, settle_s=0.6, expectations=E_SI), "reference", over, expectation=E_SI)
+            rec = run_probe(lambda a: ScalingUnitsProbe(a, TOL, trials=9, step_if=0.005, settle_s=0.6, expectations=E_SI, consistency_gate=False), "reference", over, expectation=E_SI)
             rec["truth"] = {"ratio": rs, "s": s, "E_true_m": float(ratio * Fraction(1, 1000)), "truth_conformant": ratio <= 1, "noise_m": 1e-4}
             save(out, name, rec)
             e = rec["result"]["estimates"].get("predicted_error_at_workspace_edge_m", {})

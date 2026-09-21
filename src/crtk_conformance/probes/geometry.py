@@ -105,8 +105,9 @@ class GeometryAnchorProbe:
             res.decision_basis = "no measured_js received"
             res.duration_s = time.time() - t0
             return res
-        names = list(js.name)
         q_now = np.array(js.position, dtype=float)
+        # measured_js may list more names than positions (SRC lists the two gripper links): the joints are the first len(position)
+        names = list(js.name)[:len(q_now)]
         ip, iy = _joint_index(names, de.pitch_joint), _joint_index(names, de.yaw_joint)
         res.observations["joint_names"] = names
         res.observations["pitch_joint_index"], res.observations["yaw_joint_index"] = ip, iy

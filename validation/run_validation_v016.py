@@ -27,7 +27,22 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 from harness import ros_master  # noqa: E402
-from run_validation_v013 import run_probe, save, log, git_rev, NS, ANCHOR  # noqa: E402
+from run_validation_v013 import run_probe as _run_probe, save, log, git_rev, NS, ANCHOR  # noqa: E402
+
+
+def run_probe(*args, **kw):
+    """run_validation_v013.run_probe, retried (at most twice) when the probe found the node's topics missing: a start-up
+    race of the freshly spawned reference node (first L run of 21 Sep 2026), not a measurement.  Retries are logged in
+    the record."""
+    retries = []
+    for attempt in range(3):
+        rec = _run_probe(*args, **kw)
+        if rec["result"].get("decision_basis") not in ("missing topics", "no data", "no measured_cp data"):
+            break
+        retries.append(rec["result"].get("decision_basis"))
+        log(f"start-up failure ({rec['result'].get('decision_basis')}): retrying")
+    rec["startup_retries"] = retries
+    return rec
 
 from crtk_conformance import __version__, geometry as G  # noqa: E402
 from crtk_conformance.expectations import Expectations  # noqa: E402
@@ -139,7 +154,10 @@ def exp_L(out, n_rep, rules=("0.1.5", "0.1.6"), policies=("hold", "fault250"), l
                                                                    liveness_rule=rule, skip_rate_sweep=True), "reference", over, expectation=exp, event_log=ev)
                     rec["truth"] = dict(truth, loss=loss, rule=rule)
                     save(out, name, rec)
-                    L = rec["result"]["observations"]["liveness"]
+                    L = rec["result"]["observations"].get("liveness")
+                    if L is None:  # no liveness observation (e.g. the node was not discovered): recorded, not retried
+                        log(f"{name}: NO LIVENESS OBSERVATION: {rec['result']['decision_basis']} {rec['result'].get('notes')}")
+                        continue
                     tau = L.get("tau_w_estimate_s") or {}
                     log(f"{name}: class {L.get('stop_class')} status {tau.get('status')} [{tau.get('interval_low_s')}, {tau.get('interval_high_s')}] "
                         f"outcome {rec['result']['outcome']} ({rec['wall_s']:.0f}s)")

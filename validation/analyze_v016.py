@@ -137,7 +137,168 @@ def dvrk():
     return rows, summ
 
 
+# ------------------------------------------------------------------ SRC with the geometry anchor
+PRED_SRC = {  # (release, case): (spatial, dimensional, temporal)
+    ("v1", "src_client_geometry_1mm"): ("U", "D", "U"), ("v1", "src_client_geometry_5mm"): (None, "D", None), ("v1", "dvrk_client_geometry_1mm"): ("U", "D", "D"),
+    ("v2", "src_client_geometry_1mm"): ("U", "U", "U"), ("v2", "src_client_geometry_5mm"): (None, "C", None), ("v2", "dvrk_client_geometry_1mm"): ("U", "U", "D"),
+}
+
+
+def src():
+    rows = []
+    for v in ("v1", "v2"):
+        d = os.path.join(V16, "src_live", f"live-src-{v}")
+        for case in ("src_client_geometry_1mm", "src_client_geometry_5mm", "dvrk_client_geometry_1mm"):
+            p = os.path.join(d, case + ".json")
+            if not os.path.exists(p):
+                continue
+            rep = json.load(open(p)); s = rep["summary"]; pred = PRED_SRC[(v, case)]
+            row = {"release": v, "case": case, "spatial": AB[s.get("spatial")], "dimensional": AB[s.get("dimensional")], "temporal": AB[s.get("temporal")],
+                   "pred": "/".join(x or "-" for x in pred)}
+            dm = probe_of(rep, "dimensional")
+            ga = (dm or {}).get("estimates", {}).get("geometry_anchor") or {}
+            row.update(d_int_if=ga.get("d_int_mean_if"), lambda_hat=ga.get("lambda_hat_m"), lambda_ci=ga.get("lambda_ci_m"), lambda_ci_widened=ga.get("lambda_ci_widened_m"),
+                       e_s_ci_mm=[x * 1e3 for x in ga.get("predicted_error_ci_m") or []] or None, gates_passed=ga.get("gates_passed"), gate_failures=ga.get("gate_failures"),
+                       axes_angle_deg=ga.get("axes_angle_deg_mean"), n_ok=ga.get("n_trials_used"))
+            te = probe_of(rep, "temporal")
+            if te:
+                row["sub_verdicts"] = te["estimates"].get("sub_verdicts")
+            row["matches_prediction"] = all(a == b for a, b in zip((row["spatial"], row["dimensional"], row["temporal"]), pred) if b is not None)
+            rows.append(row)
+    json.dump(rows, open(os.path.join(OUT, "src_geometry.json"), "w"), indent=1)
+    for r in rows:
+        print(r)
+    return rows
+
+
+# ------------------------------------------------------------------ reference node
+def load_dir(d, prefix=""):
+    out = []
+    for p in sorted(glob.glob(os.path.join(d, prefix + "*.json"))):
+        out.append((os.path.basename(p)[:-5], json.load(open(p))))
+    return out
+
+
+def K():
+    rows = []
+    for name, r in load_dir(os.path.join(V16, "mock", "K")):
+        fr, sc = r["frame"]["result"], r["scale"]["result"]
+        est = sc["estimates"]
+        cc = est.get("command_feedback_consistency", {})
+        rows.append({"case": name, "what": r["what"], "frame": AB[fr["outcome"]], "frame_E_ci_mm": [x * 1e3 for x in (fr["estimates"].get("spatial_decision", {}).get("ci_low_m"), fr["estimates"].get("spatial_decision", {}).get("ci_high_m"))],
+                     "scale": AB[sc["outcome"]], "internal_ratio": est.get("internal_ratio", {}).get("mean"), "internal_ratio_range": [est.get("internal_ratio", {}).get("min"), est.get("internal_ratio", {}).get("max")],
+                     "s_hat": est.get("scale_anchored", {}).get("mean"), "flag": cc.get("flag_non_shared_binding_or_tracking_deficit"),
+                     "goal_residual_mm": (cc.get("goal_residual_if") or {}).get("mean", float("nan")) * 1e3 if cc.get("goal_residual_if") else None,
+                     "E_true_command_residual_mm": r["truth"]["E_residual_max_m"] * 1e3})
+    write_csv(os.path.join(OUT, "K1_cases.csv"), rows)
+    for x in rows:
+        print(x)
+    return rows
+
+
+def classify(outcome, truth_conformant):
+    if outcome == "undetermined":
+        return "U"
+    if outcome == "conformant":
+        return "correct_C" if truth_conformant else "false_C"
+    return "false_D" if truth_conformant else "correct_D"
+
+
+def B():
+    cells = defaultdict(Counter)
+    cover = defaultdict(int)
+    for name, r in load_dir(os.path.join(V16, "mock", "B")):
+        parts = name.split("_")
+        probe = "frame" if parts[0] == "BF" else "scale"
+        model, sig, ratio = parts[1], parts[2], parts[3]
+        tr = r["truth"]
+        o = r["result"]["outcome"]
+        cells[(probe, model, sig, ratio)][classify(o, tr["truth_conformant"])] += 1
+        if probe == "frame":
+            sd = r["result"]["estimates"].get("spatial_decision") or {}
+            cover[(probe, model, sig, ratio)] += int(sd.get("ci_low_m", 1) - 1e-9 <= tr["E_true_m"] <= sd.get("ci_high_m", -1) + 1e-9)
+        else:
+            e = r["result"]["estimates"].get("predicted_error_at_workspace_edge_m", {})
+            cover[(probe, model, sig, ratio)] += int((e.get("ci_low") or 1) - 1e-9 <= tr["E_true_m"] <= (e.get("ci_high") or -1) + 1e-9)
+    mc = {}
+    mcp = os.path.join(V16, "boundary", "boundary_montecarlo.json")
+    if os.path.exists(mcp):
+        for row in json.load(open(mcp))["rows"]:
+            sig = f"{row['sigma_mm']:g}mm" if row["noise_model"] == "gaussian" else "0.001mm"
+            mc[(row["probe"], row["noise_model"], sig, row["ratio"])] = row
+    rows = []
+    for key, c in sorted(cells.items()):
+        n = sum(c.values())
+        row = {"probe": key[0], "noise_model": key[1], "sigma": key[2], "ratio": key[3], "n": n, **{k: c.get(k, 0) for k in ("correct_C", "correct_D", "false_C", "false_D", "U")},
+               "coverage": cover[key] / n}
+        for k in ("false_C", "false_D", "U"):
+            row[f"{k}_ci95"] = cp(c.get(k, 0), n)
+        m = mc.get(key)
+        if m:
+            row["mc_false_D_rate"], row["mc_false_C_rate"], row["mc_U_rate"] = m["false_D_rate"], m["false_C_rate"], m["U_rate"]
+            row["mc_within_live_ci"] = all(row[f"{k}_ci95"][0] <= m[f"{k}_rate"] <= row[f"{k}_ci95"][1] for k in ("false_C", "false_D", "U"))
+        rows.append(row)
+    write_csv(os.path.join(OUT, "B_live_boundary.csv"), rows)
+    for x in rows:
+        print(x)
+    return rows
+
+
+def L():
+    groups = defaultdict(list)
+    for name, r in load_dir(os.path.join(V16, "mock", "L")):
+        tr = r["truth"]
+        Lv = r["result"]["observations"]["liveness"]
+        R = r["result"]["observations"]["resolution"]
+        tau = Lv.get("tau_w_estimate_s") or {}
+        sv = r["result"]["estimates"].get("sub_verdicts", {})
+        if tr["mode"] == "hold":
+            if Lv.get("stop_class") == "held_through_range":
+                cls = "correct_hold"
+            elif Lv.get("stop_class") in ("rejected", "faulted", "drifted"):
+                cls = "false_trip"
+            else:
+                cls = "not_observable_or_U"
+        else:
+            st = tau.get("status")
+            lo, hi = tau.get("interval_low_s"), tau.get("interval_high_s")
+            if st == "ok" and lo is not None:
+                cls = "contains" if lo <= tr["tau_w_s"] <= hi else "excludes"
+            elif st in ("inconsistent",):
+                cls = "contradictory"
+            elif st in ("upper_bound",) and tau.get("tau_upper_bound_s") is not None:
+                cls = "upper_bound_only" if tau["tau_upper_bound_s"] >= tr["tau_w_s"] else "upper_bound_excludes"
+            else:
+                cls = f"U:{st or Lv.get('stop_class')}"
+        trials = Lv.get("trials", [])
+        groups[(tr["rule"], tr["mode"], tr["loss"])].append({"run": name, "class": cls, "stop_verdict": sv.get("stop_behaviour"),
+                                                               "calib": f"{R.get('latency_probes_responded')}/{R.get('calibration_commands') or R.get('latency_probes_sent')}",
+                                                               "rejected_trials": sum(1 for t in trials if t["class"] == "rejected"),
+                                                               "confirmed": sum(1 for t in trials if (t.get("confirmation") or {}).get("confirmed")),
+                                                               "trials": len(trials), "wall_s": r["wall_s"],
+                                                               "interval_ms": [None if tau.get("interval_low_s") is None else tau["interval_low_s"] * 1e3, None if tau.get("interval_high_s") is None else tau["interval_high_s"] * 1e3]})
+    rows = []
+    for key, rs in sorted(groups.items()):
+        c = Counter(x["class"] for x in rs)
+        wrong = c.get("false_trip", 0) + c.get("excludes", 0) + c.get("upper_bound_excludes", 0)
+        rows.append({"rule": key[0], "policy": key[1], "loss": key[2], "n": len(rs), "classes": dict(c), "false": wrong, "false_ci95": cp(wrong, len(rs)),
+                     "stop_verdicts": dict(Counter(x["stop_verdict"] for x in rs)), "calibration_loss_seen": sum(1 for x in rs if x["calib"].split("/")[0] != x["calib"].split("/")[1]),
+                     "mean_trials": float(np.mean([x["trials"] for x in rs])), "mean_wall_s": float(np.mean([x["wall_s"] for x in rs])), "runs": rs})
+    json.dump(rows, open(os.path.join(OUT, "L_loss.json"), "w"), indent=1)
+    for x in rows:
+        print({k: v for k, v in x.items() if k != "runs"})
+    return rows
+
+
 if __name__ == "__main__":
     what = sys.argv[1] if len(sys.argv) > 1 else "all"
     if what in ("dvrk", "all"):
         dvrk()
+    if what in ("src", "all"):
+        src()
+    if what in ("K", "all"):
+        K()
+    if what in ("B", "all"):
+        B()
+    if what in ("L", "all"):
+        L()

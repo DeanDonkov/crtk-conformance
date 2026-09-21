@@ -215,6 +215,8 @@ def bring_up(timeout_s: float = 30.0) -> dict:
             time.sleep(0.02)
         return False
 
+    if st()[1] is not None and st()[1].state == "FAULT":  # addendum C: a faulted arm is disabled first ("home" is refused in FAULT)
+        out["recovered_from_fault"] = await_(lambda o: o.state == "DISABLED", send("disable"), timeout_s)
     if st()[1] is None or st()[1].state != "ENABLED":
         out["enabled"] = await_(lambda o: o.state == "ENABLED", send("enable"), timeout_s)
     out["enable_latency_s"] = time.monotonic() - t0
@@ -222,8 +224,15 @@ def bring_up(timeout_s: float = 30.0) -> dict:
     out["enable_home_latency_s"] = time.monotonic() - t0
     o = st()[1]
     out["after"] = None if o is None else {"state": o.state, "is_homed": o.is_homed, "is_busy": o.is_busy}
+    # addendum C: interpolate from a joint reading received after the end of homing (nobase launch 1 of the first
+    # campaign started from a stale all-zero reading, stepped the insertion by -0.12 m and faulted the arm)
+    t_h = time.monotonic()
+    while time.monotonic() - t_h < 2.0 and not (last.get("js") and last["js"][0] > t_h + 0.2):
+        time.sleep(0.02)
     js = last.get("js")
-    if js is not None and out["homed"]:
+    out["q0_receipt_after_homed_s"] = None if js is None else js[0] - t_h
+    if js is not None and out["homed"] and js[0] > t_h + 0.2:
+        out["q0"] = [round(v, 6) for v in js[1].position]
         names = list(js[1].name)
         q0 = np.array(js[1].position[:len(REF_JOINTS)], dtype=float)
         q1 = np.array(REF_JOINTS, dtype=float)
@@ -303,7 +312,7 @@ CASES_NOBASE = [
 ]
 
 
-def campaign(out: str, launches: int, only: str = None):
+def campaign(out: str, launches: int, only: str = None, cases_only=None, first_launch: int = 1):
     os.makedirs(out, exist_ok=True)
     rows = []
     from crtk_conformance import __version__
@@ -312,12 +321,16 @@ def campaign(out: str, launches: int, only: str = None):
                            stderr=subprocess.DEVNULL, text=True).stdout.strip()
     json.dump({"crtk_conformance_version": __version__, "repo_commit": rev, "tracked_changes_in_src_or_harness": dirty, "launches": launches, "only": only,
                "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "python": sys.version, "dvrk_ws": DVRK_WS},
-              open(os.path.join(out, f"campaign_meta{'_' + only if only else ''}.json"), "w"), indent=1)
+              open(os.path.join(out, f"campaign_meta{'_' + only if only else ''}{'_launch%d' % first_launch if first_launch > 1 else ''}.json"), "w"), indent=1)
     for cfg, cases in (("jhu", CASES_JHU), ("nobase", CASES_NOBASE)):
         if only and cfg != only:
             continue
         system_json = os.path.join(out, "configs", f"system-PSM2_KIN_SIM-{cfg}.json")
-        for k in range(launches):
+        if cases_only:
+            cases = [c for c in cases if c[0] in cases_only]
+            if not cases:
+                continue
+        for k in range(first_launch - 1, first_launch - 1 + launches):
             ldir = os.path.join(out, "runs", f"{cfg}_launch{k+1}")
             os.makedirs(ldir, exist_ok=True)
             with Launch(system_json, ldir):
@@ -336,7 +349,7 @@ def campaign(out: str, launches: int, only: str = None):
                     r.update(config=cfg, launch=k + 1, probes=probes, tolerance_mm=tol_mm, bring_up_latency_s=up.get("enable_home_latency_s"))
                     rows.append(r)
                     print(json.dumps(r), flush=True)
-            json.dump(rows, open(os.path.join(out, "campaign_rows.json"), "w"), indent=1)
+            json.dump(rows, open(os.path.join(out, f"campaign_rows{'_launch%d' % first_launch if first_launch > 1 else ''}.json"), "w"), indent=1)
     return rows
 
 
@@ -360,10 +373,12 @@ if __name__ == "__main__":
     ap.add_argument("--out", default=os.path.join(REPO, "validation", "v0.1.6", "dvrk_sim"))
     ap.add_argument("--launches", type=int, default=3)
     ap.add_argument("--only", default=None)
+    ap.add_argument("--cases", default=None, help="comma-separated subset of case names (addendum C)")
+    ap.add_argument("--first-launch", type=int, default=1)
     a = ap.parse_args()
     if a.cmd == "configs":
         print(json.dumps(write_configs(a.out), indent=1))
     elif a.cmd == "smoke":
         print(json.dumps({k: {kk: v[kk] for kk in ("operating_state_after_home", "screw_axis_anchor") if kk in v} for k, v in smoke(a.out).items()}, indent=1))
     else:
-        campaign(a.out, a.launches, a.only)
+        campaign(a.out, a.launches, a.only, a.cases.split(",") if a.cases else None, a.first_launch)

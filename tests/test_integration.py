@@ -551,3 +551,16 @@ def test_fifo_queue_slower_than_the_client_is_violated_and_logged(master, tmp_pa
     true_sup = max(ages)
     assert acc["window_start_s"] == pytest.approx(w0, abs=1e-6) and acc["window_end_s"] <= tr["window_end_mono"] + 1e-6
     assert acc["age_lower_s"] - 1e-6 <= true_sup <= acc["age_upper_s"] + 1e-6, (acc["age_lower_s"], true_sup, acc["age_upper_s"])
+
+
+def test_skip_rate_sweep_runs_and_leaves_the_rate_diagnostic_empty(master):
+    # 0.1.6 (RC9): --skip-rate-sweep raised KeyError('per_rate') when forming the sub-verdicts (found on the first
+    # dVRK-sim campaign, T_fault025, all three launches)
+    with mock_node("reference", {"watchdog_s": 0.25, "watchdog_mode": "fault", "seed": 12}):
+        a = adapter()
+        r = RateSensitivityProbe(a, TOL, trials=3, gap_max_s=0.6, bisection_steps=3, skip_rate_sweep=True,
+                                 expectations=Expectations.from_dict({"temporal": {"stop_behaviour": "fault", "horizon_s": 0.1}})).run()
+        a.close()
+    assert r.observations["effective_rate"]["skipped"] is True
+    assert r.estimates["sub_verdicts"]["stop_behaviour"] == "violated"   # a 0.25 s fault policy cannot satisfy a 0.1 s horizon
+    assert r.estimates["sub_verdicts"]["rate"] is None

@@ -1014,7 +1014,7 @@ class RateSensitivityProbe:
                     sub["stop_behaviour"] = "violated"
                     notes.append(f"client expects {te.stop_behaviour} stop behaviour; observed {stop_class}")
         # rate at the client's declared rate
-        rows = C["per_rate"]
+        rows = C.get("per_rate", [])  # 0.1.6: empty when the rate sweep was skipped (--skip-rate-sweep); a KeyError before the RC9 fix
         at_client = None
         if rows:
             at_client = min(rows, key=lambda r: abs(r["command_rate_requested_hz"] - self.tol.client_rate_hz))

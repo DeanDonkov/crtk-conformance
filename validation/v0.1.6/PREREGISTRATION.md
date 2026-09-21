@@ -244,3 +244,27 @@ This addendum changes no parameter or code.
    - N = 8 per cell instead of at least 20.
 
    The reason is the time budget of the 2-vCPU host: each temporal run takes about 1–2 min. The paper states N and the Clopper–Pearson intervals.
+
+## Addendum C (21 September 2026): after the dVRK-sim campaign at `99583e4`
+
+The campaign ran with the frozen code at `99583e4`: 3 × 14 cases on `jhu` and 3 × 3 cases on `nobase`. Its results are archived in `dvrk_sim/runs/` and `campaign_rows.json`. Every outcome that formed matched its prediction (`analysis/dvrk_sim_summary.csv`). Two things went wrong. Both are fixed below, and both fixes are followed by supplementary runs that this addendum fixes in advance.
+
+1. **`T_fault025` crashed in all three `jhu` launches.**
+   - The error was `KeyError: 'per_rate'` in `RateSensitivityProbe.run`. It happened with the 0.1.6 option `--skip-rate-sweep`, which no test had exercised.
+   - No verdict was produced.
+   - Fix: `C.get("per_rate", [])`, plus `tests/test_integration.py::test_skip_rate_sweep_runs_and_leaves_the_rate_diagnostic_empty`.
+   - No decision rule is touched. The same crash would have stopped the WP6 reference-node campaign, which uses the same option.
+2. **`nobase` launch 1 failed at bring-up, and no probe ran.**
+   - The harness interpolated `servo_jp` from an all-zero joint reading taken right after homing. That stepped the insertion by −0.12 m, and the PID tracking-error check faulted the arm.
+   - The later bring-ups of that launch then failed from FAULT, because `home` is refused in FAULT.
+   - Launches 2 and 3 were unaffected.
+   - Fix (harness only):
+     - interpolate from a joint reading received at least 0.2 s after the end of homing, and record it;
+     - disable a faulted arm before enabling it.
+
+**Supplementary runs, at the commit that adds this addendum.** The cases, parameters, declarations and predictions are unchanged.
+
+- `T_fault025`: three new `jhu` launches (launches 4–6). Prediction: temporal **D** (stop `violated`: held through the range, while a fault within 0.25 s was expected).
+- All three `nobase` cases: one new launch (launch 4). With launches 2 and 3, this gives three `nobase` launches in which the cases ran.
+
+The report counts launch 1 of `nobase` as a failed start-up, not as a result.

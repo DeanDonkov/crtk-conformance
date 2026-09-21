@@ -9,7 +9,11 @@ covered coverage), the live boundary counts are checked against the supplement's
 analysis output B_live_boundary.csv is cross-checked against the raw recomputation, and the RC10 wording corrections
 are checked.
 
-Usage: python3 validation/verify_reporting_v016.py [--repo .] [--paper <dir>] [--tag rc10]
+RC12: the counts of the dVRK-sim text are checked as cases and launches, and the post hoc v0.1.7 re-derivation (consistency
+gate; sound fault bound) is recomputed from the raw archive with the package's ROS-free decision functions and compared
+with the text and with validation/v0.1.7/.
+
+Usage: python3 validation/verify_reporting_v016.py [--repo .] [--paper <dir>] [--tag rc12]
        (reads <paper>/manuscript_<tag>.tex and <paper>/supplement_<tag>_campaigns.tex)
 """
 import argparse
@@ -25,7 +29,7 @@ import sys
 ap = argparse.ArgumentParser()
 ap.add_argument("--repo", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 ap.add_argument("--paper", default=".")
-ap.add_argument("--tag", default="rc10", help="manuscript tag: reads manuscript_<tag>.tex and supplement_<tag>_campaigns.tex")
+ap.add_argument("--tag", default="rc12", help="manuscript tag: reads manuscript_<tag>.tex and supplement_<tag>_campaigns.tex")
 a = ap.parse_args()
 V = os.path.join(a.repo, "validation", "v0.1.6")
 checks = []
@@ -77,7 +81,8 @@ for p in glob.glob(os.path.join(V, "dvrk_sim", "runs", "*_launch*", "*.json")):
 check("dVRK-sim: 51 case runs with a report", runs == 51, f"{runs}")
 check("dVRK-sim: all runs match their prediction", match == runs, f"{match}/{runs}")
 check("dVRK-sim: 17 cases x 3 launches", len(per_case) == 17 and all(len(v) == 3 for v in per_case.values()))
-check("text: 51 runs matched", intex("All 51 runs matched their predicted outcomes") and intex("51 runs"))
+check("text: 17 cases matched in each of three launches (51 runs)", len(per_case) == 17
+      and intex("All 17 cases matched their predicted outcomes in each of the three launches (51 runs") and intex("all 17 pre-registered cases matched"))
 truths = json.load(open(os.path.join(V, "dvrk_sim", "derived_truths.json")))["E_max_m"]
 for k, txt in (("F2_identity", "278.07"), ("F3_inverse", "412.31")):
     check(f"table: E_max {k} = {txt} mm", f"{truths[k]['jhu'] * 1e3:.2f}" == txt and intex(txt))
@@ -277,6 +282,65 @@ if logs:
           and all(f.split("::")[-1].replace("_", "\\_") in sup for f in failed), f"{summ}; failed: {failed}")
 else:
     check("final test log present in <paper>/code/", False)
+
+# ---------------------------------------------------------------- RC12: post hoc v0.1.7 re-derivation, recomputed from the raw archive
+sys.path.insert(0, os.path.join(a.repo, "src"))
+from crtk_conformance.dimensional import consistency_gate  # noqa: E402
+from crtk_conformance.liveness import fault_observation_window, timeout_interval_from_trials  # noqa: E402
+from crtk_conformance.probes.base import Outcome  # noqa: E402
+
+
+def cflag(res):
+    c = (res.get("estimates") or {}).get("command_feedback_consistency")
+    return c.get("flag_non_shared_binding_or_tracking_deficit") if isinstance(c, dict) else None
+
+
+diag = []
+for p in glob.glob(os.path.join(V, "mock", "K", "*.json")):
+    diag.append((os.path.basename(p), json.load(open(p))["scale"]["result"]))
+for p in glob.glob(os.path.join(V, "mock", "B", "BS_*.json")):
+    diag.append((os.path.basename(p), json.load(open(p))["result"]))
+for p in glob.glob(os.path.join(V, "dvrk_sim", "runs", "*", "*.json")):
+    for res in (json.load(open(p)).get("probes") or []):
+        if cflag(res) is not None:
+            diag.append((os.path.basename(p), res))
+diag = [(n, r) for n, r in diag if cflag(r) is not None]
+changed = [n for n, r in diag if consistency_gate(Outcome(r["outcome"]), bool(cflag(r)))[0].value != r["outcome"]]
+check("v0.1.7 gate: 102 runs carry the diagnostic; only the 3 K1 unit verdicts change (divergent -> undetermined)",
+      len(diag) == 102 and sorted(changed) == ["K1_0.json", "K1_1.json", "K1_2.json"] and intex("102 archived runs"), f"{len(diag)}; {sorted(changed)}")
+lrows = []
+for p in glob.glob(os.path.join(V, "mock", "L", "L16_*_fault250_*.json")):
+    d = json.load(open(p)); obs = d["result"]["observations"]; Lv = obs["liveness"]; R = obs["resolution"]; tau = Lv.get("tau_w_estimate_s") or {}
+    if "latency_allowance_s" not in tau:
+        lrows.append(None); continue
+    iv = timeout_interval_from_trials(Lv["trials"], L=tau["latency_allowance_s"], G=tau["granularity_allowance_s"], fp=float(R.get("feedback_period_s") or 0.01),
+                                      hold_tol=Lv["hold_tolerance_m"], stop_class=Lv["stop_class"], baseline_loss=int((Lv.get("baseline_command_loss") or {}).get("lost", 0)),
+                                      rule="0.1.7", fault_window_s=fault_observation_window(Lv["response_timeout_s"], tau["granularity_allowance_s"]))
+    ok = iv["status"] == "formed" and iv["interval_low_s"] > R["resolution_floor_s"]
+    lrows.append({"ok": ok, "contains": ok and iv["interval_low_s"] <= d["truth"]["tau_w_s"] <= iv["interval_high_s"], "loss": d["truth"]["loss"],
+                  "w": (iv["interval_high_s"] - iv["interval_low_s"]) * 1e3, "released": tau.get("status"), "hi245": ok and iv["interval_high_s"] <= 0.245})
+lr = [r for r in lrows if r]
+w0 = statistics.median([r["w"] for r in lr if r["loss"] == "none"])
+n_contra = sum(1 for r in lr if r["released"] == "inconsistent")
+check("v0.1.7 bound: 64/64 fault-policy loss intervals formed and containing; none decides a 245-ms horizon satisfied",
+      len(lrows) == 64 and len(lr) == 64 and all(r["ok"] and r["contains"] for r in lr) and not any(r["hi245"] for r in lr) and intex("all 64 fault-policy intervals contain the timeout"), f"{len(lr)} formed")
+check(f"v0.1.7 bound: median width without loss {w0:.0f} ms; {n_contra} contradictory 0.1.6 intervals become determinate",
+      f"{w0:.0f}" == "334" and intex("from 45 to \\SI{334}{ms}") and n_contra == 10 and intex("the ten contradictory ones become determinate and correct"), f"{w0:.1f}; {n_contra}")
+rj = json.load(open(os.path.join(a.repo, "validation", "v0.1.7", "rederivation_v017.json")))["summary"]
+av = rj["archived_v013"]
+check("v0.1.7 archived: 23/23 contain; fault width/tau median 2.1; overall 0.53; range 0.05-10.7 (validation/v0.1.7)",
+      av["formed_v017"] == 23 and av["contain_v017"] == 23 and f"{av['width_over_tau_v017']['fault_median']:.1f}" == "2.1" and intex("median 2.1 times $\\tau_w$")
+      and f"{av['width_over_tau_v017']['median']:.2f}" == "0.53" and intex("from a median of 0.14 to 0.53", sup)
+      and f"{av['width_over_tau_v017']['min']:.2f}--{av['width_over_tau_v017']['max']:.1f}" == "0.05--10.7" and intex("range 0.05--10.7", sup), json.dumps(av["width_over_tau_v017"]))
+check("v0.1.7 archived: horizon claims unchanged (0.1 violated, 0.25 undetermined, 1 s satisfied)",
+      [av["fault_horizon_claims"][k][f"v017_fault_horizon_{h}"] for k, h in (("L_horizon_fault_0100", "0.1"), ("L_horizon_fault_0250", "0.25"), ("L_horizon_fault_1000", "1.0"))] == ["violated", "undetermined", "satisfied"]
+      and intex("violated, undetermined and satisfied under every rule, v0.1.7 included"))
+ratios = sorted({r["ratio"] for r in mc if r["probe"] == "frame"})
+check("MC accounting: 42 000 frame replicates = 7 ratios x 3 noise models x 2000; Table III shows five ratios",
+      len(ratios) == 7 and sum(r["n_rep"] for r in mc if r["probe"] == "frame") == 42000 and intex("0 of 42\\,000 replicates over the supplement's full grid of seven ratios"), str(ratios))
+check("text: RC12 wording (illustrative parameters; stationary arm; ROS 1 scope; SRC v1 contingency)",
+      intex("illustrative engineering settings, not task-derived or clinical thresholds") and intex("The pairing assumes a stationary arm")
+      and intex("the executable validation is ROS~1 only") and intex("counts the primary prediction as not matched") and not intex("reviewer-supplied"))
 
 # ---------------------------------------------------------------- abstract length
 ab = re.search(r"\\begin\{abstract\}(.*?)\\end\{abstract\}", tex, re.S).group(1)

@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.1.7 — 2026-09-21
+
+Two decision-rule changes made after the pre-registered v0.1.6 campaigns, in response to an external review of the RC11
+manuscript (points 1 and 2). They are **post hoc**, and the campaigns stay reported under their own rules. Both are
+re-derived offline on the archive in `validation/v0.1.7/` (`validation/rederive_v017.py`); no run was repeated.
+
+### Changed
+- **Consistency gate.** When the scale probe's command/feedback consistency diagnostic is raised, the unit verdict is
+  withheld (undetermined, with the ungated outcome kept in `unit_outcome_without_consistency_gate`). The report adds
+  `verdict_kinds`:
+  - `spatial_feedback_binding`: the frame probe's verdict;
+  - `spatial_command_semantic`: that verdict read for `servo_cp`, undetermined when the flag is raised;
+  - `shared_binding_assumption`.
+
+  With the flag raised, the report's dimensional class is also undetermined. `--no-consistency-gate` restores 0.1.6.
+  Archive: of 102 runs carrying the diagnostic, only the 3 K1 runs are flagged; their unit verdict changes from
+  divergent to undetermined.
+- **Liveness rule `0.1.7`** (new default; `0.1.6` and `0.1.5` stay selectable).
+  - Rejections keep the 0.1.6 confirmation rule.
+  - Every faulted trial bounds τ_w by the time its FAULT was observed. This is sound whether or not the post-gap
+    command arrived, and wider by about the response wait.
+  - The 0.1.6 interval is reported as `conditional_estimate_s`, conditional on arrival; it decides nothing.
+  - For records without an observation time, the bound is gap + response wait + 0.2 s + G
+    (`liveness.fault_observation_window`).
+
+  Loss experiment: 64/64 intervals contain τ_w (0.1.6: 53/54, with 10 contradictory); median width without loss rises
+  from 45 to 334 ms. Archived v0.1.3: 23/23 contain τ_w; median width/τ_w rises from 0.14 to 0.53.
+- The stop decision for fault/drift expectations is `liveness.fault_horizon_decision`, moved out of the probe
+  unchanged. The hold branch uses `liveness.trip_upper_bound` under rule 0.1.7.
+
+### Tests
+- `tests/test_v017.py`: the gate, the fault bound, verdict kinds, and replays of the K1 runs, the 64 fault-policy loss
+  runs and the one 0.1.6 excluding interval.
+- `test_liveness_interval_contains_timeout` now checks tightness on the conditional estimate.
+
 ## 0.1.6 — 2026-09-21
 
 RC9 response to the external review of the RC8 review copy, with the RC10 reporting corrections (below). Every change is listed in `validation/v0.1.6/PREREGISTRATION.md`

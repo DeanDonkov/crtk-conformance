@@ -62,7 +62,7 @@ temporal:
 |---|---|
 | ROS 1 (`rospy`) transport; discovery through the ROS master API | ROS 2 (no `rclpy` backend) |
 | `FrameSemanticsProbe` — binding of the unqualified `measured_cp` relative to `local/measured_cp`, decided on the exact maximum error eq. (3′) against a declared expected transform with a propagated interval; **passive** (never publishes `servo_cp`, so it never tests the command frame) | inferring the binding when `local/` is absent (undetermined by construction); TF beyond a one-hop `/tf` lookup; an active command-frame test |
-| `ScalingUnitsProbe` — internal command/measurement ratio, and a unit estimate **only with an out-of-band anchor topic**; noise-adaptive step; goals streamed at the client rate; no-response accounting; 0.1.6: command/feedback consistency diagnostic | detecting a uniform unit scale without an anchor (impossible; paper Sec. 5.2) |
+| `ScalingUnitsProbe` — internal command/measurement ratio, and a unit estimate **only with an out-of-band anchor topic**; noise-adaptive step; goals streamed at the client rate; no-response accounting; 0.1.6: command/feedback consistency diagnostic; 0.1.7: a raised diagnostic withholds the unit verdict | detecting a uniform unit scale without an anchor (impossible; paper Sec. 5.2) |
 | 0.1.6: `GeometryAnchorProbe` — unit anchor from instrument geometry: screw axes of wrist-pitch/yaw steps (`servo_jp`), their common normal against a declared link length L with relative uncertainty u_rel, eq. (6) decision; gates return undetermined | an anchor for instruments without a declared, perpendicular pitch–yaw pair |
 | `RateSensitivityProbe` — operating-state precondition; liveness / stop-behaviour probe with measured timing resolution, observational stop classes, drift onset/speed estimation and a timeout **interval** with explicit allowances; source age of the applied setpoint reported by `setpoint_cp` (bracketed between samples) as a **diagnostic**, with the feedback-crossing statistic likewise | identifying the internal controller rate (not identifiable through the interface); identifying a physical release from the pose; measuring the platform's own jitter; **any rate verdict at all (0.1.4)** |
 | JSON report validated against `schema/report.schema.json`; text summary; every outcome-affecting constant recorded | PDF reports |
@@ -140,6 +140,9 @@ trial whose drift could not be evaluated is not a passing trial for a drift poli
 0.1.6: 30 calibration commands, and a post-gap non-response without a state change counts only after it recurs at the
 same gap (confirmation rule, `liveness.required_confirmations`; `--liveness-rule 0.1.5` restores the 0.1.5 rule).
 State commands are sent one at a time (`ensure_enabled`): the released dVRK console keeps only the latest.
+0.1.7 (default `--liveness-rule 0.1.7`): every faulted trial bounds the timeout by the time its FAULT was observed, which
+is sound under command loss; the 0.1.6 interval is reported as `conditional_estimate_s` (conditional on post-gap
+arrival) and decides nothing.
 
 ## Validate against the mock (reproduces the paper's Section 7)
 
@@ -153,7 +156,9 @@ python validation/src_live_v016.py run v1|v2                                   #
 python validation/run_validation_v016.py --only K,B,L                          # reference node: command-side mismatch, boundary, command loss
 python validation/boundary_montecarlo_v016.py                                  # offline Monte Carlo of the released decision rules near epsilon
 python validation/reanalyze_liveness_v016.py; python validation/rescore_v016.py; python validation/analyze_v016.py all
-python validation/verify_reporting_v016.py --paper <manuscript dir> --tag rc10  # paper numbers recomputed from the raw v0.1.6 archive
+python validation/verify_reporting_v016.py --paper <manuscript dir> --tag rc12  # paper numbers recomputed from the raw v0.1.6 archive
+# 0.1.7 (post hoc rule changes; the v0.1.6 campaign scripts above pin the 0.1.6 rules)
+python validation/rederive_v017.py                                             # offline re-derivation under the 0.1.7 rules -> validation/v0.1.7/
 python validation/analyze_v013.py validation/v0.1.3/mock --live validation/v0.1.3/live-src-v1 validation/v0.1.3/live-src-v2
 ```
 

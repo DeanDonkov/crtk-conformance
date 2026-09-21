@@ -165,8 +165,15 @@ class Launch:
 
 
 def bring_up(timeout_s: float = 30.0) -> dict:
-    """enable + home through state_command; wait for ENABLED/homed and a non-zero stamp and non-identity pose on
-    measured_cp; move to the reference joint configuration.  Returns what was observed (archived)."""
+    """enable, then home, through state_command (one command at a time: the console keeps only the latest state
+    command, cisst-ros mtsROSBridge.h l.295-296); wait for ENABLED, then for is_homed and not is_busy (homing moves
+    the insertion to 0.12 m over ~1.5 s and reports is_homed before the motion ends); interpolate servo_jp from the
+    measured joints to the reference configuration over 3 s (a step would exceed the simulated PID's tracking-error
+    tolerance); check that measured_cp carries a non-zero stamp and a non-identity pose.  Returns what was observed.
+
+    Harness change of 21 Sep 2026, before any probe run on this target: the first campaign attempt (archived in
+    runs-failed-bringup/) sent enable and home 0.2 s apart and streamed the reference joints as soon as is_homed was
+    reported, while homing was still moving the arm; the PID tracking-error check faulted the arm and no case ran."""
     import rospy
     from geometry_msgs.msg import PoseStamped
     from sensor_msgs.msg import JointState
@@ -174,50 +181,79 @@ def bring_up(timeout_s: float = 30.0) -> dict:
     if not rospy.core.is_initialized():
         rospy.init_node("dvrk_sim_harness", anonymous=True, disable_signals=True)
     last = {}
-    subs = [rospy.Subscriber(NS + "/operating_state", OperatingState, lambda m: last.__setitem__("os", m)),
-            rospy.Subscriber(NS + "/measured_cp", PoseStamped, lambda m: last.__setitem__("cp", m)),
-            rospy.Subscriber(NS + "/measured_js", JointState, lambda m: last.__setitem__("js", m))]
+
+    def keep(k):
+        return lambda m: last.__setitem__(k, (time.monotonic(), m))
+    subs = [rospy.Subscriber(NS + "/operating_state", OperatingState, keep("os")),
+            rospy.Subscriber(NS + "/measured_cp", PoseStamped, keep("cp")),
+            rospy.Subscriber(NS + "/measured_js", JointState, keep("js"))]
     pub = rospy.Publisher(NS + "/state_command", StringStamped, queue_size=10)
     pj = rospy.Publisher(NS + "/servo_jp", JointState, queue_size=10)
     time.sleep(1.5)
     out = {"initial": None}
-    if "os" in last:
-        out["initial"] = {"state": last["os"].state, "is_homed": last["os"].is_homed}
+
+    def st():
+        d = last.get("os")
+        return (None, None) if d is None else d
+
+    if st()[1] is not None:
+        out["initial"] = {"state": st()[1].state, "is_homed": st()[1].is_homed, "is_busy": st()[1].is_busy}
     cp0 = last.get("cp")
-    out["stamp_before_enable_ns"] = None if cp0 is None else cp0.header.stamp.to_nsec()
+    out["stamp_before_enable_ns"] = None if cp0 is None else cp0[1].header.stamp.to_nsec()
     t0 = time.monotonic()
-    for c in ("enable", "home"):
+
+    def send(c):
         m = StringStamped(); m.header.stamp = rospy.Time.now(); m.string = c
         pub.publish(m)
-        time.sleep(0.2)
-    while time.monotonic() - t0 < timeout_s:
-        o = last.get("os")
-        if o is not None and o.state == "ENABLED" and o.is_homed:
-            break
-        time.sleep(0.05)
+        return time.monotonic()
+
+    def await_(pred, t_sent, limit):
+        while time.monotonic() - t0 < limit:
+            t_rx, o = st()
+            if o is not None and (t_rx >= t_sent or time.monotonic() - t_sent > 0.3) and pred(o):
+                return True
+            time.sleep(0.02)
+        return False
+
+    if st()[1] is None or st()[1].state != "ENABLED":
+        out["enabled"] = await_(lambda o: o.state == "ENABLED", send("enable"), timeout_s)
+    out["enable_latency_s"] = time.monotonic() - t0
+    out["homed"] = await_(lambda o: o.state == "ENABLED" and o.is_homed and not o.is_busy, send("home"), timeout_s)
     out["enable_home_latency_s"] = time.monotonic() - t0
-    o = last.get("os")
-    out["after"] = None if o is None else {"state": o.state, "is_homed": o.is_homed}
+    o = st()[1]
+    out["after"] = None if o is None else {"state": o.state, "is_homed": o.is_homed, "is_busy": o.is_busy}
     js = last.get("js")
-    if js is not None:
-        names = list(js.name)
+    if js is not None and out["homed"]:
+        names = list(js[1].name)
+        q0 = np.array(js[1].position[:len(REF_JOINTS)], dtype=float)
+        q1 = np.array(REF_JOINTS, dtype=float)
+        names = names[:len(REF_JOINTS)]
         t1 = time.monotonic()
-        while time.monotonic() - t1 < 2.0:
-            m = JointState(); m.header.stamp = rospy.Time.now(); m.name = names; m.position = REF_JOINTS
-            pj.publish(m); time.sleep(0.01)
-        time.sleep(0.5)
-        out["joints"] = dict(zip(names, [round(v, 6) for v in last["js"].position]))
+        while True:
+            a = min(1.0, (time.monotonic() - t1) / 3.0)
+            m = JointState(); m.header.stamp = rospy.Time.now(); m.name = names; m.position = list(q0 + a * (q1 - q0))
+            pj.publish(m)
+            if a >= 1.0:
+                break
+            time.sleep(0.01)
+        time.sleep(1.0)
+        out["joints"] = dict(zip(names, [round(v, 6) for v in last["js"][1].position]))
+    o = st()[1]
+    out["state_at_reference"] = None if o is None else {"state": o.state, "is_homed": o.is_homed, "is_busy": o.is_busy}
     cp = last.get("cp")
-    out["stamp_after_ns"] = None if cp is None else cp.header.stamp.to_nsec()
+    out["stamp_after_ns"] = None if cp is None else cp[1].header.stamp.to_nsec()
     if cp is not None:
-        p = cp.pose.position
-        q = cp.pose.orientation
+        p = cp[1].pose.position
+        q = cp[1].pose.orientation
         out["pose_after"] = [p.x, p.y, p.z, q.x, q.y, q.z, q.w]
-        out["ready"] = bool(cp.header.stamp.to_nsec() != 0 and not (abs(p.x) + abs(p.y) + abs(p.z) < 1e-12 and abs(q.w) > 1 - 1e-12))
+        out["ready"] = bool(out["homed"] and o is not None and o.state == "ENABLED" and cp[1].header.stamp.to_nsec() != 0
+                            and not (abs(p.x) + abs(p.y) + abs(p.z) < 1e-12 and abs(q.w) > 1 - 1e-12)
+                            and time.monotonic() - cp[0] < 0.5
+                            and "joints" in out and all(abs(a_ - b_) < 1e-3 for a_, b_ in zip(list(out["joints"].values()), REF_JOINTS)))
     else:
         out["ready"] = False
-    for s in subs:
-        s.unregister()
+    for s_ in subs:
+        s_.unregister()
     pub.unregister(); pj.unregister()
     return out
 
@@ -278,15 +314,19 @@ def campaign(out: str, launches: int, only: str = None):
             ldir = os.path.join(out, "runs", f"{cfg}_launch{k+1}")
             os.makedirs(ldir, exist_ok=True)
             with Launch(system_json, ldir):
-                up = bring_up()
-                json.dump(up, open(os.path.join(ldir, "bring_up.json"), "w"), indent=1)
-                if not up.get("ready"):
-                    rows.append({"config": cfg, "launch": k + 1, "case": "bring_up", "error": "not ready", "bring_up": up})
-                    continue
+                # bring-up before every case: each case starts ENABLED, homed, at the reference joints (the state
+                # sub-probe of the temporal runs disables the arm, and the console resets the simulated joints then)
                 for name, probes, exp, extra, tol_mm in cases:
+                    up = bring_up()
+                    json.dump(up, open(os.path.join(ldir, f"{name}.bring_up.json"), "w"), indent=1)
+                    if not up.get("ready"):
+                        r = {"config": cfg, "launch": k + 1, "case": name, "error": "bring-up not ready", "bring_up": up}
+                        rows.append(r)
+                        print(json.dumps(r), flush=True)
+                        continue
                     e = os.path.join(out, "expectations", f"{exp}.yaml") if exp else None
                     r = run_cli(name, ldir, probes, e, extra, tol_mm)
-                    r.update(config=cfg, launch=k + 1, probes=probes, tolerance_mm=tol_mm)
+                    r.update(config=cfg, launch=k + 1, probes=probes, tolerance_mm=tol_mm, bring_up_latency_s=up.get("enable_home_latency_s"))
                     rows.append(r)
                     print(json.dumps(r), flush=True)
             json.dump(rows, open(os.path.join(out, "campaign_rows.json"), "w"), indent=1)

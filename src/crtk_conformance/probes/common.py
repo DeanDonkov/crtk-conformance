@@ -13,26 +13,69 @@ from ..adapter import PlatformAdapter, Buffer, pose_msg_to_matrix
 ENABLE_TIMEOUT_S = 3.0  # implementation constant (0.1.6: settable with --enable-timeout-s; a homing sequence may take longer)
 
 
+def _state_latest(a: PlatformAdapter, wait_s: float = 0.5):
+    """(receipt time, message) of the most recent operating_state message, however old (an implementation may
+    publish it on change only); waits up to wait_s for a first one.  (None, None) if there is none."""
+    buf = a.subscribe("operating_state")
+    d = buf.latest()
+    if d is not None:
+        return d
+    m = a.wait_for(buf, wait_s)
+    d = buf.latest()
+    return d if d is not None else (None, m)
+
+
 def ensure_enabled(a: PlatformAdapter, timeout_s: float = None) -> dict:
     """Bring the arm to ENABLED/homed through the public operating-state interface, if it exists.
-    Returns a dict describing what was found and done."""
+    Returns a dict describing what was found and done.
+
+    0.1.6 (RC9): one state command at a time.  0.1.5 published `enable` and `home` back to back; the released dVRK
+    console (cisst-ros 4.0.0 ROS 1 bridge, every write-command subscriber has queue size 1, mtsROSBridge.h l.295-296)
+    keeps only the latest state command, so `enable` was superseded by `home`, which is not accepted while DISABLED:
+    an arm disabled by the state-machine sub-probe was never re-enabled (RC9 harness diagnostic, before any probe run
+    on that target).  Now `enable` is sent only when the state is not ENABLED and the arm is awaited in ENABLED before
+    `home` is sent; `home` is then awaited until is_homed and not is_busy (homing moves the arm; is_homed is reported
+    before the homing motion ends).  After an `enable`, `home` is sent even when is_homed is already true: the dVRK
+    console reports the flag across a disable/enable cycle while its own state machine requires homing again.  An arm
+    already ENABLED, homed and not busy receives no command at all (0.1.5 sent both on every call, also before every
+    gap trial)."""
     if timeout_s is None:
         timeout_s = ENABLE_TIMEOUT_S
-    info = {"operating_state_present": a.has("operating_state"), "state_before": None, "state_after": None, "enable_latency_s": None}
+    info = {"operating_state_present": a.has("operating_state"), "state_before": None, "state_after": None, "enable_latency_s": None,
+            "commands_sent": []}
     if not info["operating_state_present"]:
         return info
     st = a.operating_state(timeout=1.0)
     info["state_before"] = None if st is None else {"state": st.state, "is_homed": st.is_homed, "is_busy": st.is_busy}
     t0 = time.monotonic()
-    a.state_command("enable")
-    a.state_command("home")
     deadline = t0 + timeout_s
-    while time.monotonic() < deadline:
-        st = a.operating_state(timeout=0.3)
-        if st is not None and st.state == "ENABLED" and st.is_homed:
-            info["enable_latency_s"] = time.monotonic() - t0
-            break
-    st = a.operating_state(timeout=0.5)
+
+    def await_state(pred, t_sent):
+        # a state message received after the command, or 0.3 s without one (a no-op command may publish nothing)
+        while True:
+            t_rx, s = _state_latest(a, 0.1)
+            fresh = t_rx is not None and (t_rx >= t_sent or time.monotonic() - t_sent > 0.3)
+            if s is not None and fresh and pred(s):
+                return s
+            if time.monotonic() >= deadline:
+                return s
+            time.sleep(0.02)
+
+    if st is None or st.state != "ENABLED":
+        t_sent = time.monotonic()
+        a.state_command("enable")
+        info["commands_sent"].append("enable")
+        st = await_state(lambda s: s.state == "ENABLED", t_sent)
+    if st is not None and st.state == "ENABLED" and (info["commands_sent"] or not st.is_homed):
+        t_sent = time.monotonic()
+        a.state_command("home")
+        info["commands_sent"].append("home")
+        st = await_state(lambda s: s.state == "ENABLED" and s.is_homed and not s.is_busy, t_sent)
+    elif st is not None and st.state == "ENABLED" and st.is_busy:
+        st = await_state(lambda s: s.state == "ENABLED" and s.is_homed and not s.is_busy, -1.0)
+    if st is not None and st.state == "ENABLED" and st.is_homed and not st.is_busy:
+        info["enable_latency_s"] = time.monotonic() - t0
+    st = _state_latest(a, 0.5)[1]
     info["state_after"] = None if st is None else {"state": st.state, "is_homed": st.is_homed, "is_busy": st.is_busy}
     return info
 

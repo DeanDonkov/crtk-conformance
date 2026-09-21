@@ -171,3 +171,61 @@ If a geometry gate fails (for example, joint tracking under AMBF's controller do
 - Under 0.1.6, false trips and excluding intervals are rare (per gap at most α under iid loss), paid for with more trials.
 
 **Archived re-derivation (offline):** the 23 archived intervals under the 0.1.6 rule. Archived non-responses carry no confirmation, so rejection-only evidence becomes unattributable. Every change is reported.
+
+## Addendum A (21 September 2026): harness and enable sequence, before any probe run
+
+This addendum was written and committed after the events below and **before any probe was run** against dVRK-sim or SRC. It changes no prediction, parameter, declaration or case.
+
+### 1. First campaign attempt (commit `efdd062`)
+
+Bring-up failed in all six launches. No case ran and no probe executed. The outputs are archived in `dvrk_sim/runs-failed-bringup/`.
+
+What happened:
+
+1. The harness sent `enable`, then `home` 0.2 s later.
+2. It started streaming the reference joints as soon as `is_homed` was reported.
+3. The console reports `is_homed = true` while the homing motion is still running. That motion (insertion 0 → 0.12 m in about 1.5 s, `is_busy = true`) had not finished.
+4. The joint step exceeded the simulated PID's tracking-error tolerance on insertion (0.05 m), and the arm faulted.
+
+### 2. Harness diagnostic 1 (`dvrk_sim_bringup_diag.py first`, no probe; `dvrk_sim/harness_diag/`)
+
+The console processes only the **latest** state command.
+
+- An `enable` followed within about 1 ms by `home` leaves the arm DISABLED. The console logs "command "home" is not supported in state DISABLED".
+- An `enable` sent while the arm is homed and ready is dropped the same way. The `home` after it is a no-op.
+- The source of this behaviour is cisst-ros 4.0.0 (`7d8e8a7`) `cisst_ros_bridge/include/cisst_ros_bridge/mtsROSBridge.h` l.295–296: every ROS 1 write-command subscriber has queue size 1.
+- After `disable`, the simulated joints read 0 and `is_homed` stays true.
+
+### 3. Consequence for the tool as frozen at `ffd9ade`
+
+`ensure_enabled` (0.1.5, and 0.1.6.dev0 at `ffd9ade`) publishes `enable` and `home` back to back.
+
+- On this target, the state-machine sub-probe (`probe_state_precondition`: `disable`, a goal, then `ensure_enabled`) would never re-enable the arm.
+- Every later temporal measurement of that run would then be taken on a disabled arm.
+
+This is a tool defect: the tool relied on ordered delivery of state commands, which CRTK does not specify. It is not a property the probes are meant to test.
+
+### 4. Change (the commit that adds this addendum)
+
+**Tool.** `probes/common.ensure_enabled` now sends one command at a time:
+
+1. It sends `enable` only when the state is not ENABLED, and waits for ENABLED.
+2. It sends `home` after an `enable`, or when the arm is not homed. It then waits for `is_homed` and not `is_busy`, using a state message received after the command, or 0.3 s without one.
+3. An arm that is already ENABLED, homed and not busy receives no state command. Version 0.1.5 sent both commands on every call, including before every gap trial.
+
+Test: `tests/test_enable_v016.py` (a fake depth-one state channel).
+
+**Harness.**
+- Bring-up waits for the end of homing.
+- It interpolates `servo_jp` to the reference joints over 3 s.
+- It runs **before every case**, so each case starts ENABLED, homed and at the reference joints.
+
+**Diagnostic 2** (`harness_diag/second/`, no probe) confirmed both parts:
+- Bring-up is ready after 1.59 s.
+- The corrected `ensure_enabled` re-enables and re-homes the arm after `disable` in 1.59 s.
+
+### 5. What this does and does not change
+
+- **Archived evidence.** The reference node processes every state command, so no archived verdict depends on this change. The integration suite is re-run on this commit.
+- **SRC.** The SRC releases publish no `operating_state`, so `ensure_enabled` returns before sending anything, as before.
+- **Reporting.** The paper reports the finding as an interface semantic: the queue depth of the state channel. It is not a verdict of any probe.

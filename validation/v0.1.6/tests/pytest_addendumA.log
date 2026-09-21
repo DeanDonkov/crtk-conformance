@@ -1,0 +1,53 @@
+.............................................................F.......... [ 52%]
+................................................................         [100%]
+=================================== FAILURES ===================================
+________ test_fifo_queue_slower_than_the_client_is_violated_and_logged _________
+
+master = None
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_fifo_queue_slower_than_th0')
+
+    def test_fifo_queue_slower_than_the_client_is_violated_and_logged(master, tmp_path):
+        # RC4 review, finding 1: an ordered buffer applying one command per 20 ms tick while the client sends every
+        # 10 ms; the channel changes every 20 ms (the 0.1.2 statistic passed it) but the applied command ages by ~0.5 s
+        # over the 1 s window.  The mock's event log is the estimator-independent truth (finding 5): the largest source
+        # age of an applied command, from the send stamps in the probe's trace and the apply events, must lie inside
+        # the estimator's bracket
+        log = tmp_path / "events.jsonl"
+        with mock_node("reference", {"queue_policy": "fifo", "loop_rate_hz": 50, "publish_rate_hz": 500, "event_log_path": str(log), "seed": 9}):
+            a = adapter()
+            r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.3, bisection_steps=2, rates_hz=(100,),
+                                     expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
+            a.close()
+        row = r.observations["effective_rate"]["per_rate"][0]
+        acc = row["acceptance"]
+        assert acc["status"] == "ok" and acc["age_lower_s"] > 0.3, acc
+        from crtk_conformance.rate_estimator import AppliedAgeEstimate, rate_subverdict_v013_archival
+        assert r.estimates["sub_verdicts"]["rate"] == "undetermined"  # 0.1.4/0.1.5: no rate verdict
+>       assert rate_subverdict_v013_archival(AppliedAgeEstimate(**acc), TOL.required_rate_hz()) == "violated"
+E       AssertionError: assert 'undetermined' == 'violated'
+E         - violated
+E         + undetermined
+
+tests/test_integration.py:534: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     rospy.internal:core.py:140 topic[/PSM1/measured_cp] adding connection to [http://localhost:38049/], count 0
+INFO     rospy.internal:core.py:140 topic[/PSM1/operating_state] adding connection to [http://localhost:38049/], count 0
+INFO     rospy.internal:core.py:140 topic[/PSM1/state_command] adding connection to [/crtk_mock_1283_1790000011512], count 0
+INFO     rospy.internal:core.py:140 topic[/PSM1/servo_cp] adding connection to [/crtk_mock_1283_1790000011512], count 0
+INFO     rospy.internal:core.py:140 topic[/PSM1/setpoint_cp] adding connection to [http://localhost:38049/], count 0
+INFO     rospy.internal:core.py:140 topic impl's ref count is zero, deleting topic /PSM1/measured_cp...
+INFO     rospy.internal:core.py:140 topic[/PSM1/measured_cp] removing connection to http://localhost:38049/
+INFO     rospy.internal:core.py:140 topic impl's ref count is zero, deleting topic /PSM1/operating_state...
+INFO     rospy.internal:core.py:140 topic[/PSM1/operating_state] removing connection to http://localhost:38049/
+INFO     rospy.internal:core.py:140 topic[/PSM1/operating_state] removing connection to http://localhost:38049/
+INFO     rospy.internal:core.py:140 topic impl's ref count is zero, deleting topic /PSM1/setpoint_cp...
+INFO     rospy.internal:core.py:140 topic[/PSM1/setpoint_cp] removing connection to http://localhost:38049/
+INFO     rospy.internal:core.py:140 topic[/PSM1/setpoint_cp] removing connection to http://localhost:38049/
+INFO     rospy.internal:core.py:140 topic impl's ref count is zero, deleting topic /PSM1/state_command...
+INFO     rospy.internal:core.py:140 topic[/PSM1/state_command] removing connection to /crtk_mock_1283_1790000011512
+INFO     rospy.internal:core.py:140 topic impl's ref count is zero, deleting topic /PSM1/servo_cp...
+INFO     rospy.internal:core.py:140 topic[/PSM1/servo_cp] removing connection to /crtk_mock_1283_1790000011512
+=========================== short test summary info ============================
+FAILED tests/test_integration.py::test_fifo_queue_slower_than_the_client_is_violated_and_logged
+1 failed, 135 passed in 735.21s (0:12:15)
+PYTEST_EXIT 1

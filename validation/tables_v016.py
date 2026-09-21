@@ -3,6 +3,7 @@
 Usage: python3 validation/tables_v016.py <outdir>   (writes dvrk_cases_v016.tex, src_geometry_v016.tex, ...)"""
 import csv
 import json
+from decimal import Decimal, ROUND_HALF_UP
 import os
 import sys
 
@@ -64,6 +65,12 @@ def mc_full():
     open(os.path.join(out, "mc_full_v016.tex"), "w").write("\n".join(L) + "\n")
 
 
+def pct(k, n, nd):
+    """k/n in percent, rounded half-up at nd decimals from the exact rational (no binary rounding artefacts)."""
+    q = Decimal(1).scaleb(-nd)
+    return str((Decimal(100 * k) / Decimal(n)).quantize(q, rounding=ROUND_HALF_UP))
+
+
 def boundary_main():
     """Main text: false / undetermined rates (%) near the boundary, Monte Carlo (N = 2000) and live (N = 30)."""
     d = json.load(open(os.path.join(HERE, "v0.1.6", "boundary", "boundary_montecarlo.json")))
@@ -83,9 +90,10 @@ def boundary_main():
         for rt in ratios:
             r = mc[(probe, model, sig, rt)]
             fk = "false_C" if r["truth"] == "divergent" else "false_D"
-            u = 100 * r["U_rate"]
-            us = f"{u:.1f}" if (99.5 <= u < 100 or 0 < u < 0.5) else f"{u:.0f}"
-            cells.append(f"{100 * r[f'{fk}_rate']:.1f}/{us}")
+            n = r["n_rep"]
+            u = Decimal(100 * r["U"]) / n
+            us = pct(r["U"], n, 1) if (Decimal("99.5") <= u < 100 or 0 < u < Decimal("0.5")) else pct(r["U"], n, 0)
+            cells.append(f"{pct(r[fk], n, 1)}/{us}")
         L.append(f"{probe.capitalize()} & {lab} & " + " & ".join(cells) + r" \\")
         if any((probe, model, sig, rt) in live for rt in ratios):
             cells = []

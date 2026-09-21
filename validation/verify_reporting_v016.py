@@ -6,6 +6,7 @@ Standard library only; reads the archive and the manuscript directory; writes re
 Usage: python3 validation/verify_reporting_v016.py [--repo .] [--paper <dir with manuscript_rc9.tex>]
 """
 import argparse
+from decimal import Decimal, ROUND_HALF_UP
 import glob
 import json
 import math
@@ -30,6 +31,11 @@ def check(name, ok, detail=""):
 AB = {"conformant": "C", "divergent": "D", "undetermined": "U"}
 tex = open(os.path.join(a.paper, "manuscript_rc9.tex")).read()
 sup = open(os.path.join(a.paper, "supplement_rc9_campaigns.tex")).read()
+
+
+def pct(k, n, nd):
+    q = Decimal(1).scaleb(-nd)
+    return str((Decimal(100 * k) / Decimal(n)).quantize(q, rounding=ROUND_HALF_UP))
 
 
 def intex(s, where=tex):
@@ -133,9 +139,9 @@ for r in mc:
     if r["ratio"] not in ("0.95", "0.98", "1.00", "1.02", "1.05"):
         continue
     fk = "false_C" if r["truth"] == "divergent" else "false_D"
-    u = 100 * r["U"] / r["n_rep"]
-    us = f"{u:.1f}" if (99.5 <= u < 100 or 0 < u < 0.5) else f"{u:.0f}"
-    cellstr = f"{100 * r[fk] / r['n_rep']:.1f}/{us}"
+    u = Decimal(100 * r["U"]) / r["n_rep"]
+    us = pct(r["U"], r["n_rep"], 1) if (Decimal("99.5") <= u < 100 or 0 < u < Decimal("0.5")) else pct(r["U"], r["n_rep"], 0)
+    cellstr = f"{pct(r[fk], r['n_rep'], 1)}/{us}"
     check(f"boundary table cell {r['probe']} {r['noise_model']} {r['sigma_mm']} {r['ratio']}", cellstr in bt, cellstr)
 fr = [r for r in mc if r["probe"] == "frame"]
 check("MC: frame decisions made no false verdict (42 000 replicates)", sum(r["false_C"] + r["false_D"] for r in fr) == 0 and sum(r["n_rep"] for r in fr) == 42000)
@@ -157,7 +163,8 @@ check("rescoring: one false D at exactly 1 mm (S_si_020), none on the frame swee
       rs["S_si"]["at_eps_1mm_exact_truth"]["FP"] == 1 and rs["S_si"]["at_eps_1mm_exact_truth"]["false_divergent_runs"] == "S_si_020" and rs["F_id"]["at_eps_1mm_exact_truth"]["FP"] == 0)
 mix = rs["mixture_stress"]
 check("mixture: 2000/2000 C at 1 mm; 60.9 % false D at 1 um; coverage 39.2 %",
-      mix["decisions"]["1 mm"]["conformant"] == 2000 and f"{100 * mix['decisions']['0.001 mm']['divergent'] / 2000:.1f}" == "60.9" and f"{100 * mix['coverage']:.1f}" == "39.2" and intex("60.9"))
+      mix["decisions"]["1 mm"]["conformant"] == 2000 and pct(mix["decisions"]["0.001 mm"]["divergent"], 2000, 1) == "60.9"
+      and pct(round(mix["coverage"] * 2000), 2000, 1) == "39.2" and intex("60.9") and intex("39.2"))
 lw = json.load(open(os.path.join(V, "reanalysis", "L_liveness_v016_summary.json")))
 check("width/tau median 0.14, range 0.03-1.30; 23/23 unchanged under 0.1.6",
       f"{lw['width_over_tau']['median']:.2f}" == "0.14" and f"{lw['width_over_tau']['min']:.2f}" == "0.03" and f"{lw['width_over_tau']['max']:.2f}" == "1.30"

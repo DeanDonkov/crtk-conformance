@@ -158,7 +158,7 @@ def src():
             dm = probe_of(rep, "dimensional")
             ga = (dm or {}).get("estimates", {}).get("geometry_anchor") or {}
             row.update(d_int_if=ga.get("d_int_mean_if"), lambda_hat=ga.get("lambda_hat_m"), lambda_ci=ga.get("lambda_ci_m"), lambda_ci_widened=ga.get("lambda_ci_widened_m"),
-                       e_s_ci_mm=[x * 1e3 for x in ga.get("predicted_error_ci_m") or []] or None, gates_passed=ga.get("gates_passed"), gate_failures=ga.get("gate_failures"),
+                       e_s_ci_mm=[None if x is None else x * 1e3 for x in ga.get("predicted_error_ci_m") or []] or None, gates_passed=ga.get("gates_passed"), gate_failures=ga.get("gate_failures"),
                        axes_angle_deg=ga.get("axes_angle_deg_mean"), n_ok=ga.get("n_trials_used"))
             te = probe_of(rep, "temporal")
             if te:

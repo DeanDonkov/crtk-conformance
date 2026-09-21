@@ -7,7 +7,8 @@ case next to its coverage.  Offline, reads the frozen v0.1.3 archive (unchanged)
     |1 - 1.01| x 0.1 m), so at epsilon = 1 mm that run was labelled divergent and its divergent verdict scored as
     correct.  Here the truth is computed exactly from the decimal injected value (Decimal(repr(s)): |1 - 1.01| x 100 mm
     = 1 mm exactly for the scale runs; for the frame runs with theta = 0 the exact maximum error is |t|, Decimal(repr)
-    of the injected translation; for theta != 0 the archived float truth is used -- none lies within 0.7 mm of 1 mm)
+    of the injected translation norm, from the campaign's decimal grid; for theta != 0 the archived float truth is used --
+    none lies within 0.7 mm of 1 mm)
     under the closed boundary (truth conformant iff E <= epsilon).  The grid is the archived 61-point grid plus
     epsilon = 1 mm exactly.  Verdicts are recomputed with the released decide() (1e-9 relative guard band) from the
     archived intervals, so they equal the archived verdicts wherever epsilon = 1 mm was the run tolerance.
@@ -47,12 +48,11 @@ def frame_records():
     for p in sorted(glob.glob(os.path.join(args.archive, "F_id_*.json"))):
         d = json.load(open(p)); tr = d["truth"]; sd = d["result"]["estimates"].get("spatial_decision") or {}
         if tr["theta_deg"] == 0:
-            comps = [Decimal(repr(float(v))) for v in tr["t_m"]]
-            nz = [c for c in comps if c != 0]
-            if len(nz) <= 1:
-                truth, exact = (abs(nz[0]) if nz else Decimal(0)), True
-            else:
-                truth, exact = Decimal(repr(tr["exact_max_error_m"])), False
+            # the campaign injected t = direction * tn / 1000 with tn from the decimal grid [0, 0.1, 0.5, 1, 2, 5, 20, 200] mm
+            # (run_validation_v013.exp_frame); for theta = 0 the exact maximum error is |t| = tn exactly
+            tn = Decimal(str(round(tr["t_norm_m"] * 1e3, 9)))
+            assert tn in (Decimal(x) for x in ("0", "0.1", "0.5", "1", "2", "5", "20", "200")), tn
+            truth, exact = tn / 1000, True
         else:
             truth, exact = Decimal(repr(tr["exact_max_error_m"])), False
         recs.append({"run": os.path.basename(p)[:-5], "truth_m": truth, "truth_exact": exact, "noise_mm": tr["noise_m"] * 1e3,

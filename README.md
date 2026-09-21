@@ -56,17 +56,18 @@ temporal:
 | temporal / rate | **source age of the applied setpoint** (t − send time of the target the channel shows applied), bracketed [age_lower, age_upper] between causally matched samples — **reported, never decided (0.1.4): the sub-verdict is always `undetermined`** | the bracket itself | **`setpoint_cp`** (CRTK: current setpoint to the low-level controller); feedback crossings are a diagnostic only | `setpoint_cp` piecewise constant on the commanded targets (checked); no explicit command identifier or send-time stamp on the channel, and age_lower is measured at receipt, above the publication-side age by an unbounded transport delay — the two reasons the class carries no verdict |
 | spatial (scope) | — | the Hotelling region is exact for iid **multivariate-normal** trial errors only; rotation deviations treated as Euclidean-normal under a small-angle approximation; campaign coverage is empirical for its Gaussian configurations (the RC4 reviewer's mixture noise gives 43 % coverage: `tests/test_spatial.py`) | — | recorded in every frame report (`observations.assumptions`, `spatial_decision.assumptions`) |
 
-## What is and is not implemented (0.1.3)
+## What is and is not implemented (0.1.3; 0.1.6 additions marked)
 
 | Implemented | Not implemented |
 |---|---|
 | ROS 1 (`rospy`) transport; discovery through the ROS master API | ROS 2 (no `rclpy` backend) |
 | `FrameSemanticsProbe` — binding of the unqualified `measured_cp` relative to `local/measured_cp`, decided on the exact maximum error eq. (3′) against a declared expected transform with a propagated interval; **passive** (never publishes `servo_cp`, so it never tests the command frame) | inferring the binding when `local/` is absent (undetermined by construction); TF beyond a one-hop `/tf` lookup; an active command-frame test |
-| `ScalingUnitsProbe` — internal command/measurement ratio, and a unit estimate **only with an out-of-band anchor topic**; noise-adaptive step; goals streamed at the client rate; no-response accounting | detecting a uniform unit scale without an anchor (impossible; paper Sec. 5.2) |
+| `ScalingUnitsProbe` — internal command/measurement ratio, and a unit estimate **only with an out-of-band anchor topic**; noise-adaptive step; goals streamed at the client rate; no-response accounting; 0.1.6: command/feedback consistency diagnostic | detecting a uniform unit scale without an anchor (impossible; paper Sec. 5.2) |
+| 0.1.6: `GeometryAnchorProbe` — unit anchor from instrument geometry: screw axes of wrist-pitch/yaw steps (`servo_jp`), their common normal against a declared link length L with relative uncertainty u_rel, eq. (6) decision; gates return undetermined | an anchor for instruments without a declared, perpendicular pitch–yaw pair |
 | `RateSensitivityProbe` — operating-state precondition; liveness / stop-behaviour probe with measured timing resolution, observational stop classes, drift onset/speed estimation and a timeout **interval** with explicit allowances; source age of the applied setpoint reported by `setpoint_cp` (bracketed between samples) as a **diagnostic**, with the feedback-crossing statistic likewise | identifying the internal controller rate (not identifiable through the interface); identifying a physical release from the pose; measuring the platform's own jitter; **any rate verdict at all (0.1.4)** |
 | JSON report validated against `schema/report.schema.json`; text summary; every outcome-affecting constant recorded | PDF reports |
 | `crtk-mock` with presets emulating *documented* behaviours (built from cited configuration values) | any emulation of dVRK/AMBF/SRC *code* |
-| Unit tests (no ROS; 82) incl. both reviewers' counterexamples (`tests/adversarial/`, `tests/test_liveness_verdict.py` and `tests/test_liveness_v015.py` offline replays) + integration tests (ROS 1; 35) | hardware tests of any kind |
+| Unit tests (no ROS; 98 in 0.1.6) incl. both reviewers' counterexamples (`tests/adversarial/`, `tests/test_liveness_verdict.py`, `tests/test_liveness_v015.py` and `tests/test_liveness_v016.py` offline replays) + integration tests (ROS 1; 137 tests in total with ROS) | hardware tests of any kind |
 
 Three probe families, one per binding class; the temporal probe has three sub-probes. There are no others.
 
@@ -136,6 +137,9 @@ state change is not read as a stop policy (`rejection_confounded_by_command_loss
 state still counts, bounded by the time it was observed) and the stop expectation stays `undetermined`. A gap trial is
 `not_observable` when the silence started in FAULT/DISABLED or the pose was already at the post-gap goal, and a `held`
 trial whose drift could not be evaluated is not a passing trial for a drift policy (`CHANGELOG.md`, 0.1.5).
+0.1.6: 30 calibration commands, and a post-gap non-response without a state change counts only after it recurs at the
+same gap (confirmation rule, `liveness.required_confirmations`; `--liveness-rule 0.1.5` restores the 0.1.5 rule).
+State commands are sent one at a time (`ensure_enabled`): the released dVRK console keeps only the latest.
 
 ## Validate against the mock (reproduces the paper's Section 7)
 
@@ -143,6 +147,12 @@ trial whose drift could not be evaluated is not a passing trial for a drift poli
 python validation/run_validation_v013.py --out validation/v0.1.3/mock          # ~1 h, private ROS master on :11611
 python validation/run_validation_v015.py --out validation/v0.1.5/mock          # the same design with the 0.1.5 probe (seeds +30000) plus experiment V, :11615
 python validation/reanalyze_liveness_v015.py                                   # the archived v0.1.3 liveness intervals under the 0.1.5 rules (offline)
+# RC9 / 0.1.6 (pre-registered: validation/v0.1.6/PREREGISTRATION.md; environment: validation/v0.1.6/environment/)
+python validation/dvrk_sim_v016.py campaign --launches 3                       # released dVRK 2.4.0 console, kinematic simulation (inside the dVRK image)
+python validation/src_live_v016.py run v1|v2                                   # SRC releases on AMBF with the geometry anchor
+python validation/run_validation_v016.py --only K,B,L                          # reference node: command-side mismatch, boundary, command loss
+python validation/boundary_montecarlo_v016.py                                  # offline Monte Carlo of the released decision rules near epsilon
+python validation/reanalyze_liveness_v016.py; python validation/rescore_v016.py; python validation/analyze_v016.py all
 python validation/analyze_v013.py validation/v0.1.3/mock --live validation/v0.1.3/live-src-v1 validation/v0.1.3/live-src-v2
 ```
 

@@ -1,0 +1,11 @@
+# RC9 campaign image: the from-source ROS Noetic core (focal-ros-noetic) + GL/AMBF build dependencies + the crtk-conformance
+# runtime (cp38 wheels downloaded on the host; the container cannot verify TLS to PyPI) + rostopic's Cryptodome/gnupg.
+FROM focal-ros-noetic:rc9check
+ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8 LC_ALL=C.UTF-8
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev libglew-dev xorg-dev libasound2-dev libusb-1.0-0-dev \
+    freeglut3 freeglut3-dev libglvnd-dev libegl1-mesa-dev libxext6 libx11-6 mesa-utils libgl1-mesa-dri \
+    python3-pykdl python3-opengl xvfb xauth \
+ && rm -rf /var/lib/apt/lists/*
+COPY wheels38rt /tmp/w
+RUN pip3 install --no-cache-dir --no-index --find-links /tmp/w numpy==1.24.4 scipy==1.10.1 jsonschema==4.17.3 matplotlib==3.7.5 pytest==7.4.4 pytest-timeout==2.3.1 PyYAML==6.0.1 psutil==5.9.8 pycryptodomex gnupg && rm -rf /tmp/w

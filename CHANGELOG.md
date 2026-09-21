@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.1.6.dev0 — 2026-09-21 (branch `rc9`; not released)
+
+RC9 response to the external review of the RC8 review copy. Every change is listed in `validation/v0.1.6/PREREGISTRATION.md`
+(and its addenda A–D) with the order in which it was made relative to the pre-registered runs. The v0.1.3 archive and the
+0.1.5 verification campaign are unchanged; all new measurements are in `validation/v0.1.6/`.
+
+### New
+- `dimensional.py` (ROS-free): the scale decision of eq. (6), moved unchanged out of `ScalingUnitsProbe.run()`
+  (`scale_decision`; a test replays every archived v0.1.3 scale run), and the instrument-geometry unit anchor: screw
+  axes of wrist steps, their common normal, and `geometry_anchor_decision` (Student-t interval of L / d_int widened by a
+  declared relative uncertainty u_rel, gates on the step angle, the axial slide and the angle between the axes).
+- `probes/geometry.py`: `GeometryAnchorProbe` (`--probes geometry`, `--geometry-trials`, `--geometry-settle-s`);
+  `adapter.servo_jp()`; expectation mode `dimensional.mode: geometry_anchor` (L_m, u_rel, L_source, pitch_joint,
+  yaw_joint, delta_q_rad, axes_angle_deg, reference_joints).
+- Scale probe: `command_feedback_consistency` diagnostic (settled goal residual; flags a non-shared binding or a
+  tracking deficit; not a verdict).
+- Liveness: 30 calibration commands (was 12), `liveness.loss_upper_bound()` (one-sided Clopper–Pearson),
+  `required_confirmations()` and the **confirmation rule** (rule "0.1.6", default): a non-response without a state change
+  counts only after r = max(2, ceil(ln α / ln p_up)) repeats at the same gap, each after its own answered stream
+  (α = 0.01, r ≤ 4); the 0.1.5 rule stays selectable (`--liveness-rule 0.1.5`, `--calibration-commands 12`).
+- `--skip-rate-sweep`, `--enable-timeout-s`.
+- Reference node: separate command binding (`cmd_bind_*`), mixture noise, Gilbert–Elliott loss; all default to the
+  archived behaviour (fixture test over every preset).
+
+### Changed
+- Frame probe: samples with an unset (zero) header stamp are skipped and counted (the released dVRK publishes identity
+  poses stamped 0 until homed).
+- Report: probes of the same class are combined (any D → D; else any C → C; else U).
+- `probes/common.ensure_enabled`: one state command at a time — `enable` only when not ENABLED, then `home` after an
+  enable or when not homed, awaiting is_homed and not is_busy; nothing is sent to a ready arm. The released dVRK console
+  (cisst-ros 4.0.0 ROS 1 bridge, subscriber queue size 1) keeps only the latest state command, so 0.1.5's back-to-back
+  `enable` + `home` never re-enabled a disabled arm (addendum A; before any probe run).
+
+### Fixed
+- `RateSensitivityProbe.run()` raised `KeyError('per_rate')` with `--skip-rate-sweep` (addendum C).
+
 ## 0.1.5 — 2026-09-19
 
 Response to the adversarial review of the RC7 (T-MRB) manuscript. Three changes to the liveness/stop sub-probe of

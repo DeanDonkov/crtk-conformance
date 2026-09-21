@@ -55,6 +55,7 @@ from crtk_conformance.spatial import exact_max_error  # noqa: E402
 TOL = Tolerance(epsilon_m=0.001, workspace_radius_m=0.10, speed_m_s=0.05, client_rate_hz=100.0, jitter_max_s=0.005)
 JHU = {"bind_translation_m": [0.20, 0.0, 0.0], "bind_axis": [1.0, 0.0, 0.0], "bind_angle_deg": -150.0}
 SEED0 = 30000
+RERUN = set()  # --rerun: only these run names are executed; seeds are unchanged because the counters still advance
 E_AXIS = [0.48, 0.60, 0.64]
 
 
@@ -82,6 +83,8 @@ def exp_K(out):
                "shared binding (identity)") for k in range(3)]
     cases += [(f"K_ctrl_jhu_{k}", "emul-dvrk-jhu-psm2", {"noise_m": 2e-5, "seed": SEED0 + 30 + k}, exp, "shared binding (JHU)") for k in range(3)]
     for name, preset, over, e, what in cases:
+        if RERUN and name not in RERUN:
+            continue
         rf = run_probe(lambda a, e=e: FrameSemanticsProbe(a, TOL, trials=10, samples_per_trial=5, expectations=e), preset, over, expectation=e)
         rs = run_probe(lambda a, e=e: ScalingUnitsProbe(a, TOL, trials=9, step_if=0.005, settle_s=0.6, expectations=e), preset, over, expectation=e)
         cc = rs["result"]["estimates"].get("command_feedback_consistency", {})
@@ -106,6 +109,8 @@ def exp_B(out, n_rep):
                 over = {"bind_translation_m": [t, 0.0, 0.0], "bind_angle_deg": 0.0, "bind_axis": [0, 0, 1], "noise_m": noise, "seed": SEED0 + 1000 + k,
                         "noise_model": model}
                 k += 1
+                if RERUN and name not in RERUN:
+                    continue
                 rec = run_probe(lambda a: FrameSemanticsProbe(a, TOL, trials=10, samples_per_trial=5, expectations=E_ID), "reference", over, expectation=E_ID)
                 rec["truth"] = {"ratio": rs, "E_true_m": t, "truth_conformant": ratio <= 1, "noise_model": model, "noise_m": noise}
                 save(out, name, rec)
@@ -118,6 +123,8 @@ def exp_B(out, n_rep):
             name = f"BS_gaussian_0.1mm_{rs}_{j:02d}"
             over = {"unit_m": s, "noise_m": 1e-4, "seed": SEED0 + 5000 + k, "publish_local": False, "publish_T_b_w": True}
             k += 1
+            if RERUN and name not in RERUN:
+                continue
             rec = run_probe(lambda a: ScalingUnitsProbe(a, TOL, trials=9, step_if=0.005, settle_s=0.6, expectations=E_SI), "reference", over, expectation=E_SI)
             rec["truth"] = {"ratio": rs, "s": s, "E_true_m": float(ratio * Fraction(1, 1000)), "truth_conformant": ratio <= 1, "noise_m": 1e-4}
             save(out, name, rec)
@@ -150,6 +157,8 @@ def exp_L(out, n_rep, rules=("0.1.5", "0.1.6"), policies=("hold", "fault250"), l
                     ev = os.path.join(out, name + ".events.jsonl")
                     over = dict(over0, **LOSS[loss], seed=SEED0 + 20000 + k)
                     k += 1
+                    if RERUN and name not in RERUN:
+                        continue
                     rec = run_probe(lambda a: RateSensitivityProbe(a, TOL, trials=5, gap_max_s=2.0, expectations=exp, step_if=0.002, calibration_commands=n_calib,
                                                                    liveness_rule=rule, skip_rate_sweep=True), "reference", over, expectation=exp, event_log=ev)
                     rec["truth"] = dict(truth, loss=loss, rule=rule)
@@ -170,13 +179,27 @@ if __name__ == "__main__":
     ap.add_argument("--n-boundary", type=int, default=30)
     ap.add_argument("--n-loss", type=int, default=8)
     ap.add_argument("--port", type=int, default=11411)
+    ap.add_argument("--rerun", default=None, help="comma-separated run names to re-run (same seeds), e.g. runs lost to a start-up failure")
     a = ap.parse_args()
+    if a.rerun:
+        RERUN.update(a.rerun.split(","))
     os.makedirs(a.out, exist_ok=True)
     meta = {"crtk_conformance_version": __version__, "repo_commit": git_rev(os.path.join(HERE, "..")), "python": sys.version, "platform": platform.platform(),
             "numpy": np.__version__, "tolerance": TOL.to_dict(), "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "only": a.only,
             "n_boundary": a.n_boundary, "n_loss": a.n_loss}
-    json.dump(meta, open(os.path.join(a.out, f"meta_{a.only.replace(',', '')}.json"), "w"), indent=1)
+    meta["rerun"] = sorted(RERUN)
+    json.dump(meta, open(os.path.join(a.out, f"meta_{a.only.replace(',', '')}{'_rerun' if RERUN else ''}.json"), "w"), indent=1)
     with ros_master(a.port):
+        # warm-up (discarded, not saved): in a fresh container the first spawned node was never discovered, in all three
+        # attempts of the first L run (21 Sep 2026); one throw-away start-up avoids losing the first case of each part
+        from harness import mock_node
+        from crtk_conformance.adapter import PlatformAdapter
+        for _ in range(3):
+            with mock_node("reference", {"seed": 1}):
+                ok = PlatformAdapter(NS, anchor_topic=None).discover()["topics"]["servo_cp"]["present"]
+            log(f"warm-up: node discovered = {ok}")
+            if ok:
+                break
         for part in a.only.split(","):
             t0 = time.time()
             if part == "K":

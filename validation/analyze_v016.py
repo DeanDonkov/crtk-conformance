@@ -245,48 +245,66 @@ def B():
 
 
 def L():
+    """WP6.  Per run: the stop class and interval, the stop sub-verdict against the declared expectation, and the
+    classification of section 3 of the pre-registration:
+      hold policy (truth: held, no stop policy): correct = held_through_range; false trip = a rejected/faulted/drifted
+        stop class; U = anything else (not observable, ...).  A false trip is a false VERDICT only if the stop
+        sub-verdict is 'violated' (the hold expectation declared violated).
+      fault policy (tau_w = 0.25 s): interval formed and contains / formed and excludes (a false verdict about the
+        timeout) / contradictory bounds (U) / not formed (U)."""
     groups = defaultdict(list)
+    startup = []
     for name, r in load_dir(os.path.join(V16, "mock", "L")):
         tr = r["truth"]
-        Lv = r["result"]["observations"]["liveness"]
-        R = r["result"]["observations"]["resolution"]
+        obs = r["result"]["observations"]
+        if "liveness" not in obs:
+            startup.append({"run": name, "basis": r["result"].get("decision_basis"), "retries": r.get("startup_retries")})
+            continue
+        Lv = obs["liveness"]
+        R = obs["resolution"]
         tau = Lv.get("tau_w_estimate_s") or {}
-        sv = r["result"]["estimates"].get("sub_verdicts", {})
+        sv = r["result"]["estimates"].get("sub_verdicts", {}).get("stop_behaviour")
+        sc = Lv.get("stop_class")
         if tr["mode"] == "hold":
-            if Lv.get("stop_class") == "held_through_range":
-                cls = "correct_hold"
-            elif Lv.get("stop_class") in ("rejected", "faulted", "drifted"):
-                cls = "false_trip"
-            else:
-                cls = "not_observable_or_U"
+            cls = "correct_hold" if sc == "held_through_range" else ("false_trip" if sc in ("rejected", "faulted", "drifted") else f"U:{sc}")
+            false_verdict = sv == "violated"
         else:
             st = tau.get("status")
             lo, hi = tau.get("interval_low_s"), tau.get("interval_high_s")
-            if st == "ok" and lo is not None:
+            if st == "ok" and lo is not None and hi is not None:
                 cls = "contains" if lo <= tr["tau_w_s"] <= hi else "excludes"
-            elif st in ("inconsistent",):
+            elif st == "inconsistent":
                 cls = "contradictory"
-            elif st in ("upper_bound",) and tau.get("tau_upper_bound_s") is not None:
-                cls = "upper_bound_only" if tau["tau_upper_bound_s"] >= tr["tau_w_s"] else "upper_bound_excludes"
             else:
-                cls = f"U:{st or Lv.get('stop_class')}"
+                cls = f"not_formed:{st or sc}"
+            false_verdict = cls == "excludes" or sv == "violated"
         trials = Lv.get("trials", [])
-        groups[(tr["rule"], tr["mode"], tr["loss"])].append({"run": name, "class": cls, "stop_verdict": sv.get("stop_behaviour"),
-                                                               "calib": f"{R.get('latency_probes_responded')}/{R.get('calibration_commands') or R.get('latency_probes_sent')}",
-                                                               "rejected_trials": sum(1 for t in trials if t["class"] == "rejected"),
-                                                               "confirmed": sum(1 for t in trials if (t.get("confirmation") or {}).get("confirmed")),
-                                                               "trials": len(trials), "wall_s": r["wall_s"],
-                                                               "interval_ms": [None if tau.get("interval_low_s") is None else tau["interval_low_s"] * 1e3, None if tau.get("interval_high_s") is None else tau["interval_high_s"] * 1e3]})
+        calib_sent = R.get("calibration_commands") or (30 if tr["rule"] == "0.1.6" else 12)
+        groups[(tr["rule"], tr["mode"], tr["loss"])].append({
+            "run": name, "class": cls, "stop_class": sc, "stop_verdict": sv, "false_verdict": bool(false_verdict),
+            "calib_answered": R.get("latency_probes_responded"), "calib_sent": calib_sent,
+            "rejected_trials": sum(1 for t in trials if t["class"] == "rejected"),
+            "confirmed_rejections": sum(1 for t in trials if (t.get("confirmation") or {}).get("confirmed")),
+            "unconfirmed_rejections": sum(1 for t in trials if t["class"] == "rejected" and (t.get("confirmation") or {}).get("confirmed") is False),
+            "gap_attempts": len(trials), "wall_s": r["wall_s"],
+            "interval_ms": [None if tau.get("interval_low_s") is None else tau["interval_low_s"] * 1e3,
+                            None if tau.get("interval_high_s") is None else tau["interval_high_s"] * 1e3]})
     rows = []
     for key, rs in sorted(groups.items()):
         c = Counter(x["class"] for x in rs)
-        wrong = c.get("false_trip", 0) + c.get("excludes", 0) + c.get("upper_bound_excludes", 0)
-        rows.append({"rule": key[0], "policy": key[1], "loss": key[2], "n": len(rs), "classes": dict(c), "false": wrong, "false_ci95": cp(wrong, len(rs)),
-                     "stop_verdicts": dict(Counter(x["stop_verdict"] for x in rs)), "calibration_loss_seen": sum(1 for x in rs if x["calib"].split("/")[0] != x["calib"].split("/")[1]),
-                     "mean_trials": float(np.mean([x["trials"] for x in rs])), "mean_wall_s": float(np.mean([x["wall_s"] for x in rs])), "runs": rs})
-    json.dump(rows, open(os.path.join(OUT, "L_loss.json"), "w"), indent=1)
+        wrong_class = c.get("false_trip", 0) + c.get("excludes", 0)
+        fv = sum(x["false_verdict"] for x in rs)
+        rows.append({"rule": key[0], "policy": key[1], "loss": key[2], "n": len(rs), "classes": dict(c),
+                     "false_class": wrong_class, "false_class_ci95": cp(wrong_class, len(rs)),
+                     "false_verdict": fv, "false_verdict_ci95": cp(fv, len(rs)),
+                     "stop_verdicts": dict(Counter(str(x["stop_verdict"]) for x in rs)),
+                     "calibration_caught_loss": sum(1 for x in rs if x["calib_answered"] is not None and x["calib_answered"] < x["calib_sent"]),
+                     "unconfirmed_rejections": sum(x["unconfirmed_rejections"] for x in rs), "confirmed_rejections": sum(x["confirmed_rejections"] for x in rs),
+                     "mean_gap_attempts": float(np.mean([x["gap_attempts"] for x in rs])), "mean_wall_s": float(np.mean([x["wall_s"] for x in rs])), "runs": rs})
+    json.dump({"rows": rows, "startup_failures": startup}, open(os.path.join(OUT, "L_loss.json"), "w"), indent=1)
     for x in rows:
         print({k: v for k, v in x.items() if k != "runs"})
+    print("start-up failures:", startup)
     return rows
 
 

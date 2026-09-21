@@ -1,0 +1,544 @@
+{
+ "preset": "reference",
+ "overrides": {
+  "unit_m": 1.01,
+  "noise_m": 0.0001,
+  "seed": 35312,
+  "publish_local": false,
+  "publish_T_b_w": true
+ },
+ "expectation": {
+  "spatial": {
+   "mode": "discover_only",
+   "translation_m": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "orientation_tolerance_deg": null,
+   "declared": false
+  },
+  "dimensional": {
+   "mode": "si",
+   "expected_unit_m": 1.0,
+   "L_m": null,
+   "u_rel": null,
+   "L_source": "",
+   "pitch_joint": "wrist_pitch",
+   "yaw_joint": "wrist_yaw",
+   "delta_q_rad": 0.5,
+   "axes_angle_deg": 90.0,
+   "reference_joints": null,
+   "declared": true
+  },
+  "temporal": {
+   "state_machine": "any",
+   "stop_behaviour": "any",
+   "rate": "any",
+   "horizon_s": null,
+   "declared": false
+  },
+  "source": "dict"
+ },
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.003962322999996104,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "servo_jp": {
+    "topic": "/PSM1/servo_jp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": true,
+    "type": "crtk_msgs/OperatingState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": true,
+    "type": "crtk_msgs/StringStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/T_b_w",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/operating_state",
+   "/PSM1/servo_cp",
+   "/PSM1/setpoint_cp",
+   "/PSM1/state_command"
+  ]
+ },
+ "result": {
+  "probe": "ScalingUnitsProbe",
+  "binding_class": "dimensional",
+  "outcome": "divergent",
+  "estimates": {
+   "internal_ratio": {
+    "n": 9,
+    "mean": 0.9989079523747288,
+    "std": 0.003308927762599717,
+    "ci_low": 0.9963644853403683,
+    "ci_high": 1.0014514194090893,
+    "alpha": 0.05
+   },
+   "internal_ratio_per_axis": {
+    "0": {
+     "n": 3,
+     "mean": 0.9975812174630256,
+     "std": 0.0038722216154470344,
+     "ci_low": 0.9879620857194771,
+     "ci_high": 1.0072003492065742,
+     "alpha": 0.05
+    },
+    "1": {
+     "n": 3,
+     "mean": 1.0016591926933491,
+     "std": 0.0027926866703476445,
+     "ci_low": 0.9947217744181752,
+     "ci_high": 1.0085966109685232,
+     "alpha": 0.05
+    },
+    "2": {
+     "n": 3,
+     "mean": 0.9974834469678119,
+     "std": 0.001991146897628455,
+     "ci_low": 0.9925371638695923,
+     "ci_high": 1.0024297300660314,
+     "alpha": 0.05
+    }
+   },
+   "response_latency_s": {
+    "n": 9,
+    "mean": 0.006896786222221686,
+    "std": 0.0032288643434526284,
+    "ci_low": 0.0044148613797338285,
+    "ci_high": 0.009378711064709543,
+    "alpha": 0.05
+   },
+   "command_feedback_consistency": {
+    "goal_residual_if": {
+     "n": 9,
+     "mean": 2.4377025197978307e-05,
+     "std": 1.0602701039925905e-05,
+     "ci_low": 1.6227067717781055e-05,
+     "ci_high": 3.252698267817556e-05,
+     "alpha": 0.05
+    },
+    "step_direction_angle_deg": {
+     "n": 9,
+     "mean": 0.19486461557997783,
+     "std": 0.13992138540744073,
+     "ci_low": 0.08731151780359243,
+     "ci_high": 0.30241771335636325,
+     "alpha": 0.05
+    },
+    "assumed_unit_m": 1.0,
+    "flag_non_shared_binding_or_tracking_deficit": false,
+    "semantics": "diagnostic, not a verdict: settled feedback vs commanded absolute goal; zero under any shared binding with exact tracking"
+   },
+   "scale_anchored": {
+    "n": 9,
+    "mean": 1.0124374360312183,
+    "std": 0.002862796439601023,
+    "ci_low": 1.0102368958887253,
+    "ci_high": 1.0146379761737112,
+    "alpha": 0.05
+   },
+   "expected_unit_m": 1.0,
+   "predicted_error_at_workspace_edge_m": {
+    "n": 9,
+    "mean": 0.0012437436031218275,
+    "std": null,
+    "ci_low": 0.001023689588872534,
+    "ci_high": 0.001463797617371121,
+    "alpha": 0.05
+   }
+  },
+  "predicted_error_m": 0.0012437436031218275,
+  "predicted_error_ci": [
+   0.001023689588872534,
+   0.001463797617371121
+  ],
+  "decision_basis": "eq. (6) with anchored s_hat = 1.0124 (95% CI 1.0102..1.0146) against the client's unit 1.0: |1-s| r_ws = 1.244 mm vs epsilon = 1.000 mm",
+  "observations": {
+   "expectation": {
+    "mode": "si",
+    "expected_unit_m": 1.0,
+    "L_m": null,
+    "u_rel": null,
+    "L_source": "",
+    "pitch_joint": "wrist_pitch",
+    "yaw_joint": "wrist_yaw",
+    "delta_q_rad": 0.5,
+    "axes_angle_deg": 90.0,
+    "reference_joints": null,
+    "declared": true
+   },
+   "enable": {
+    "operating_state_present": true,
+    "state_before": {
+     "state": "DISABLED",
+     "is_homed": false,
+     "is_busy": false
+    },
+    "state_after": {
+     "state": "ENABLED",
+     "is_homed": true,
+     "is_busy": false
+    },
+    "enable_latency_s": 0.34207577199998696,
+    "commands_sent": [
+     "enable",
+     "home"
+    ]
+   },
+   "resting_noise_sigma_if": 0.00010912004438851085,
+   "step_used_if": 0.005,
+   "still_tol_used_if": 0.00032736013316553254,
+   "trials": [
+    {
+     "trial": 0,
+     "ok": true,
+     "axis": 0,
+     "delta_cmd_if": [
+      0.005,
+      0.0,
+      0.0
+     ],
+     "delta_meas_if": [
+      0.005002726902331314,
+      -1.4238821591444727e-05,
+      -3.365723844406254e-05
+     ],
+     "r_int": 1.0005720766251567,
+     "first_motion_s": 0.003925165999987712,
+     "n_pre": 30,
+     "n_post": 30,
+     "post_std_if": 9.953067812459979e-05,
+     "goal_residual_if": 3.664682436880442e-05,
+     "delta_anchor_m": [
+      0.005072722400315988,
+      -1.6207640131446012e-06,
+      -0.00011264994328659406
+     ],
+     "s_anchored": 1.0147946627227806
+    },
+    {
+     "trial": 1,
+     "ok": true,
+     "axis": 1,
+     "delta_cmd_if": [
+      0.0,
+      0.005,
+      0.0
+     ],
+     "delta_meas_if": [
+      -2.7602556224327222e-05,
+      0.0049932043250794445,
+      -8.730434283066302e-06
+     ],
+     "r_int": 0.9986576501200991,
+     "first_motion_s": 0.011293416000000889,
+     "n_pre": 30,
+     "n_post": 30,
+     "post_std_if": 0.00011261619641627953,
+     "goal_residual_if": 2.9737229032207313e-05,
+     "delta_anchor_m": [
+      8.66581584246668e-06,
+      0.00507187170790113,
+      3.123683385272691e-06
+     ],
+     "s_anchored": 1.0143760146054328
+    },
+    {
+     "trial": 2,
+     "ok": true,
+     "axis": 2,
+     "delta_cmd_if": [
+      0.0,
+      0.0,
+      0.005
+     ],
+     "delta_meas_if": [
+      -9.059368598934089e-06,
+      9.708424726358636e-06,
+      0.004993453884046095
+     ],
+     "r_int": 0.9986943079394237,
+     "first_motion_s": 0.006748129000015979,
+     "n_pre": 30,
+     "n_post": 30,
+     "post_std_if": 9.408814958383329e-05,
+     "goal_residual_if": 1.4804637927377712e-05,
+     "delta_anchor_m": [
+      -5.17147862873218e-06,
+      -5.052434906491683e-05,
+      0.00505529430381442
+     ],
+     "s_anchored": 1.0111098842800055
+    },
+    {
+     "trial": 3,
+     "ok": true,
+     "axis": 0,
+     "delta_cmd_if": [
+      -0.005,
+      -0.0,
+      -0.0
+     ],
+     "delta_meas_if": [
+      -0.004994782525668043,
+      -1.809223804490286e-05,
+      7.501796104467107e-06
+     ],
+     "r_int": 0.9989641852387121,
+     "first_motion_s": 0.0035488940000050206,
+     "n_pre": 30,
+     "n_post": 30,
+     "post_std_if": 0.00011691060018593246,
+     "goal_residual_if": 2.026889391829419e-05,
+     "delta_anchor_m": [
+      -0.00508355260252474,
+      2.4886294990449882e-05,
+      -1.9128870676690668e-05
+     ],
+     "s_anchored": 1.0167299012817077
+    },
+    {
+     "trial": 4,
+     "ok": true,
+     "axis": 1,
+     "delta_cmd_if": [
+      -0.0,
+      -0.005,
+      -0.0
+     ],
+     "delta_meas_if": [
+      -6.957652392358792e-07,
+      -0.0050209040674824195,
+      2.2474769306723985e-07
+     ],
+     "r_int": 1.0041808241439845,
+     "first_motion_s": 0.009654793999970934,
+     "n_pre": 30,
+     "n_post": 30,
+     "post_std_if": 0.00010209725049237184,
+     "goal_residual_if": 2.0916850578019884e-05,
+     "delta_anchor_m": [
+      -1.541128893364983e-05,
+      -0.005040675977387022,
+      2.6723236094816638e-05
+     ],
+     "s_anchored": 1.0081540744981508
+    },
+    {
+     "trial": 5,
+     "ok": true,
+     "axis": 2,
+     "delta_cmd_if": [
+      -0.0,
+      -0.0,
+      -0.005
+     ],
+     "delta_meas_if": [
+      -1.7357236662876027e-06,
+      -2.7586118717016472e-05,
+      -0.004975850115105485
+     ],
+     "r_int": 0.9951853771971889,
+     "first_motion_s": 0.005730739999989964,
+     "n_pre": 30,
+     "n_post": 30,
+     "post_std_if": 0.00011539949962043919,
+     "goal_residual_if": 3.6704544990145236e-05,
+     "delta_anchor_m": [
+      4.2750866737314626e-05,
+      1.0599770852112364e-05,
+      -0.005058612142352509
+     ],
+     "s_anchored": 1.0117607780202817
+    },
+    {
+     "trial": 6,
+     "ok": true,
+     "axis": 0,
+     "delta_cmd_if": [
+      0.005,
+      0.0,
+      0.0
+     ],
+     "delta_meas_if": [
+      0.004966020956724278,
+      -1.1773873571158374e-05,
+      4.499791522227792e-06
+     ],
+     "r_int": 0.9932073905252079,
+     "first_motion_s": 0.011171374000014112,
+     "n_pre": 30,
+     "n_post": 30,
+     "post_std_if": 0.00010573319161787117,
+     "goal_residual_if": 3.624151769099286e-05,
+     "delta_anchor_m": [
+      0.005042805083771755,
+      3.104250017039251e-05,
+      1.9893775616702802e-06
+     ],
+     "s_anchored": 1.0085802041950689
+    },
+    {
+     "trial": 7,
+     "ok": true,
+     "axis": 1,
+     "delta_cmd_if": [
+      0.0,
+      0.005,
+      0.0
+     ],
+     "delta_meas_if": [
+      -2.028030379946844e-06,
+      0.005010694917306376,
+      1.3848102415198182e-06
+     ],
+     "r_int": 1.0021391038159637,
+     "first_motion_s": 0.0071871730000339085,
+     "n_pre": 30,
+     "n_post": 30,
+     "post_std_if": 0.00010284163614347817,
+     "goal_residual_if": 1.0973233927025782e-05,
+     "delta_anchor_m": [
+      1.5159006676149288e-05,
+      0.005069800276128692,
+      2.782917283018771e-05
+     ],
+     "s_anchored": 1.0139798636694592
+    },
+    {
+     "trial": 8,
+     "ok": true,
+     "axis": 2,
+     "delta_cmd_if": [
+      0.0,
+      0.0,
+      0.005
+     ],
+     "delta_meas_if": [
+      2.4969886329925094e-06,
+      1.0682404462842264e-05,
+      0.004992841226721237
+     ],
+     "r_int": 0.9985706557668229,
+     "first_motion_s": 0.0028113899999766545,
+     "n_pre": 30,
+     "n_post": 30,
+     "post_std_if": 0.00010646998043709448,
+     "goal_residual_if": 1.3099494348937395e-05,
+     "delta_anchor_m": [
+      -2.2583990653420384e-06,
+      -6.461199695154487e-07,
+      0.005062257160042674
+     ],
+     "s_anchored": 1.0124515410080757
+    }
+   ],
+   "no_response_trials": 0,
+   "valid_trials": 9
+  },
+  "notes": [],
+  "started_at": 1790013337.8667488,
+  "duration_s": 17.603110551834106
+ },
+ "wall_s": 17.603203058242798,
+ "event_log": null,
+ "startup_retries": [],
+ "truth": {
+  "ratio": "1.00",
+  "s": 1.01,
+  "E_true_m": 0.001,
+  "truth_conformant": true,
+  "noise_m": 0.0001
+ }
+}

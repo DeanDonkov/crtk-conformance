@@ -302,14 +302,16 @@ def test_rate_targets_not_separable_is_undetermined_and_sends_nothing(master):
 
 
 def test_rate_reduced_targets_keep_the_requested_rate(master):
-    # resting noise 0.5 mm -> delta = 2.5 mm, spacing 10 mm: 5 targets fit; the client rate must stay at 100 Hz
-    with mock_node("reference", {"noise_m": 0.0005, "loop_rate_hz": 1000, "publish_rate_hz": 1000, "seed": 6}):
+    # resting noise 0.4 mm -> delta = 2.0 mm, spacing 8 mm: 6 targets fit in the 50-mm excursion (5-7 with the spread of
+    # the MAD noise estimate; 0.5 mm sat exactly on the 5-target boundary and made the test a coin flip); the client
+    # rate must stay at 100 Hz
+    with mock_node("reference", {"noise_m": 0.0004, "loop_rate_hz": 1000, "publish_rate_hz": 1000, "seed": 6}):
         a = adapter()
         r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.2, bisection_steps=2, rates_hz=(100,),
                                  expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
         a.close()
     row = r.observations["effective_rate"]["per_rate"][0]
-    assert row["commands_sent"] == 5 and "window shortened" in row.get("note", "")
+    assert 5 <= row["commands_sent"] <= 7 and "window shortened" in row.get("note", "")
     assert 70.0 <= row["client_rate_achieved_hz"] <= 130.0
     assert row["transitions"] <= row["commands_sent"]
 
@@ -355,8 +357,11 @@ def test_rate_final_command_only_is_not_credited(master):
     acc = row["acceptance"]
     assert acc["channel"] == "setpoint_cp" and acc["accepted"] <= 2 and acc["age_lower_s"] > 0.5
     assert row["feedback_count_is_evidence_of_execution"] is False
-    assert r.estimates["sub_verdicts"]["rate"] == "violated"
-    assert r.outcome == Outcome.DIVERGENT
+    # 0.1.4/0.1.5: the rate class carries no verdict; the archival 0.1.3 rule on the same bracket says violated
+    from crtk_conformance.rate_estimator import AppliedAgeEstimate, rate_subverdict_v013_archival
+    assert r.estimates["sub_verdicts"]["rate"] == "undetermined"
+    assert rate_subverdict_v013_archival(AppliedAgeEstimate(**acc), TOL.required_rate_hz()) == "violated"
+    assert r.outcome == Outcome.UNDETERMINED
 
 
 def test_rate_without_setpoint_channel_is_undetermined(master):
@@ -380,7 +385,10 @@ def test_rate_accepted_channel_satisfied_on_reference(master):
         a.close()
     acc = r.observations["effective_rate"]["per_rate"][0]["acceptance"]
     assert acc["accepted"] >= 0.9 * acc["commands_sent"] and acc["age_upper_s"] <= 0.02
-    assert r.estimates["sub_verdicts"]["rate"] == "satisfied"
+    # 0.1.4/0.1.5: reported as a diagnostic only; the archival 0.1.3 rule on this bracket would have said satisfied
+    from crtk_conformance.rate_estimator import AppliedAgeEstimate, rate_subverdict_v013_archival
+    assert r.estimates["sub_verdicts"]["rate"] == "undetermined"
+    assert rate_subverdict_v013_archival(AppliedAgeEstimate(**acc), TOL.required_rate_hz()) == "satisfied"
 
 
 def test_rate_fifty_percent_drops_violate_the_stale_interval_criterion(master):
@@ -521,7 +529,9 @@ def test_fifo_queue_slower_than_the_client_is_violated_and_logged(master, tmp_pa
     row = r.observations["effective_rate"]["per_rate"][0]
     acc = row["acceptance"]
     assert acc["status"] == "ok" and acc["age_lower_s"] > 0.3, acc
-    assert r.estimates["sub_verdicts"]["rate"] == "violated"
+    from crtk_conformance.rate_estimator import AppliedAgeEstimate, rate_subverdict_v013_archival
+    assert r.estimates["sub_verdicts"]["rate"] == "undetermined"  # 0.1.4/0.1.5: no rate verdict
+    assert rate_subverdict_v013_archival(AppliedAgeEstimate(**acc), TOL.required_rate_hz()) == "violated"
     # truth from the event log, matched by the client's header stamp
     import json as _json
     events = [_json.loads(l) for l in open(log)]

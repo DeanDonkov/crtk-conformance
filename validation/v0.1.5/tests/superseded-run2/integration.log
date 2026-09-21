@@ -1,0 +1,48 @@
+....................F..............                                      [100%]
+=================================== FAILURES ===================================
+______________ test_rate_reduced_targets_keep_the_requested_rate _______________
+
+master = None
+
+    def test_rate_reduced_targets_keep_the_requested_rate(master):
+        # resting noise 0.5 mm -> delta = 2.5 mm, spacing 10 mm: 5 targets fit; the client rate must stay at 100 Hz
+        with mock_node("reference", {"noise_m": 0.0005, "loop_rate_hz": 1000, "publish_rate_hz": 1000, "seed": 6}):
+            a = adapter()
+            r = RateSensitivityProbe(a, TOL, trials=1, gap_max_s=0.2, bisection_steps=2, rates_hz=(100,),
+                                     expectations=Expectations.from_dict({"temporal": {"rate": "required"}})).run()
+            a.close()
+        row = r.observations["effective_rate"]["per_rate"][0]
+>       assert row["commands_sent"] == 5 and "window shortened" in row.get("note", "")
+E       assert (0 == 5)
+
+tests/test_integration.py:312: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     rospy.internal:core.py:140 topic[/PSM1/measured_cp] adding connection to [http://localhost:34023/], count 0
+INFO     rospy.internal:core.py:140 topic[/PSM1/operating_state] adding connection to [http://localhost:34023/], count 0
+INFO     rospy.internal:core.py:140 topic[/PSM1/state_command] adding connection to [/crtk_mock_854_1789808229700], count 0
+INFO     rospy.internal:core.py:140 topic[/PSM1/servo_cp] adding connection to [/crtk_mock_854_1789808229700], count 0
+INFO     rospy.internal:core.py:140 topic impl's ref count is zero, deleting topic /PSM1/measured_cp...
+ERROR    rospy.internal:core.py:143 Traceback (most recent call last):
+  File "/opt/ros/noetic/lib/python3.8/site-packages/rospy/impl/tcpros_base.py", line 739, in receive_once
+    sock.setblocking(1)
+OSError: [Errno 9] Bad file descriptor
+
+INFO     rospy.internal:core.py:140 topic[/PSM1/measured_cp] removing connection to http://localhost:34023/
+WARNING  rospy.internal:core.py:146 Unknown error initiating TCP/IP socket to localhost:44751 (http://localhost:34023/): Traceback (most recent call last):
+  File "/opt/ros/noetic/lib/python3.8/site-packages/rospy/impl/tcpros_base.py", line 569, in connect
+    self.read_header()
+  File "/opt/ros/noetic/lib/python3.8/site-packages/rospy/impl/tcpros_base.py", line 664, in read_header
+    self._validate_header(read_ros_handshake_header(sock, self.read_buff, self.protocol.buff_size))
+AttributeError: 'NoneType' object has no attribute 'buff_size'
+
+INFO     rospy.internal:core.py:140 topic impl's ref count is zero, deleting topic /PSM1/operating_state...
+INFO     rospy.internal:core.py:140 topic[/PSM1/operating_state] removing connection to http://localhost:34023/
+INFO     rospy.internal:core.py:140 topic impl's ref count is zero, deleting topic /PSM1/setpoint_cp...
+INFO     rospy.internal:core.py:140 topic impl's ref count is zero, deleting topic /PSM1/state_command...
+INFO     rospy.internal:core.py:140 topic[/PSM1/state_command] removing connection to /crtk_mock_854_1789808229700
+INFO     rospy.internal:core.py:140 topic impl's ref count is zero, deleting topic /PSM1/servo_cp...
+INFO     rospy.internal:core.py:140 topic[/PSM1/servo_cp] removing connection to /crtk_mock_854_1789808229700
+=========================== short test summary info ============================
+FAILED tests/test_integration.py::test_rate_reduced_targets_keep_the_requested_rate
+1 failed, 34 passed in 535.61s (0:08:55)
+INTEGRATION EXIT 1

@@ -1,5 +1,93 @@
 # Changelog
 
+## 0.1.5 — 2026-09-19
+
+Response to the adversarial review of the RC7 (T-MRB) manuscript. Three changes to the liveness/stop sub-probe of
+`probes/rate.py`; the decision logic that they touch now lives in the ROS-free module `liveness.py` so that it can be
+replayed offline on archived trial records. The frame, scale, state and rate procedures are unchanged; the v0.1.0–0.1.3
+archives are unchanged (`validation/reanalyze_liveness_v015.py` re-derives the archived liveness intervals under the
+0.1.5 rules without touching them: 23 of 23 still contain the injected timeout; the archived delayed-application case
+widens from [489.0, 824.0] to [176.4, 824.0] ms; the eleven drift intervals' lower ends move down by one feedback period).
+
+### Liveness lower bound (review finding F1)
+- The response latency $r_i$ of the last streamed command (the return to base after the half-step offset) bounded the
+  one-way transport latency of that command only if the sample read as the response *was* the response. 0.1.3 took the
+  first gap sample within the half-step band around the base pose; an implementation that applies commands later than
+  one feedback period is still executing the earlier in-band stream when the gap starts, so that sample precedes the
+  actual response (archived `L_delayed`: $r_i$ = 0.2–9.7 ms against ~310 ms responses; the archived interval contained
+  the timeout only because the reference node times its policy from receipt and loopback transport is negligible).
+- `liveness.last_command_latency()` accepts a sample as the response only after a sample *outside* the band — the
+  departure to the half-step offset — was observed (the pose leaves the band only once the half-step is applied and
+  returns only once the last command is). Without an observed departure the trial's lower bound uses the latency
+  allowance $L$ instead, and the estimate says so (`last_stream_departures_observed`, `lower_bound_uses_L_for_all_trials`).
+  `_gap_trial` therefore no longer clears the feedback buffer after the stream: the samples between the half-step send
+  and the last send are needed by the guard. Only samples up to the post-gap send are considered: a later in-band
+  sample may be the pose passing the base on its way to the post-gap goal (a 2.05-s "response" after a 2.0-s silence
+  on live SRC v1.0.0 in the first verification run), and a response that arrives later is not attributable.
+
+### Onset-based drift lower bound (finding F8)
+- `liveness.timeout_interval_from_trials()`: the drift onset bound is $o_i - r_i - G - \delta_i/v_{\min} - P - L$; 0.1.3
+  omitted the policy-evaluation granularity $G$ that the passing-trial bound already carried. Under the stated
+  assumption $G = P$ the archived drift lower ends were one feedback period too high; all eleven still contained the
+  injected timeout (margins 12.3–24.1 ms against a 10-ms correction).
+
+### Post-gap non-responses versus baseline command loss (finding F10)
+- A post-gap command that draws no response is evidence of a silence-triggered stop policy only if commands sent without
+  a preceding silence are answered. `probe_liveness` now reads the calibration of `measure_resolution()` (12 commands
+  sent without silence): when any of them drew no response, a `rejected` trial (a non-response without a visible
+  state change) is *unattributable* — it may be the loss of the post-gap command itself — and contributes no bound
+  (`liveness.attributable()`); a `faulted` trial remains attributable, because a FAULT read from the operating state
+  cannot be produced by loss, but it then bounds the timeout by the time its state was observed
+  (`state_observed_at_s`, recorded per trial), not by the gap: the lost post-gap command lets the policy fire during
+  the response wait (seen in the v0.1.5 verification campaign, `V_drop_fault`: a 10.7-ms gap "faulted" against a
+  0.25-s policy). A `drifted` trial is attributable (the drift is seen in the pose). When no attributable tripping
+  trial remains the timeout estimate is `undetermined` with the reason recorded (`rejection_confounded_by_command_loss`,
+  `baseline_command_loss`, `confound_note`), and `run()` leaves a hold/fault/drift expectation `undetermined` instead
+  of `violated`. The archived regression case `R_drop_50` (no stop policy, 50 % random drops; 7 of 12 calibration
+  commands unanswered) was reported as `rejected` at every gap with "tau_w <= 23 ms" and a violated hold expectation;
+  under 0.1.5 it is undetermined. The cost of the rule is stated in the report: a genuine rejection policy on an
+  interface that also loses commands is undetermined, not detected (`V_drop_reject`).
+
+### Observability of a gap trial (found by the v0.1.5 verification campaign, not by the review)
+- Two further pre-existing defects of the stop sub-probe surfaced when the new experiment V ran the revised probe against
+  delayed application and random command loss; both are fixed in 0.1.5 and neither touches an archived interval
+  (`tests/test_liveness_v015.py` checks that on the archive):
+  - A `held` trial whose silence ended before the settled reference window closed (no feedback sample after it) had its
+    drift never evaluated, yet counted as a passing trial. For a release-with-drift policy the post-gap command is acted
+    on after the release, so the response alone does not show that the policy had not fired: in `V_delayed_drift_1`
+    (300-ms application delay, hence a 0.93-s reference window) silences of 0.85–0.92 s were "held" and pushed the lower
+    end to 547 ms above the 500-ms timeout. Each trial now records `drift_evaluated`; under a drift stop class only
+    evaluated trials are passing trials (`liveness.drift_evaluated()`, archived records judged by gap versus window).
+    A drift that began inside the reference window is censored: its onset is the first observable sample and bounds
+    the timeout from above only (`reference_window_still`, the window's spread against max(4 σ̂, still tolerance)).
+    The 300-ms-delay drift case is therefore `undetermined` (lower end at the floor) rather than wrong; the settle hint
+    of three times the largest response latency is the limiting heuristic and is left as is.
+  - Under command loss the recovery before a stream can fail silently (its enable or return-to-base command lost): the
+    silence then starts in FAULT, or with the pose already at the post-gap goal, and the post-gap command's "response"
+    is spurious (attained without motion; `V_drop_fault`: "held" at 0.76 and 1.13 s of silence against a 0.25-s fault
+    policy, hence an inconsistent interval). A trial is now `not_observable` when the operating state at the start of
+    the silence is FAULT/DISABLED (`state_at_gap_start`, read from the latest state message without waiting) or when
+    the pose at the end of the silence is already within the attainment tolerance of the post-gap goal
+    (`distance_to_goal_at_gap_end_m`); `not_observable_reason` says which. An unobservable bisection trial moves
+    neither end of its bracket.
+
+### Other
+- Author metadata in `pyproject.toml` corrected to the author's name as published (Dean Donkov); `LICENSE` already carries the full Apache-2.0 text without a name field since ad2232d.
+- Tests: `tests/test_liveness_v015.py` (13 tests: the departure guard on synthetic samples, the granularity term, the
+  fallback to $L$, the attribution rule under command loss, the observability rules, offline replays of the archived
+  `L_delayed`, drift and `R_drop_50` records). Unit tests: 82. Three
+  integration tests (`test_rate_final_command_only_is_not_credited`, `test_rate_accepted_channel_satisfied_on_reference`,
+  `test_fifo_queue_slower_than_the_client_is_violated_and_logged`) still asserted the 0.1.3 rate sub-verdicts and
+  therefore failed against 0.1.4 in a ROS environment; they now assert `undetermined` from the tool and the archival
+  0.1.3 rule on the same bracket; `test_rate_reduced_targets_keep_the_requested_rate` placed its resting noise exactly on
+  the five-target boundary of the rate diagnostic and failed in one of three container runs, so its noise is 0.4 mm and
+  it accepts 5–7 targets (the rate diagnostic itself is unchanged). Integration tests: 35 (run under the pure-Python ROS 1 stack of `docs/ros1-stack.md`
+  and in the `focal-crtk:rc3` container).
+- Validation: `validation/run_validation_v015.py` (the v0.1.3 campaign design with seeds offset by 30000, plus
+  experiment V: delayed application, delayed drift, random loss with a hold / fault / rejection policy) and
+  `validation/v0.1.5/` (plan, mock campaign, live SRC v1.0.0 / v2.0.0 runs, the offline reanalysis of the v0.1.3
+  liveness archive, test logs). The v0.1.3 archive remains the measurement set reported in the manuscript.
+
 ## 0.1.4 — 2026-09-11
 
 > **Commit hashes**: the history was re-authored to a single author before first publication, so every

@@ -66,7 +66,7 @@ temporal:
 | `RateSensitivityProbe` — operating-state precondition; liveness / stop-behaviour probe with measured timing resolution, observational stop classes, drift onset/speed estimation and a timeout **interval** with explicit allowances; source age of the applied setpoint reported by `setpoint_cp` (bracketed between samples) as a **diagnostic**, with the feedback-crossing statistic likewise | identifying the internal controller rate (not identifiable through the interface); identifying a physical release from the pose; measuring the platform's own jitter; **any rate verdict at all (0.1.4)** |
 | JSON report validated against `schema/report.schema.json`; text summary; every outcome-affecting constant recorded | PDF reports |
 | `crtk-mock` with presets emulating *documented* behaviours (built from cited configuration values) | any emulation of dVRK/AMBF/SRC *code* |
-| Unit tests (no ROS; 68) incl. both reviewers' counterexamples (`tests/adversarial/`, `tests/test_liveness_verdict.py` offline replays) + integration tests (ROS 1; 35) | hardware tests of any kind |
+| Unit tests (no ROS; 82) incl. both reviewers' counterexamples (`tests/adversarial/`, `tests/test_liveness_verdict.py` and `tests/test_liveness_v015.py` offline replays) + integration tests (ROS 1; 35) | hardware tests of any kind |
 
 Three probe families, one per binding class; the temporal probe has three sub-probes. There are no others.
 
@@ -128,11 +128,21 @@ where the decision boundary lies). All are CLI options with these defaults and a
 `--trials` (default 10): the scale estimate is the mean of *n* trials with a Student-t 95 % interval; the spatial
 interval is propagated from Hotelling T² regions (needs n ≥ 4); the liveness interval is built from the passing and
 tripping gaps of `--temporal-trials` bisection runs (needs ≥ 3). `--still-tol-mm` also sets the drift-onset floor.
+0.1.5: the lower end of the liveness interval uses the response latency of the last streamed command only when that
+command's departure to the half-step offset was observed before its return to base (`liveness.last_command_latency`);
+otherwise the latency allowance is used and the estimate says so. The onset-based drift bound carries the granularity
+term. When calibration commands sent without any silence draw no response, a post-gap non-response without a visible
+state change is not read as a stop policy (`rejection_confounded_by_command_loss`; a FAULT read from the operating
+state still counts, bounded by the time it was observed) and the stop expectation stays `undetermined`. A gap trial is
+`not_observable` when the silence started in FAULT/DISABLED or the pose was already at the post-gap goal, and a `held`
+trial whose drift could not be evaluated is not a passing trial for a drift policy (`CHANGELOG.md`, 0.1.5).
 
 ## Validate against the mock (reproduces the paper's Section 7)
 
 ```
 python validation/run_validation_v013.py --out validation/v0.1.3/mock          # ~1 h, private ROS master on :11611
+python validation/run_validation_v015.py --out validation/v0.1.5/mock          # the same design with the 0.1.5 probe (seeds +30000) plus experiment V, :11615
+python validation/reanalyze_liveness_v015.py                                   # the archived v0.1.3 liveness intervals under the 0.1.5 rules (offline)
 python validation/analyze_v013.py validation/v0.1.3/mock --live validation/v0.1.3/live-src-v1 validation/v0.1.3/live-src-v2
 ```
 

@@ -1,0 +1,1384 @@
+{
+ "preset": "reference",
+ "overrides": {
+  "watchdog_s": 0.5,
+  "watchdog_mode": "release",
+  "release_drift_m_s": 0.0,
+  "seed": 30230,
+  "state_machine": false,
+  "require_enabled": false,
+  "event_log_path": "validation/v0.1.5/mock/L_release_nodrift_hold.events.jsonl"
+ },
+ "expectation": {
+  "spatial": {
+   "mode": "discover_only",
+   "translation_m": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "orientation_tolerance_deg": null,
+   "declared": false
+  },
+  "dimensional": {
+   "mode": "discover_only",
+   "expected_unit_m": 1.0,
+   "declared": false
+  },
+  "temporal": {
+   "state_machine": "any",
+   "stop_behaviour": "hold",
+   "rate": "any",
+   "horizon_s": null,
+   "declared": true
+  },
+  "source": "dict"
+ },
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.002644566000526538,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/local/measured_cp",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/servo_cp",
+   "/PSM1/setpoint_cp"
+  ]
+ },
+ "result": {
+  "probe": "RateSensitivityProbe",
+  "binding_class": "temporal",
+  "outcome": "conformant",
+  "estimates": {
+   "required_rate_hz_from_tolerance": 50.0,
+   "stop_class": "held_through_range",
+   "tau_w_estimate_s": null,
+   "stop_horizon_s": 1.5,
+   "feedback_target_crossings_at_client_rate_hz": 99.99082730603801,
+   "client_rate_achieved_hz": 99.99082730603801,
+   "publish_rate_hz": 100.06466584628478,
+   "zoh_error_at_client_rate_m": 0.0009552148000238959,
+   "sub_verdicts": {
+    "state_machine": null,
+    "stop_behaviour": "satisfied",
+    "rate": null
+   }
+  },
+  "predicted_error_m": null,
+  "predicted_error_ci": null,
+  "decision_basis": "every declared temporal expectation satisfied: stop_behaviour",
+  "observations": {
+   "expectation": {
+    "state_machine": "any",
+    "stop_behaviour": "hold",
+    "rate": "any",
+    "horizon_s": null,
+    "declared": true
+   },
+   "state_precondition": {
+    "operating_state_present": false,
+    "state_command_present": false,
+    "executed_without_state_machine": true,
+    "attained_without_state_machine": true,
+    "closest_approach_m": 0.0
+   },
+   "resolution": {
+    "sleep_error_median_s": 9.067100034371818e-05,
+    "sleep_error_p95_s": 0.00011996500063105476,
+    "send_interval_median_s": 4.7150999307632446e-05,
+    "send_interval_p95_s": 0.00013088099967717426,
+    "feedback_period_s": 0.010001957670001503,
+    "resting_noise_measured_under_hold_stream_hz": 100.0,
+    "resting_noise_sigma_m": 0.0,
+    "step_requested_m": 0.002,
+    "step_used_m": 0.002,
+    "latency_probes_attained": 12,
+    "latency_probes_responded": 12,
+    "tracking_ratio_by_direction": {
+     "0+": 1.0,
+     "0-": 1.0,
+     "1+": 1.0,
+     "1-": 1.0,
+     "2+": 1.0,
+     "2-": 1.0
+    },
+    "probe_direction": "0+",
+    "response_latency_median_s": 0.009712435500205174,
+    "response_latency_p95_s": 0.00993228400056978,
+    "settle_hint_s": 0.029943429000013566,
+    "resolution_floor_s": 0.01050364967061796,
+    "response_timeout_s": 0.3,
+    "hold_tolerance_m": 0.001
+   },
+   "liveness": {
+    "gap_max_s": 1.5,
+    "resolution_floor_s": 0.01050364967061796,
+    "response_timeout_s": 0.3,
+    "hold_tolerance_m": 0.001,
+    "granularity_allowance_s": 0.010001957670001503,
+    "trials": [
+     {
+      "gap_requested_s": 1.5,
+      "gap_s": 1.5001312249996772,
+      "below_resolution": false,
+      "executed": true,
+      "responded": true,
+      "closest_approach_m": 0.0,
+      "moved_m": 0.002,
+      "initial_distance_m": 0.002,
+      "settled_distance_m": 0.001,
+      "reduction_m": 0.001,
+      "time_to_execute_s": 0.01094158000069001,
+      "time_to_respond_s": 0.01094158000069001,
+      "last_stream_latency_s": 0.001363872000183619,
+      "last_stream_departure_observed": true,
+      "state_observed_at_s": 1.5115475169995989,
+      "drift_m": 0.0,
+      "drift_onset_s": null,
+      "drift_speed_m_s": null,
+      "onset_threshold_m": 1e-05,
+      "reference_window_motion": false,
+      "reference_window_s": 0.1,
+      "samples_in_gap": 150,
+      "class": "held",
+      "state": null
+     },
+     {
+      "gap_requested_s": 1.5,
+      "gap_s": 1.500139147000482,
+      "below_resolution": false,
+      "executed": true,
+      "responded": true,
+      "closest_approach_m": 0.0,
+      "moved_m": 0.002,
+      "initial_distance_m": 0.002,
+      "settled_distance_m": 0.001,
+      "reduction_m": 0.001,
+      "time_to_execute_s": 0.010930029000519426,
+      "time_to_respond_s": 0.010930029000519426,
+      "last_stream_latency_s": 0.0011173670000061975,
+      "last_stream_departure_observed": true,
+      "state_observed_at_s": 1.511610968000241,
+      "drift_m": 0.0,
+      "drift_onset_s": null,
+      "drift_speed_m_s": null,
+      "onset_threshold_m": 1e-05,
+      "reference_window_motion": false,
+      "reference_window_s": 0.1,
+      "samples_in_gap": 150,
+      "class": "held",
+      "state": null
+     },
+     {
+      "gap_requested_s": 1.5,
+      "gap_s": 1.500153199000124,
+      "below_resolution": false,
+      "executed": true,
+      "responded": true,
+      "closest_approach_m": 0.0,
+      "moved_m": 0.002,
+      "initial_distance_m": 0.002,
+      "settled_distance_m": 0.001,
+      "reduction_m": 0.001,
+      "time_to_execute_s": 0.010955630000353267,
+      "time_to_respond_s": 0.010955630000353267,
+      "last_stream_latency_s": 0.0011988570004177745,
+      "last_stream_departure_observed": true,
+      "state_observed_at_s": 1.5116051650002191,
+      "drift_m": 0.0,
+      "drift_onset_s": null,
+      "drift_speed_m_s": null,
+      "onset_threshold_m": 1e-05,
+      "reference_window_motion": false,
+      "reference_window_s": 0.1,
+      "samples_in_gap": 150,
+      "class": "held",
+      "state": null
+     },
+     {
+      "gap_requested_s": 1.5,
+      "gap_s": 1.5001718240000628,
+      "below_resolution": false,
+      "executed": true,
+      "responded": true,
+      "closest_approach_m": 0.0,
+      "moved_m": 0.002,
+      "initial_distance_m": 0.002,
+      "settled_distance_m": 0.001,
+      "reduction_m": 0.001,
+      "time_to_execute_s": 0.011242863000006764,
+      "time_to_respond_s": 0.011242863000006764,
+      "last_stream_latency_s": 0.0015372920006484492,
+      "last_stream_departure_observed": true,
+      "state_observed_at_s": 1.511993851000625,
+      "drift_m": 0.0,
+      "drift_onset_s": null,
+      "drift_speed_m_s": null,
+      "onset_threshold_m": 1e-05,
+      "reference_window_motion": false,
+      "reference_window_s": 0.1,
+      "samples_in_gap": 150,
+      "class": "held",
+      "state": null
+     },
+     {
+      "gap_requested_s": 1.5,
+      "gap_s": 1.5001369820001855,
+      "below_resolution": false,
+      "executed": true,
+      "responded": true,
+      "closest_approach_m": 0.0,
+      "moved_m": 0.002,
+      "initial_distance_m": 0.002,
+      "settled_distance_m": 0.001,
+      "reduction_m": 0.001,
+      "time_to_execute_s": 0.010609173999910126,
+      "time_to_respond_s": 0.010609173999910126,
+      "last_stream_latency_s": 0.010959640000692161,
+      "last_stream_departure_observed": true,
+      "state_observed_at_s": 1.5113730520006357,
+      "drift_m": 0.0,
+      "drift_onset_s": null,
+      "drift_speed_m_s": null,
+      "onset_threshold_m": 1e-05,
+      "reference_window_motion": false,
+      "reference_window_s": 0.1,
+      "samples_in_gap": 150,
+      "class": "held",
+      "state": null
+     }
+    ],
+    "tripped_at_gap_max": {
+     "count": 0,
+     "total": 5,
+     "p": 0.0,
+     "ci_low": 0.0,
+     "ci_high": 0.43448246478317476
+    },
+    "drift_during_gap_max_m": {
+     "n": 5,
+     "mean": 0.0,
+     "std": 0.0,
+     "ci_low": 0.0,
+     "ci_high": 0.0,
+     "alpha": 0.05
+    },
+    "stop_class": "held_through_range",
+    "tau_w_estimate_s": null,
+    "latency_allowance_s": 0.011242863000006764,
+    "latency_allowance_source": "run maximum of 22 observed response latencies (not a bound)",
+    "latency_allowance_conditional": true,
+    "finding": "held within 0.001 interface units for silences up to 1.5 s and responded afterwards (n=5); a stop policy with a longer timeout is not excluded"
+   },
+   "effective_rate": {
+    "per_rate": [
+     {
+      "command_rate_requested_hz": 100.0,
+      "commands_sent": 100,
+      "client_rate_achieved_hz": 99.99082730603801,
+      "window_s": 1.0000917353542231,
+      "publish_rate_hz": 100.06466584628478,
+      "samples_total": 106,
+      "samples_matched": 106,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 100,
+      "transitions": 100,
+      "observable_rate_hz": 99.99082730603801,
+      "match_tolerance_m": 1e-06,
+      "match_tolerance_source": "5 x resting noise sigma_hat (0.00e+00 m), floor 1e-6 m",
+      "target_spacing_m": 1.999999999999962e-05,
+      "observation_bounded_by": "client",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.002,
+      "command_window_s": 1.0000869470004545,
+      "zoh_error_bound_m": 0.0009552148000238959,
+      "feedback_target_crossings_hz": 99.99082730603801,
+      "feedback_count_is_evidence_of_execution": false,
+      "feedback_latency_allowance_source": "none: age_lower is the age at the probe's receipt of the sample (transport delay of the channel not subtracted)",
+      "feedback_latency_allowance_conditional": true,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 100,
+       "accepted": 100,
+       "accepted_fraction": 1.0,
+       "out_of_order_events": 0,
+       "first_application_delay_s": 0.009029980000377691,
+       "age_lower_s": 0.009071312000742182,
+       "age_upper_s": 0.019104296000477916,
+       "max_update_gap_s": 0.010291769000104978,
+       "channel_period_s": 0.01000277000002825,
+       "samples_in_window": 100,
+       "client_rate_achieved_hz": 99.99082730603801,
+       "client_max_send_gap_s": 0.0101200630006133,
+       "status": "ok",
+       "reason": "",
+       "unmatched_after_first_fraction": 0.0,
+       "age_lower_at_receipt_s": 0.009071312000742182,
+       "feedback_latency_allowance_s": 0.0,
+       "window_start_s": 6565.903184237,
+       "window_end_s": 6566.902145292
+      },
+      "trace": {
+       "send_times_mono": [
+        6565.903184,
+        6565.913304,
+        6565.923335,
+        6565.933266,
+        6565.943269,
+        6565.953324,
+        6565.963287,
+        6565.973321,
+        6565.983303,
+        6565.993257,
+        6566.003265,
+        6566.013294,
+        6566.023303,
+        6566.033289,
+        6566.04326,
+        6566.053267,
+        6566.063269,
+        6566.073301,
+        6566.083261,
+        6566.093266,
+        6566.103317,
+        6566.113267,
+        6566.123255,
+        6566.133326,
+        6566.143265,
+        6566.153286,
+        6566.163319,
+        6566.173266,
+        6566.183308,
+        6566.193309,
+        6566.203262,
+        6566.213333,
+        6566.22326,
+        6566.233315,
+        6566.2433,
+        6566.25326,
+        6566.263258,
+        6566.273262,
+        6566.283317,
+        6566.293274,
+        6566.303262,
+        6566.31326,
+        6566.323264,
+        6566.333321,
+        6566.343298,
+        6566.353284,
+        6566.363257,
+        6566.373255,
+        6566.383253,
+        6566.3933,
+        6566.403259,
+        6566.413375,
+        6566.423263,
+        6566.433278,
+        6566.443279,
+        6566.453272,
+        6566.463265,
+        6566.473274,
+        6566.483259,
+        6566.493311,
+        6566.503266,
+        6566.513326,
+        6566.523288,
+        6566.5333,
+        6566.543276,
+        6566.553271,
+        6566.56326,
+        6566.573261,
+        6566.583315,
+        6566.593302,
+        6566.603298,
+        6566.613301,
+        6566.623262,
+        6566.633266,
+        6566.643255,
+        6566.653304,
+        6566.663269,
+        6566.673256,
+        6566.683279,
+        6566.693259,
+        6566.703331,
+        6566.713322,
+        6566.72326,
+        6566.73331,
+        6566.743305,
+        6566.753267,
+        6566.763259,
+        6566.773254,
+        6566.783304,
+        6566.793259,
+        6566.80327,
+        6566.813263,
+        6566.823269,
+        6566.833283,
+        6566.843289,
+        6566.853269,
+        6566.863319,
+        6566.873258,
+        6566.88326,
+        6566.893275
+       ],
+       "send_stamps_wall": [
+        1789806234.461323,
+        1789806234.471453,
+        1789806234.481483,
+        1789806234.491402,
+        1789806234.501403,
+        1789806234.511456,
+        1789806234.521431,
+        1789806234.531469,
+        1789806234.54145,
+        1789806234.551387,
+        1789806234.561397,
+        1789806234.57144,
+        1789806234.58144,
+        1789806234.591433,
+        1789806234.60139,
+        1789806234.611399,
+        1789806234.621406,
+        1789806234.631451,
+        1789806234.641392,
+        1789806234.651405,
+        1789806234.661464,
+        1789806234.671401,
+        1789806234.681385,
+        1789806234.691463,
+        1789806234.7014,
+        1789806234.711432,
+        1789806234.721465,
+        1789806234.731399,
+        1789806234.741454,
+        1789806234.751457,
+        1789806234.761397,
+        1789806234.771481,
+        1789806234.781396,
+        1789806234.791464,
+        1789806234.801433,
+        1789806234.811391,
+        1789806234.821388,
+        1789806234.831406,
+        1789806234.841461,
+        1789806234.851412,
+        1789806234.861392,
+        1789806234.871391,
+        1789806234.8814,
+        1789806234.891469,
+        1789806234.901428,
+        1789806234.911421,
+        1789806234.921387,
+        1789806234.931386,
+        1789806234.941384,
+        1789806234.951431,
+        1789806234.96139,
+        1789806234.971522,
+        1789806234.981394,
+        1789806234.991408,
+        1789806235.00141,
+        1789806235.011408,
+        1789806235.021395,
+        1789806235.03141,
+        1789806235.04139,
+        1789806235.051444,
+        1789806235.061402,
+        1789806235.071473,
+        1789806235.081434,
+        1789806235.091447,
+        1789806235.101414,
+        1789806235.111408,
+        1789806235.12139,
+        1789806235.131392,
+        1789806235.141462,
+        1789806235.151453,
+        1789806235.161445,
+        1789806235.171437,
+        1789806235.181395,
+        1789806235.1914,
+        1789806235.201385,
+        1789806235.211452,
+        1789806235.221399,
+        1789806235.231386,
+        1789806235.241423,
+        1789806235.25139,
+        1789806235.261478,
+        1789806235.271468,
+        1789806235.281392,
+        1789806235.291456,
+        1789806235.301453,
+        1789806235.3114,
+        1789806235.321389,
+        1789806235.331385,
+        1789806235.341454,
+        1789806235.35139,
+        1789806235.361401,
+        1789806235.371397,
+        1789806235.3814,
+        1789806235.39143,
+        1789806235.401437,
+        1789806235.4114,
+        1789806235.421467,
+        1789806235.431388,
+        1789806235.441391,
+        1789806235.451418
+       ],
+       "targets_x": [
+        2e-05,
+        4e-05,
+        6e-05,
+        8e-05,
+        0.0001,
+        0.00012,
+        0.00014,
+        0.00016,
+        0.00018,
+        0.0002,
+        0.00022,
+        0.00024,
+        0.00026,
+        0.00028,
+        0.0003,
+        0.00032,
+        0.00034,
+        0.00036,
+        0.00038,
+        0.0004,
+        0.00042,
+        0.00044,
+        0.00046,
+        0.00048,
+        0.0005,
+        0.00052,
+        0.00054,
+        0.00056,
+        0.00058,
+        0.0006,
+        0.00062,
+        0.00064,
+        0.00066,
+        0.00068,
+        0.0007,
+        0.00072,
+        0.00074,
+        0.00076,
+        0.00078,
+        0.0008,
+        0.00082,
+        0.00084,
+        0.00086,
+        0.00088,
+        0.0009,
+        0.00092,
+        0.00094,
+        0.00096,
+        0.00098,
+        0.001,
+        0.00102,
+        0.00104,
+        0.00106,
+        0.00108,
+        0.0011,
+        0.00112,
+        0.00114,
+        0.00116,
+        0.00118,
+        0.0012,
+        0.00122,
+        0.00124,
+        0.00126,
+        0.00128,
+        0.0013,
+        0.00132,
+        0.00134,
+        0.00136,
+        0.00138,
+        0.0014,
+        0.00142,
+        0.00144,
+        0.00146,
+        0.00148,
+        0.0015,
+        0.00152,
+        0.00154,
+        0.00156,
+        0.00158,
+        0.0016,
+        0.00162,
+        0.00164,
+        0.00166,
+        0.00168,
+        0.0017,
+        0.00172,
+        0.00174,
+        0.00176,
+        0.00178,
+        0.0018,
+        0.00182,
+        0.00184,
+        0.00186,
+        0.00188,
+        0.0019,
+        0.00192,
+        0.00194,
+        0.00196,
+        0.00198,
+        0.002
+       ],
+       "window_end_mono": 6566.962479,
+       "setpoint_times_mono": [
+        6565.912214,
+        6565.922042,
+        6565.93207,
+        6565.942145,
+        6565.952153,
+        6565.962156,
+        6565.972248,
+        6565.982078,
+        6565.992134,
+        6566.002124,
+        6566.012144,
+        6566.022125,
+        6566.032176,
+        6566.04212,
+        6566.05216,
+        6566.062142,
+        6566.07213,
+        6566.082277,
+        6566.092084,
+        6566.102089,
+        6566.112141,
+        6566.122052,
+        6566.132187,
+        6566.142131,
+        6566.152134,
+        6566.162114,
+        6566.172175,
+        6566.182064,
+        6566.192292,
+        6566.202062,
+        6566.212078,
+        6566.221935,
+        6566.232095,
+        6566.242242,
+        6566.252264,
+        6566.262233,
+        6566.272109,
+        6566.282139,
+        6566.292366,
+        6566.302227,
+        6566.312217,
+        6566.322024,
+        6566.332205,
+        6566.342119,
+        6566.352158,
+        6566.362112,
+        6566.372263,
+        6566.382076,
+        6566.392325,
+        6566.402149,
+        6566.411998,
+        6566.422224,
+        6566.432101,
+        6566.442304,
+        6566.451938,
+        6566.462078,
+        6566.472109,
+        6566.482107,
+        6566.492242,
+        6566.502133,
+        6566.511983,
+        6566.52206,
+        6566.532118,
+        6566.542211,
+        6566.552144,
+        6566.562267,
+        6566.572153,
+        6566.582096,
+        6566.592134,
+        6566.602169,
+        6566.612061,
+        6566.622241,
+        6566.632119,
+        6566.642186,
+        6566.651941,
+        6566.662085,
+        6566.672186,
+        6566.682045,
+        6566.692068,
+        6566.702019,
+        6566.712165,
+        6566.722094,
+        6566.73214,
+        6566.741955,
+        6566.752247,
+        6566.762211,
+        6566.772174,
+        6566.782182,
+        6566.792231,
+        6566.802293,
+        6566.812261,
+        6566.822092,
+        6566.831876,
+        6566.842098,
+        6566.852257,
+        6566.862168,
+        6566.872214,
+        6566.88219,
+        6566.892139,
+        6566.902145,
+        6566.912128,
+        6566.922068,
+        6566.932193,
+        6566.94213,
+        6566.951934,
+        6566.96191
+       ],
+       "setpoint_positions": [
+        [
+         2e-05,
+         0.0,
+         -0.1
+        ],
+        [
+         4e-05,
+         0.0,
+         -0.1
+        ],
+        [
+         6e-05,
+         0.0,
+         -0.1
+        ],
+        [
+         8e-05,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0001,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00012,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00014,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00016,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00018,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0002,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00022,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00024,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00026,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00028,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0003,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00032,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00034,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00036,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00038,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0004,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00042,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00044,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00046,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00048,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0005,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00052,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00054,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00056,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00058,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0006,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00062,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00064,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00066,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00068,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0007,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00072,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00074,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00076,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00078,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0008,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00082,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00084,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00086,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00088,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0009,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00092,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00094,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00096,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00098,
+         0.0,
+         -0.1
+        ],
+        [
+         0.001,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00102,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00104,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00106,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00108,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0011,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00112,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00114,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00116,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00118,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0012,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00122,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00124,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00126,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00128,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0013,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00132,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00134,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00136,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00138,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0014,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00142,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00144,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00146,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00148,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0015,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00152,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00154,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00156,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00158,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0016,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00162,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00164,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00166,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00168,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0017,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00172,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00174,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00176,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00178,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0018,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00182,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00184,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00186,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00188,
+         0.0,
+         -0.1
+        ],
+        [
+         0.0019,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00192,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00194,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00196,
+         0.0,
+         -0.1
+        ],
+        [
+         0.00198,
+         0.0,
+         -0.1
+        ],
+        [
+         0.002,
+         0.0,
+         -0.1
+        ],
+        [
+         0.002,
+         0.0,
+         -0.1
+        ],
+        [
+         0.002,
+         0.0,
+         -0.1
+        ],
+        [
+         0.002,
+         0.0,
+         -0.1
+        ],
+        [
+         0.002,
+         0.0,
+         -0.1
+        ],
+        [
+         0.002,
+         0.0,
+         -0.1
+        ],
+        [
+         0.002,
+         0.0,
+         -0.1
+        ]
+       ]
+      }
+     }
+    ],
+    "match_tolerance_m": 1e-06,
+    "match_tolerance_source": "5 x resting noise sigma_hat (0.00e+00 m), floor 1e-6 m"
+   }
+  },
+  "notes": [
+   "held within 0.001 interface units for silences up to 1.5 s (claimed horizon 1.5 s) and responded afterwards"
+  ],
+  "started_at": 1789806222.8313346,
+  "duration_s": 12.699355363845825
+ },
+ "wall_s": 12.699400186538696,
+ "event_log": "L_release_nodrift_hold.events.jsonl",
+ "truth": {
+  "tau_w_s": 0.5,
+  "mode": "release",
+  "drift_m_s": 0.0,
+  "expect": "hold",
+  "note": "a release without drift is not observable from the pose"
+ }
+}

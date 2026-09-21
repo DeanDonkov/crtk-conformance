@@ -1,0 +1,2207 @@
+{
+ "preset": "reference",
+ "overrides": {
+  "loop_rate_hz": 1500,
+  "publish_rate_hz": 100,
+  "noise_m": 5e-05,
+  "seed": 30309,
+  "event_log_path": "validation/v0.1.5/mock/T_rate_009.events.jsonl"
+ },
+ "expectation": {
+  "spatial": {
+   "mode": "discover_only",
+   "translation_m": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "orientation_tolerance_deg": null,
+   "declared": false
+  },
+  "dimensional": {
+   "mode": "discover_only",
+   "expected_unit_m": 1.0,
+   "declared": false
+  },
+  "temporal": {
+   "state_machine": "any",
+   "stop_behaviour": "any",
+   "rate": "required",
+   "horizon_s": null,
+   "declared": true
+  },
+  "source": "dict"
+ },
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.002743606999501935,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": true,
+    "type": "crtk_msgs/OperatingState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": true,
+    "type": "crtk_msgs/StringStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/local/measured_cp",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/operating_state",
+   "/PSM1/servo_cp",
+   "/PSM1/setpoint_cp",
+   "/PSM1/state_command"
+  ]
+ },
+ "result": {
+  "probe": "RateSensitivityProbe",
+  "binding_class": "temporal",
+  "outcome": "undetermined",
+  "estimates": {
+   "required_rate_hz_from_tolerance": 50.0,
+   "stop_class": "held_through_range",
+   "tau_w_estimate_s": null,
+   "stop_horizon_s": 0.3,
+   "feedback_target_crossings_at_client_rate_hz": 99.95708203857862,
+   "client_rate_achieved_hz": 99.95708203857862,
+   "publish_rate_hz": 100.01017196495123,
+   "zoh_error_at_client_rate_m": 0.0009924788500029536,
+   "applied_setpoint_age_at_client_rate": {
+    "channel": "setpoint_cp",
+    "commands_sent": 37,
+    "accepted": 37,
+    "accepted_fraction": 1.0,
+    "out_of_order_events": 0,
+    "first_application_delay_s": 0.00983686299969122,
+    "age_lower_s": 0.00983686299969122,
+    "age_upper_s": 0.01984957700005907,
+    "max_update_gap_s": 0.010290756999893347,
+    "channel_period_s": 0.010000068500175985,
+    "samples_in_window": 37,
+    "client_rate_achieved_hz": 99.95708203857862,
+    "client_max_send_gap_s": 0.010091625999848475,
+    "status": "ok",
+    "reason": "",
+    "unmatched_after_first_fraction": 0.0,
+    "age_lower_at_receipt_s": 0.00983686299969122,
+    "feedback_latency_allowance_s": 0.0,
+    "window_start_s": 4918.182770214,
+    "window_end_s": 4918.552510166
+   },
+   "rate_note": "reported as a diagnostic, not a conformance verdict (0.1.4). Two properties of the channel, not of this run, prevent a verdict: setpoint_cp identifies the applied command by matching its VALUE against the history of sent targets, carrying no explicit command identifier or send-time stamp, so a repeated or superseded target cannot be attributed unambiguously; and age_lower is measured at the probe's receipt of the sample, exceeding the setpoint's publication-side age by a transport delay that no CRTK artifact bounds for an arbitrary implementation. The source-age bracket [age_lower_s, age_upper_s] is computed and reported exactly as before; only the satisfied/violated label is withdrawn. Deciding this class needs an explicit command identifier or send-time stamp on the channel (see the specification recommendation).",
+   "sub_verdicts": {
+    "state_machine": null,
+    "stop_behaviour": null,
+    "rate": "undetermined"
+   }
+  },
+  "predicted_error_m": null,
+  "predicted_error_ci": null,
+  "decision_basis": "rate expectation not decided: reported as a diagnostic, not a conformance verdict (0.1.4). Two properties of the channel, not of this run, prevent a verdict: setpoint_cp identifies the applied command by matching its VALUE against the history of sent targets, carrying no explicit command identifier or send-time stamp, so a repeated or superseded target cannot be attributed unambiguously; and age_lower is measured at the probe's receipt of the sample, exceeding the setpoint's publication-side age by a transport delay that no CRTK artifact bounds for an arbitrary implementation. The source-age bracket [age_lower_s, age_upper_s] is computed and reported exactly as before; only the satisfied/violated label is withdrawn. Deciding this class needs an explicit command identifier or send-time stamp on the channel (see the specification recommendation).; diagnostic: source age of the applied setpoint bracketed [9.8, 19.8] ms against a required period of 20 ms (setpoint_cp channel, 37 of 37 commands applied); the client's own stream sustained 100 Hz with send gaps <= 10 ms; the lower end is the age at the probe's receipt of the channel sample, above the publication-side age by the unbounded transport delay of setpoint_cp (--latency-bound-s subtracts a client-supplied bound)",
+  "observations": {
+   "expectation": {
+    "state_machine": "any",
+    "stop_behaviour": "any",
+    "rate": "required",
+    "horizon_s": null,
+    "declared": true
+   },
+   "state_precondition": {
+    "operating_state_present": true,
+    "state_command_present": true,
+    "state_after_disable": "DISABLED",
+    "executed_when_disabled": false,
+    "attained_when_disabled": false,
+    "enable": {
+     "operating_state_present": true,
+     "state_before": {
+      "state": "DISABLED",
+      "is_homed": true,
+      "is_busy": false
+     },
+     "state_after": {
+      "state": "ENABLED",
+      "is_homed": true,
+      "is_busy": false
+     },
+     "enable_latency_s": 0.010596318999887444
+    },
+    "executed_when_enabled": true,
+    "attained_when_enabled": true
+   },
+   "resolution": {
+    "sleep_error_median_s": 0.00011942400009502287,
+    "sleep_error_p95_s": 0.00015040000027511258,
+    "send_interval_median_s": 4.678599998442223e-05,
+    "send_interval_p95_s": 0.0001586700000189012,
+    "feedback_period_s": 0.010001306009999099,
+    "resting_noise_measured_under_hold_stream_hz": 100.0,
+    "resting_noise_sigma_m": 6.655894094541141e-05,
+    "step_requested_m": 0.002,
+    "step_used_m": 0.002,
+    "latency_probes_attained": 12,
+    "latency_probes_responded": 12,
+    "tracking_ratio_by_direction": {
+     "0+": 0.9560371405178647,
+     "0-": 0.9859367336991947,
+     "1+": 0.9670273663920679,
+     "1-": 0.9672715777375115,
+     "2+": 0.9525311511849858,
+     "2-": 0.9676186107508704
+    },
+    "probe_direction": "0-",
+    "response_latency_median_s": 0.00964083849976305,
+    "response_latency_p95_s": 0.009727685999678215,
+    "settle_hint_s": 0.029274371999235882,
+    "resolution_floor_s": 0.010619446010587126,
+    "response_timeout_s": 0.3,
+    "hold_tolerance_m": 0.001
+   },
+   "liveness": {
+    "gap_max_s": 0.3,
+    "resolution_floor_s": 0.010619446010587126,
+    "response_timeout_s": 0.3,
+    "hold_tolerance_m": 0.001,
+    "granularity_allowance_s": 0.010001306009999099,
+    "trials": [
+     {
+      "gap_requested_s": 0.3,
+      "gap_s": 0.30010012599996116,
+      "below_resolution": false,
+      "executed": true,
+      "responded": true,
+      "closest_approach_m": 7.715999404997903e-05,
+      "moved_m": 0.0018918671238661229,
+      "initial_distance_m": 0.001957785208686539,
+      "settled_distance_m": 7.715999404997903e-05,
+      "reduction_m": 0.00188062521463656,
+      "time_to_execute_s": 0.0010507119995963876,
+      "time_to_respond_s": 0.0010507119995963876,
+      "last_stream_latency_s": 0.0013518300002033357,
+      "last_stream_departure_observed": true,
+      "state_observed_at_s": 0.30167689900008554,
+      "drift_m": 0.00013032527566733568,
+      "drift_onset_s": null,
+      "drift_speed_m_s": null,
+      "onset_threshold_m": 0.00019967682283623424,
+      "reference_window_motion": false,
+      "reference_window_s": 0.1,
+      "samples_in_gap": 30,
+      "class": "held",
+      "state": "ENABLED"
+     }
+    ],
+    "tripped_at_gap_max": {
+     "count": 0,
+     "total": 1,
+     "p": 0.0,
+     "ci_low": 0.0,
+     "ci_high": 0.7934506856227626
+    },
+    "drift_during_gap_max_m": {
+     "n": 1,
+     "mean": 0.00013032527566733568,
+     "std": null,
+     "ci_low": null,
+     "ci_high": null,
+     "alpha": 0.05
+    },
+    "stop_class": "held_through_range",
+    "tau_w_estimate_s": null,
+    "latency_allowance_s": 0.009758123999745294,
+    "latency_allowance_source": "run maximum of 14 observed response latencies (not a bound)",
+    "latency_allowance_conditional": true,
+    "finding": "held within 0.001 interface units for silences up to 0.3 s and responded afterwards (n=1); a stop policy with a longer timeout is not excluded"
+   },
+   "effective_rate": {
+    "per_rate": [
+     {
+      "command_rate_requested_hz": 50.0,
+      "commands_sent": 37,
+      "client_rate_achieved_hz": 49.988993187396,
+      "window_s": 0.7401629366948126,
+      "publish_rate_hz": 100.00210079417604,
+      "samples_total": 80,
+      "samples_matched": 80,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 37,
+      "transitions": 37,
+      "observable_rate_hz": 49.988993187396,
+      "match_tolerance_m": 0.00033279470472705706,
+      "match_tolerance_source": "5 x resting noise sigma_hat (6.66e-05 m), floor 1e-6 m",
+      "target_spacing_m": 0.0013311788189082248,
+      "observation_bounded_by": "client",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.049253616299604445,
+      "command_window_s": 0.7400907459996233,
+      "note": "targets reduced to 37 (spacing 4 delta) at the requested rate: window shortened to 0.74 s to stay within the excursion 0.05",
+      "zoh_error_bound_m": 0.0014805316999627395,
+      "feedback_target_crossings_hz": 49.988993187396,
+      "feedback_count_is_evidence_of_execution": false,
+      "feedback_latency_allowance_source": "none: age_lower is the age at the probe's receipt of the sample (transport delay of the channel not subtracted)",
+      "feedback_latency_allowance_conditional": true,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 37,
+       "accepted": 37,
+       "accepted_fraction": 1.0,
+       "out_of_order_events": 0,
+       "first_application_delay_s": 0.009235643000465643,
+       "age_lower_s": 0.019649124999887135,
+       "age_upper_s": 0.029610633999254787,
+       "max_update_gap_s": 0.02028230599989911,
+       "channel_period_s": 0.009999270000662364,
+       "samples_in_window": 73,
+       "client_rate_achieved_hz": 49.988993187396,
+       "client_max_send_gap_s": 0.02010548100042797,
+       "status": "ok",
+       "reason": "",
+       "unmatched_after_first_fraction": 0.0,
+       "age_lower_at_receipt_s": 0.019649124999887135,
+       "feedback_latency_allowance_s": 0.0,
+       "window_start_s": 4917.363039798,
+       "window_end_s": 4918.092720792
+      },
+      "trace": {
+       "send_times_mono": [
+        4917.36304,
+        4917.383145,
+        4917.403164,
+        4917.423152,
+        4917.443141,
+        4917.463183,
+        4917.483144,
+        4917.503154,
+        4917.523165,
+        4917.543229,
+        4917.563156,
+        4917.58318,
+        4917.603191,
+        4917.623158,
+        4917.643132,
+        4917.663181,
+        4917.683154,
+        4917.703142,
+        4917.723147,
+        4917.743195,
+        4917.763131,
+        4917.783131,
+        4917.80314,
+        4917.823147,
+        4917.843133,
+        4917.86317,
+        4917.883195,
+        4917.903136,
+        4917.923127,
+        4917.943125,
+        4917.963127,
+        4917.983157,
+        4918.003133,
+        4918.023213,
+        4918.043157,
+        4918.063157,
+        4918.083198
+       ],
+       "send_stamps_wall": [
+        1789804585.921179,
+        1789804585.941284,
+        1789804585.961303,
+        1789804585.981292,
+        1789804586.001278,
+        1789804586.021339,
+        1789804586.041287,
+        1789804586.061284,
+        1789804586.081316,
+        1789804586.101382,
+        1789804586.121292,
+        1789804586.141316,
+        1789804586.161341,
+        1789804586.181288,
+        1789804586.201263,
+        1789804586.221342,
+        1789804586.24129,
+        1789804586.261279,
+        1789804586.28128,
+        1789804586.301354,
+        1789804586.32126,
+        1789804586.341262,
+        1789804586.361284,
+        1789804586.381277,
+        1789804586.401269,
+        1789804586.421319,
+        1789804586.441352,
+        1789804586.461271,
+        1789804586.481257,
+        1789804586.501256,
+        1789804586.521257,
+        1789804586.541294,
+        1789804586.561264,
+        1789804586.581363,
+        1789804586.601294,
+        1789804586.621299,
+        1789804586.641351
+       ],
+       "targets_x": [
+        0.001455,
+        0.0027862,
+        0.0041173,
+        0.0054485,
+        0.0067797,
+        0.0081109,
+        0.009442,
+        0.0107732,
+        0.0121044,
+        0.0134356,
+        0.0147668,
+        0.0160979,
+        0.0174291,
+        0.0187603,
+        0.0200915,
+        0.0214227,
+        0.0227538,
+        0.024085,
+        0.0254162,
+        0.0267474,
+        0.0280786,
+        0.0294097,
+        0.0307409,
+        0.0320721,
+        0.0334033,
+        0.0347344,
+        0.0360656,
+        0.0373968,
+        0.038728,
+        0.0400592,
+        0.0413903,
+        0.0427215,
+        0.0440527,
+        0.0453839,
+        0.0467151,
+        0.0480462,
+        0.0493774
+       ],
+       "window_end_mono": 4918.163019,
+       "setpoint_times_mono": [
+        4917.372275,
+        4917.382294,
+        4917.392313,
+        4917.402258,
+        4917.412368,
+        4917.422479,
+        4917.432589,
+        4917.442508,
+        4917.452258,
+        4917.462465,
+        4917.47254,
+        4917.482243,
+        4917.492777,
+        4917.502411,
+        4917.512464,
+        4917.522447,
+        4917.532561,
+        4917.542374,
+        4917.55249,
+        4917.562535,
+        4917.572465,
+        4917.58256,
+        4917.592503,
+        4917.602461,
+        4917.612457,
+        4917.622487,
+        4917.632464,
+        4917.642487,
+        4917.652434,
+        4917.662451,
+        4917.672469,
+        4917.682399,
+        4917.692501,
+        4917.70247,
+        4917.712429,
+        4917.722354,
+        4917.732561,
+        4917.742653,
+        4917.752646,
+        4917.762443,
+        4917.772472,
+        4917.782456,
+        4917.792643,
+        4917.802659,
+        4917.812472,
+        4917.822398,
+        4917.832645,
+        4917.842536,
+        4917.852465,
+        4917.862502,
+        4917.872648,
+        4917.882592,
+        4917.892734,
+        4917.902557,
+        4917.912642,
+        4917.92263,
+        4917.932495,
+        4917.942776,
+        4917.952504,
+        4917.962606,
+        4917.972736,
+        4917.982605,
+        4917.99245,
+        4918.002253,
+        4918.01273,
+        4918.022436,
+        4918.032515,
+        4918.042467,
+        4918.0526,
+        4918.062548,
+        4918.072731,
+        4918.082455,
+        4918.092721,
+        4918.102469,
+        4918.112545,
+        4918.122604,
+        4918.132477,
+        4918.142395,
+        4918.152408,
+        4918.162408
+       ],
+       "setpoint_positions": [
+        [
+         0.001455,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.001455,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0027862,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0027862,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0041173,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0041173,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0054485,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0054485,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0067797,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0067797,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0081109,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0081109,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.009442,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.009442,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0107732,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0107732,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0121044,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0121044,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0134356,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0134356,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0147668,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0147668,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0160979,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0160979,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0174291,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0174291,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0187603,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0187603,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0200915,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0200915,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0214227,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0214227,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0227538,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0227538,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.024085,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.024085,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0254162,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0254162,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0267474,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0267474,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0280786,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0280786,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0294097,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0294097,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0307409,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0307409,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0320721,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0320721,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0334033,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0334033,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0347344,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0347344,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0360656,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0360656,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0373968,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0373968,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.038728,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.038728,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0400592,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0400592,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0413903,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0413903,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0427215,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0427215,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0440527,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0440527,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0453839,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0453839,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0467151,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0467151,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0480462,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0480462,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ]
+       ]
+      }
+     },
+     {
+      "command_rate_requested_hz": 100.0,
+      "commands_sent": 37,
+      "client_rate_achieved_hz": 99.95708203857862,
+      "window_s": 0.3701588646387235,
+      "publish_rate_hz": 100.01017196495123,
+      "samples_total": 43,
+      "samples_matched": 43,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 37,
+      "transitions": 37,
+      "observable_rate_hz": 99.95708203857862,
+      "match_tolerance_m": 0.00033279470472705706,
+      "match_tolerance_source": "5 x resting noise sigma_hat (6.66e-05 m), floor 1e-6 m",
+      "target_spacing_m": 0.0013311788189082248,
+      "observation_bounded_by": "client",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.049253616299604445,
+      "command_window_s": 0.37008407799930865,
+      "note": "targets reduced to 37 (spacing 4 delta) at the requested rate: window shortened to 0.37 s to stay within the excursion 0.05",
+      "zoh_error_bound_m": 0.0009924788500029536,
+      "feedback_target_crossings_hz": 99.95708203857862,
+      "feedback_count_is_evidence_of_execution": false,
+      "feedback_latency_allowance_source": "none: age_lower is the age at the probe's receipt of the sample (transport delay of the channel not subtracted)",
+      "feedback_latency_allowance_conditional": true,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 37,
+       "accepted": 37,
+       "accepted_fraction": 1.0,
+       "out_of_order_events": 0,
+       "first_application_delay_s": 0.00983686299969122,
+       "age_lower_s": 0.00983686299969122,
+       "age_upper_s": 0.01984957700005907,
+       "max_update_gap_s": 0.010290756999893347,
+       "channel_period_s": 0.010000068500175985,
+       "samples_in_window": 37,
+       "client_rate_achieved_hz": 99.95708203857862,
+       "client_max_send_gap_s": 0.010091625999848475,
+       "status": "ok",
+       "reason": "",
+       "unmatched_after_first_fraction": 0.0,
+       "age_lower_at_receipt_s": 0.00983686299969122,
+       "feedback_latency_allowance_s": 0.0,
+       "window_start_s": 4918.182770214,
+       "window_end_s": 4918.552510166
+      },
+      "trace": {
+       "send_times_mono": [
+        4918.18277,
+        4918.192862,
+        4918.202862,
+        4918.212893,
+        4918.222869,
+        4918.232901,
+        4918.242864,
+        4918.252866,
+        4918.262856,
+        4918.272866,
+        4918.282861,
+        4918.29288,
+        4918.302865,
+        4918.312846,
+        4918.322861,
+        4918.332872,
+        4918.342907,
+        4918.352857,
+        4918.362859,
+        4918.372861,
+        4918.382858,
+        4918.39286,
+        4918.402876,
+        4918.412934,
+        4918.422859,
+        4918.432902,
+        4918.4429,
+        4918.4529,
+        4918.462872,
+        4918.472859,
+        4918.482873,
+        4918.492873,
+        4918.502868,
+        4918.512859,
+        4918.522862,
+        4918.532862,
+        4918.542925
+       ],
+       "send_stamps_wall": [
+        1789804586.740902,
+        1789804586.750994,
+        1789804586.760993,
+        1789804586.771028,
+        1789804586.781003,
+        1789804586.791048,
+        1789804586.800994,
+        1789804586.810997,
+        1789804586.820986,
+        1789804586.830997,
+        1789804586.84099,
+        1789804586.851027,
+        1789804586.861012,
+        1789804586.870975,
+        1789804586.880997,
+        1789804586.891008,
+        1789804586.901054,
+        1789804586.910992,
+        1789804586.920989,
+        1789804586.930999,
+        1789804586.940993,
+        1789804586.950994,
+        1789804586.961024,
+        1789804586.971068,
+        1789804586.980989,
+        1789804586.99105,
+        1789804587.001047,
+        1789804587.011047,
+        1789804587.021002,
+        1789804587.03099,
+        1789804587.041011,
+        1789804587.051013,
+        1789804587.061008,
+        1789804587.070989,
+        1789804587.080992,
+        1789804587.090997,
+        1789804587.101073
+       ],
+       "targets_x": [
+        0.001455,
+        0.0027862,
+        0.0041173,
+        0.0054485,
+        0.0067797,
+        0.0081109,
+        0.009442,
+        0.0107732,
+        0.0121044,
+        0.0134356,
+        0.0147668,
+        0.0160979,
+        0.0174291,
+        0.0187603,
+        0.0200915,
+        0.0214227,
+        0.0227538,
+        0.024085,
+        0.0254162,
+        0.0267474,
+        0.0280786,
+        0.0294097,
+        0.0307409,
+        0.0320721,
+        0.0334033,
+        0.0347344,
+        0.0360656,
+        0.0373968,
+        0.038728,
+        0.0400592,
+        0.0413903,
+        0.0427215,
+        0.0440527,
+        0.0453839,
+        0.0467151,
+        0.0480462,
+        0.0493774
+       ],
+       "window_end_mono": 4918.612722,
+       "setpoint_times_mono": [
+        4918.192607,
+        4918.202431,
+        4918.212405,
+        4918.222261,
+        4918.232517,
+        4918.242669,
+        4918.252323,
+        4918.262526,
+        4918.272598,
+        4918.282406,
+        4918.292552,
+        4918.302612,
+        4918.312656,
+        4918.322278,
+        4918.332461,
+        4918.342264,
+        4918.352406,
+        4918.362533,
+        4918.37242,
+        4918.382384,
+        4918.392279,
+        4918.402479,
+        4918.41271,
+        4918.422474,
+        4918.432637,
+        4918.442477,
+        4918.452653,
+        4918.462617,
+        4918.472615,
+        4918.48231,
+        4918.492466,
+        4918.502271,
+        4918.512562,
+        4918.522459,
+        4918.532443,
+        4918.542445,
+        4918.55251,
+        4918.562702,
+        4918.572519,
+        4918.582394,
+        4918.592611,
+        4918.602696,
+        4918.612516
+       ],
+       "setpoint_positions": [
+        [
+         0.001455,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0027862,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0041173,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0054485,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0067797,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0081109,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.009442,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0107732,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0121044,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0134356,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0147668,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0160979,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0174291,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0187603,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0200915,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0214227,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0227538,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.024085,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0254162,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0267474,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0280786,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0294097,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0307409,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0320721,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0334033,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0347344,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0360656,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0373968,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.038728,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0400592,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0413903,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0427215,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0440527,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0453839,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0467151,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0480462,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ]
+       ]
+      }
+     },
+     {
+      "command_rate_requested_hz": 200.0,
+      "commands_sent": 37,
+      "client_rate_achieved_hz": 199.93328670525656,
+      "window_s": 0.18968137000047136,
+      "publish_rate_hz": 99.96896546796457,
+      "samples_total": 24,
+      "samples_matched": 24,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 19,
+      "transitions": 19,
+      "observable_rate_hz": 100.1679817050709,
+      "match_tolerance_m": 0.00033279470472705706,
+      "match_tolerance_source": "5 x resting noise sigma_hat (6.66e-05 m), floor 1e-6 m",
+      "target_spacing_m": 0.0013311788189082248,
+      "observation_bounded_by": "publish",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.049253616299604445,
+      "command_window_s": 0.1851438280000366,
+      "note": "targets reduced to 37 (spacing 4 delta) at the requested rate: window shortened to 0.185 s to stay within the excursion 0.05",
+      "zoh_error_bound_m": 0.0007359962000009546,
+      "feedback_target_crossings_hz": 100.1679817050709,
+      "feedback_count_is_evidence_of_execution": false,
+      "feedback_latency_allowance_source": "none: age_lower is the age at the probe's receipt of the sample (transport delay of the channel not subtracted)",
+      "feedback_latency_allowance_conditional": true,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 37,
+       "accepted": 19,
+       "accepted_fraction": 0.5135135135135135,
+       "out_of_order_events": 0,
+       "first_application_delay_s": 0.009536745000332303,
+       "age_lower_s": 0.004664381999646139,
+       "age_upper_s": 0.014719924000019091,
+       "max_update_gap_s": 0.010141904999727558,
+       "channel_period_s": 0.01003889099956723,
+       "samples_in_window": 19,
+       "client_rate_achieved_hz": 199.93328670525656,
+       "client_max_send_gap_s": 0.005105274000015925,
+       "status": "ok",
+       "reason": "",
+       "unmatched_after_first_fraction": 0.0,
+       "age_lower_at_receipt_s": 0.004664381999646139,
+       "feedback_latency_allowance_s": 0.0,
+       "window_start_s": 4918.63284252,
+       "window_end_s": 4918.822417743
+      },
+      "trace": {
+       "send_times_mono": [
+        4918.632843,
+        4918.637948,
+        4918.642935,
+        4918.64804,
+        4918.65297,
+        4918.657931,
+        4918.662988,
+        4918.667927,
+        4918.67295,
+        4918.677947,
+        4918.682932,
+        4918.687973,
+        4918.692941,
+        4918.697977,
+        4918.702995,
+        4918.707958,
+        4918.712935,
+        4918.717934,
+        4918.722932,
+        4918.727928,
+        4918.732938,
+        4918.737935,
+        4918.742948,
+        4918.747931,
+        4918.752933,
+        4918.757987,
+        4918.762936,
+        4918.767933,
+        4918.772934,
+        4918.777923,
+        4918.782938,
+        4918.787927,
+        4918.792936,
+        4918.797926,
+        4918.802933,
+        4918.807996,
+        4918.812903
+       ],
+       "send_stamps_wall": [
+        1789804587.19098,
+        1789804587.196088,
+        1789804587.201071,
+        1789804587.206184,
+        1789804587.211118,
+        1789804587.216077,
+        1789804587.221138,
+        1789804587.226065,
+        1789804587.231086,
+        1789804587.236094,
+        1789804587.241068,
+        1789804587.246117,
+        1789804587.251076,
+        1789804587.256122,
+        1789804587.261153,
+        1789804587.266093,
+        1789804587.271065,
+        1789804587.276077,
+        1789804587.281061,
+        1789804587.286071,
+        1789804587.291068,
+        1789804587.29607,
+        1789804587.301082,
+        1789804587.306075,
+        1789804587.311064,
+        1789804587.316133,
+        1789804587.321067,
+        1789804587.32608,
+        1789804587.33107,
+        1789804587.336057,
+        1789804587.341072,
+        1789804587.346064,
+        1789804587.351069,
+        1789804587.356071,
+        1789804587.361062,
+        1789804587.366175,
+        1789804587.371032
+       ],
+       "targets_x": [
+        0.001455,
+        0.0027862,
+        0.0041173,
+        0.0054485,
+        0.0067797,
+        0.0081109,
+        0.009442,
+        0.0107732,
+        0.0121044,
+        0.0134356,
+        0.0147668,
+        0.0160979,
+        0.0174291,
+        0.0187603,
+        0.0200915,
+        0.0214227,
+        0.0227538,
+        0.024085,
+        0.0254162,
+        0.0267474,
+        0.0280786,
+        0.0294097,
+        0.0307409,
+        0.0320721,
+        0.0334033,
+        0.0347344,
+        0.0360656,
+        0.0373968,
+        0.038728,
+        0.0400592,
+        0.0413903,
+        0.0427215,
+        0.0440527,
+        0.0453839,
+        0.0467151,
+        0.0480462,
+        0.0493774
+       ],
+       "window_end_mono": 4918.872912,
+       "setpoint_times_mono": [
+        4918.642379,
+        4918.652399,
+        4918.662357,
+        4918.672433,
+        4918.682489,
+        4918.692622,
+        4918.702349,
+        4918.712416,
+        4918.722484,
+        4918.732502,
+        4918.742483,
+        4918.752586,
+        4918.762611,
+        4918.772367,
+        4918.782509,
+        4918.792457,
+        4918.802591,
+        4918.812646,
+        4918.822418,
+        4918.832493,
+        4918.842532,
+        4918.852699,
+        4918.862602,
+        4918.872543
+       ],
+       "setpoint_positions": [
+        [
+         0.0027862,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0054485,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0081109,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0107732,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0134356,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0160979,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0187603,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0214227,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.024085,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0267474,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0294097,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0320721,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0347344,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0373968,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0400592,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0427215,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0453839,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0480462,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ]
+       ]
+      }
+     },
+     {
+      "command_rate_requested_hz": 500.0,
+      "commands_sent": 37,
+      "client_rate_achieved_hz": 499.46022916905724,
+      "window_s": 0.0792545770000288,
+      "publish_rate_hz": 100.22968016706636,
+      "samples_total": 13,
+      "samples_matched": 13,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 8,
+      "transitions": 8,
+      "observable_rate_hz": 100.94054252534958,
+      "match_tolerance_m": 0.00033279470472705706,
+      "match_tolerance_source": "5 x resting noise sigma_hat (6.66e-05 m), floor 1e-6 m",
+      "target_spacing_m": 0.0013311788189082248,
+      "observation_bounded_by": "publish",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.049253616299604445,
+      "command_window_s": 0.07406924399947457,
+      "note": "targets reduced to 37 (spacing 4 delta) at the requested rate: window shortened to 0.074 s to stay within the excursion 0.05",
+      "zoh_error_bound_m": 0.0005740927999795531,
+      "feedback_target_crossings_hz": 100.94054252534958,
+      "feedback_count_is_evidence_of_execution": false,
+      "feedback_latency_allowance_source": "none: age_lower is the age at the probe's receipt of the sample (transport delay of the channel not subtracted)",
+      "feedback_latency_allowance_conditional": true,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 37,
+       "accepted": 8,
+       "accepted_fraction": 0.21621621621621623,
+       "out_of_order_events": 0,
+       "first_application_delay_s": 0.00917183500041574,
+       "age_lower_s": 0.001536148999548459,
+       "age_upper_s": 0.011481855999591062,
+       "max_update_gap_s": 0.01029057499999908,
+       "channel_period_s": 0.009986658999878273,
+       "samples_in_window": 8,
+       "client_rate_achieved_hz": 499.46022916905724,
+       "client_max_send_gap_s": 0.002126252000380191,
+       "status": "ok",
+       "reason": "",
+       "unmatched_after_first_fraction": 0.0,
+       "age_lower_at_receipt_s": 0.001536148999548459,
+       "feedback_latency_allowance_s": 0.0,
+       "window_start_s": 4918.893128639,
+       "window_end_s": 4918.972438002
+      },
+      "trace": {
+       "send_times_mono": [
+        4918.893129,
+        4918.895255,
+        4918.89728,
+        4918.899226,
+        4918.90127,
+        4918.903219,
+        4918.905242,
+        4918.907275,
+        4918.90929,
+        4918.911228,
+        4918.913213,
+        4918.91521,
+        4918.917232,
+        4918.919209,
+        4918.921205,
+        4918.923201,
+        4918.925199,
+        4918.927199,
+        4918.929199,
+        4918.931268,
+        4918.933249,
+        4918.935257,
+        4918.93726,
+        4918.939215,
+        4918.941249,
+        4918.943198,
+        4918.9452,
+        4918.947208,
+        4918.94921,
+        4918.951195,
+        4918.953181,
+        4918.955222,
+        4918.957228,
+        4918.959252,
+        4918.961234,
+        4918.963201,
+        4918.965206
+       ],
+       "send_stamps_wall": [
+        1789804587.451263,
+        1789804587.4534,
+        1789804587.455425,
+        1789804587.457365,
+        1789804587.459415,
+        1789804587.461358,
+        1789804587.463381,
+        1789804587.465421,
+        1789804587.467436,
+        1789804587.469366,
+        1789804587.471343,
+        1789804587.473346,
+        1789804587.475379,
+        1789804587.477354,
+        1789804587.479346,
+        1789804587.481347,
+        1789804587.483333,
+        1789804587.485333,
+        1789804587.487336,
+        1789804587.489416,
+        1789804587.491395,
+        1789804587.493402,
+        1789804587.495405,
+        1789804587.497355,
+        1789804587.49939,
+        1789804587.501333,
+        1789804587.503339,
+        1789804587.505342,
+        1789804587.507356,
+        1789804587.509333,
+        1789804587.511315,
+        1789804587.513358,
+        1789804587.515361,
+        1789804587.517395,
+        1789804587.519373,
+        1789804587.521334,
+        1789804587.52334
+       ],
+       "targets_x": [
+        0.001455,
+        0.0027862,
+        0.0041173,
+        0.0054485,
+        0.0067797,
+        0.0081109,
+        0.009442,
+        0.0107732,
+        0.0121044,
+        0.0134356,
+        0.0147668,
+        0.0160979,
+        0.0174291,
+        0.0187603,
+        0.0200915,
+        0.0214227,
+        0.0227538,
+        0.024085,
+        0.0254162,
+        0.0267474,
+        0.0280786,
+        0.0294097,
+        0.0307409,
+        0.0320721,
+        0.0334033,
+        0.0347344,
+        0.0360656,
+        0.0373968,
+        0.038728,
+        0.0400592,
+        0.0413903,
+        0.0427215,
+        0.0440527,
+        0.0453839,
+        0.0467151,
+        0.0480462,
+        0.0493774
+       ],
+       "window_end_mono": 4919.022826,
+       "setpoint_times_mono": [
+        4918.9023,
+        4918.912458,
+        4918.922397,
+        4918.932537,
+        4918.942441,
+        4918.952731,
+        4918.962404,
+        4918.972438,
+        4918.982327,
+        4918.992491,
+        4919.00241,
+        4919.012688,
+        4919.022504
+       ],
+       "setpoint_positions": [
+        [
+         0.0067797,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0134356,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0200915,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0267474,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0334033,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0400592,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0467151,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ]
+       ]
+      }
+     },
+     {
+      "command_rate_requested_hz": 1000.0,
+      "commands_sent": 37,
+      "client_rate_achieved_hz": 997.6233010363153,
+      "window_s": 0.039726019999761775,
+      "publish_rate_hz": 99.86383122801979,
+      "samples_total": 9,
+      "samples_matched": 9,
+      "samples_unmatched": 0,
+      "unmatched_fraction": 0.0,
+      "targets_reached": 4,
+      "transitions": 4,
+      "observable_rate_hz": 100.6896739221293,
+      "match_tolerance_m": 0.00033279470472705706,
+      "match_tolerance_source": "5 x resting noise sigma_hat (6.66e-05 m), floor 1e-6 m",
+      "target_spacing_m": 0.0013311788189082248,
+      "observation_bounded_by": "publish",
+      "status": "ok",
+      "reason": "",
+      "step_used_m": 0.049253616299604445,
+      "command_window_s": 0.03709411599993473,
+      "note": "targets reduced to 37 (spacing 4 delta) at the requested rate: window shortened to 0.037 s to stay within the excursion 0.05",
+      "zoh_error_bound_m": 0.0005768921500020951,
+      "feedback_target_crossings_hz": 100.6896739221293,
+      "feedback_count_is_evidence_of_execution": false,
+      "feedback_latency_allowance_source": "none: age_lower is the age at the probe's receipt of the sample (transport delay of the channel not subtracted)",
+      "feedback_latency_allowance_conditional": true,
+      "acceptance": {
+       "channel": "setpoint_cp",
+       "commands_sent": 37,
+       "accepted": 4,
+       "accepted_fraction": 0.10810810810810811,
+       "out_of_order_events": 0,
+       "first_application_delay_s": 0.010057761000098253,
+       "age_lower_s": 0.0019610489998740377,
+       "age_upper_s": 0.011537843000041903,
+       "max_update_gap_s": 0.010112353000295116,
+       "channel_period_s": 0.009974840999802836,
+       "samples_in_window": 4,
+       "client_rate_achieved_hz": 997.6233010363153,
+       "client_max_send_gap_s": 0.0010740280004029046,
+       "status": "ok",
+       "reason": "",
+       "unmatched_after_first_fraction": 0.0,
+       "age_lower_at_receipt_s": 0.0019610489998740377,
+       "feedback_latency_allowance_s": 0.0,
+       "window_start_s": 4919.042750034,
+       "window_end_s": 4919.082221954
+      },
+      "trace": {
+       "send_times_mono": [
+        4919.04275,
+        4919.043811,
+        4919.044885,
+        4919.045849,
+        4919.04684,
+        4919.047881,
+        4919.048885,
+        4919.049843,
+        4919.050847,
+        4919.051856,
+        4919.052869,
+        4919.053887,
+        4919.054841,
+        4919.055871,
+        4919.056862,
+        4919.057902,
+        4919.058911,
+        4919.05981,
+        4919.060879,
+        4919.061839,
+        4919.062865,
+        4919.063877,
+        4919.064911,
+        4919.065838,
+        4919.066874,
+        4919.067842,
+        4919.068881,
+        4919.069847,
+        4919.070863,
+        4919.071903,
+        4919.072852,
+        4919.073838,
+        4919.07485,
+        4919.075842,
+        4919.076837,
+        4919.077857,
+        4919.078836
+       ],
+       "send_stamps_wall": [
+        1789804587.600887,
+        1789804587.601947,
+        1789804587.60303,
+        1789804587.603997,
+        1789804587.604973,
+        1789804587.606029,
+        1789804587.607033,
+        1789804587.607979,
+        1789804587.608979,
+        1789804587.609997,
+        1789804587.611008,
+        1789804587.612034,
+        1789804587.612975,
+        1789804587.614017,
+        1789804587.614999,
+        1789804587.61605,
+        1789804587.617057,
+        1789804587.617954,
+        1789804587.619025,
+        1789804587.619974,
+        1789804587.621007,
+        1789804587.622023,
+        1789804587.623059,
+        1789804587.623982,
+        1789804587.625019,
+        1789804587.62598,
+        1789804587.627026,
+        1789804587.627996,
+        1789804587.629009,
+        1789804587.630049,
+        1789804587.630991,
+        1789804587.631972,
+        1789804587.632987,
+        1789804587.633979,
+        1789804587.634969,
+        1789804587.636003,
+        1789804587.63697
+       ],
+       "targets_x": [
+        0.001455,
+        0.0027862,
+        0.0041173,
+        0.0054485,
+        0.0067797,
+        0.0081109,
+        0.009442,
+        0.0107732,
+        0.0121044,
+        0.0134356,
+        0.0147668,
+        0.0160979,
+        0.0174291,
+        0.0187603,
+        0.0200915,
+        0.0214227,
+        0.0227538,
+        0.024085,
+        0.0254162,
+        0.0267474,
+        0.0280786,
+        0.0294097,
+        0.0307409,
+        0.0320721,
+        0.0334033,
+        0.0347344,
+        0.0360656,
+        0.0373968,
+        0.038728,
+        0.0400592,
+        0.0413903,
+        0.0427215,
+        0.0440527,
+        0.0453839,
+        0.0467151,
+        0.0480462,
+        0.0493774
+       ],
+       "window_end_mono": 4919.132868,
+       "setpoint_times_mono": [
+        4919.052808,
+        4919.062305,
+        4919.072417,
+        4919.082222,
+        4919.092647,
+        4919.102436,
+        4919.11245,
+        4919.122385,
+        4919.132516
+       ],
+       "setpoint_positions": [
+        [
+         0.0121044,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0254162,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.038728,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ],
+        [
+         0.0493774,
+         -4.55e-05,
+         -0.0999389
+        ]
+       ]
+      }
+     }
+    ],
+    "match_tolerance_m": 0.00033279470472705706,
+    "match_tolerance_source": "5 x resting noise sigma_hat (6.66e-05 m), floor 1e-6 m"
+   }
+  },
+  "notes": [
+   "rate expectation not decided: reported as a diagnostic, not a conformance verdict (0.1.4). Two properties of the channel, not of this run, prevent a verdict: setpoint_cp identifies the applied command by matching its VALUE against the history of sent targets, carrying no explicit command identifier or send-time stamp, so a repeated or superseded target cannot be attributed unambiguously; and age_lower is measured at the probe's receipt of the sample, exceeding the setpoint's publication-side age by a transport delay that no CRTK artifact bounds for an arbitrary implementation. The source-age bracket [age_lower_s, age_upper_s] is computed and reported exactly as before; only the satisfied/violated label is withdrawn. Deciding this class needs an explicit command identifier or send-time stamp on the channel (see the specification recommendation).",
+   "diagnostic: source age of the applied setpoint bracketed [9.8, 19.8] ms against a required period of 20 ms (setpoint_cp channel, 37 of 37 commands applied); the client's own stream sustained 100 Hz with send gaps <= 10 ms; the lower end is the age at the probe's receipt of the channel sample, above the publication-side age by the unbounded transport delay of setpoint_cp (--latency-bound-s subtracts a client-supplied bound)"
+  ],
+  "started_at": 1789804580.3720977,
+  "duration_s": 7.328997611999512
+ },
+ "wall_s": 7.329041481018066,
+ "event_log": "T_rate_009.events.jsonl",
+ "truth": {
+  "loop_rate_hz": 1500,
+  "publish_rate_hz": 100,
+  "noise_m": 5e-05,
+  "accept_every_k": 1,
+  "setpoint_channel": true,
+  "case": "every command applied, latest wins"
+ }
+}

@@ -1,0 +1,3291 @@
+{
+ "preset": "reference",
+ "overrides": {
+  "bind_translation_m": [
+   0.0007,
+   0,
+   0
+  ],
+  "bind_angle_deg": 0.3,
+  "bind_axis": [
+   1,
+   0,
+   0
+  ],
+  "noise_m": 5e-05,
+  "orientation_noise_deg": 0.02,
+  "seed": 30702
+ },
+ "expectation": {
+  "spatial": {
+   "mode": "identity",
+   "translation_m": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "quaternion_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "orientation_tolerance_deg": null,
+   "declared": true
+  },
+  "dimensional": {
+   "mode": "discover_only",
+   "expected_unit_m": 1.0,
+   "declared": false
+  },
+  "temporal": {
+   "state_machine": "any",
+   "stop_behaviour": "any",
+   "rate": "any",
+   "horizon_s": null,
+   "declared": false
+  },
+  "source": "dict"
+ },
+ "discovery": {
+  "namespace": "/PSM1",
+  "discovery_latency_s": 0.0026257789995725034,
+  "topics": {
+   "measured_cp": {
+    "topic": "/PSM1/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "setpoint_cp": {
+    "topic": "/PSM1/setpoint_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/measured_cp": {
+    "topic": "/PSM1/local/measured_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "local/setpoint_cp": {
+    "topic": "/PSM1/local/setpoint_cp",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "servo_cp": {
+    "topic": "/PSM1/servo_cp",
+    "present": true,
+    "type": "geometry_msgs/PoseStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "servo_cr": {
+    "topic": "/PSM1/servo_cr",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   },
+   "measured_js": {
+    "topic": "/PSM1/measured_js",
+    "present": true,
+    "type": "sensor_msgs/JointState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "operating_state": {
+    "topic": "/PSM1/operating_state",
+    "present": true,
+    "type": "crtk_msgs/OperatingState",
+    "type_matches": true,
+    "published": true,
+    "subscribed": false
+   },
+   "state_command": {
+    "topic": "/PSM1/state_command",
+    "present": true,
+    "type": "crtk_msgs/StringStamped",
+    "type_matches": true,
+    "published": false,
+    "subscribed": true
+   },
+   "T_b_w": {
+    "topic": "/PSM1/T_b_w",
+    "present": false,
+    "type": null,
+    "type_matches": null,
+    "published": false,
+    "subscribed": false
+   }
+  },
+  "tf_present": false,
+  "tf_static_present": false,
+  "all_topics_in_namespace": [
+   "/PSM1/local/measured_cp",
+   "/PSM1/measured_cp",
+   "/PSM1/measured_js",
+   "/PSM1/mock/ground_truth_cp",
+   "/PSM1/operating_state",
+   "/PSM1/servo_cp",
+   "/PSM1/setpoint_cp",
+   "/PSM1/state_command"
+  ]
+ },
+ "truth": {
+  "t_m": [
+   0.0007,
+   0,
+   0
+  ],
+  "t_norm_m": 0.0007,
+  "theta_deg": 0.3,
+  "axis": [
+   1,
+   0,
+   0
+  ],
+  "exact_max_error_m": 0.0008741596258493685,
+  "bound_eq3_m": 0.0012235981774835988,
+  "noise_m": 5e-05,
+  "orientation_noise_deg": 0.02,
+  "replicates": 60,
+  "trials": 10
+ },
+ "replicates": [
+  {
+   "replicate": 0,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006987341966669334,
+     1.3226637598069175e-06,
+     -8.126267521398891e-06
+    ],
+    "residual_rotation_deg": 0.3009127349626885,
+    "e_max_m": 0.0008811834428695239,
+    "e_min_m": 0.0006986835983385882,
+    "ci_low_m": 0.0007775761991074932,
+    "ci_high_m": 0.0009847906866315547,
+    "delta_t_m": 7.233920930889654e-05,
+    "delta_rho_rad": 0.00031268034453134244,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001223973896064789,
+    "max_rotation_deviation_deg": 0.02419194363519884,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.024 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008811834428695239,
+    "std": null,
+    "ci_low": 0.0007775761991074932,
+    "ci_high": 0.0009847906866315547,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006987341966669334,
+    1.3226637598069175e-06,
+    -8.126267521398891e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3011668040856554,
+    "std": 0.006897885115018803,
+    "ci_low": 0.2962323543321592,
+    "ci_high": 0.30610125383915154,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 1,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007084247371819168,
+     -8.099198879916874e-06,
+     -8.20610055224963e-06
+    ],
+    "residual_rotation_deg": 0.30224473547376757,
+    "e_max_m": 0.0008915500040025146,
+    "e_min_m": 0.0007083835903823836,
+    "ci_low_m": 0.0008009485344007414,
+    "ci_high_m": 0.0009821514736042878,
+    "delta_t_m": 5.831231715467237e-05,
+    "delta_rho_rad": 0.00032289152447100824,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001236034523263384,
+    "max_rotation_deviation_deg": 0.0218348901307937,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.022 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008915500040025146,
+    "std": null,
+    "ci_low": 0.0008009485344007414,
+    "ci_high": 0.0009821514736042878,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007084247371819168,
+    -8.099198879916874e-06,
+    -8.20610055224963e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3025528047405455,
+    "std": 0.008022631639790808,
+    "ci_low": 0.29681375979310753,
+    "ci_high": 0.3082918496879835,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 2,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006958685372142082,
+     -1.0274652988623468e-05,
+     -4.3451271291550246e-06
+    ],
+    "residual_rotation_deg": 0.3010880453580043,
+    "e_max_m": 0.0008770076726196511,
+    "e_min_m": 0.0006959094223623695,
+    "ci_low_m": 0.0007947851624494646,
+    "ci_high_m": 0.0009592301827898377,
+    "delta_t_m": 6.161722322017752e-05,
+    "delta_rho_rad": 0.00020605286950009036,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012214551194495958,
+    "max_rotation_deviation_deg": 0.017379594010738044,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.017 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008770076726196511,
+    "std": null,
+    "ci_low": 0.0007947851624494646,
+    "ci_high": 0.0009592301827898377,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006958685372142082,
+    -1.0274652988623468e-05,
+    -4.3451271291550246e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30120836617644275,
+    "std": 0.006017490357155592,
+    "ci_low": 0.2969037128929485,
+    "ci_high": 0.30551301945993703,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 3,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007221122861765927,
+     -6.379874278391941e-06,
+     2.2691299094906858e-05
+    ],
+    "residual_rotation_deg": 0.2963993941563253,
+    "e_max_m": 0.0009032829788677956,
+    "e_min_m": 0.0007220494153501969,
+    "ci_low_m": 0.0008132328955719774,
+    "ci_high_m": 0.0009933330621636138,
+    "delta_t_m": 6.788917303770614e-05,
+    "delta_rho_rad": 0.00022160910258112076,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012398108430392986,
+    "max_rotation_deviation_deg": 0.014734188949444919,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.015 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0009032829788677956,
+    "std": null,
+    "ci_low": 0.0008132328955719774,
+    "ci_high": 0.0009933330621636138,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007221122861765927,
+    -6.379874278391941e-06,
+    2.2691299094906858e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2965518987829957,
+    "std": 0.0053940469232533275,
+    "ci_low": 0.2926932300654142,
+    "ci_high": 0.3004105675005772,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 4,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006835215330316472,
+     -1.2266732916124666e-05,
+     1.8122919561640304e-05
+    ],
+    "residual_rotation_deg": 0.30032935609607714,
+    "e_max_m": 0.0008771639429023519,
+    "e_min_m": 0.0006833873979279747,
+    "ci_low_m": 0.000783312779212389,
+    "ci_high_m": 0.0009710151065923148,
+    "delta_t_m": 6.910371915290973e-05,
+    "delta_rho_rad": 0.00024747444537053106,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001208044781265103,
+    "max_rotation_deviation_deg": 0.018043966913827092,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008771639429023519,
+    "std": null,
+    "ci_low": 0.000783312779212389,
+    "ci_high": 0.0009710151065923148,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006835215330316472,
+    -1.2266732916124666e-05,
+    1.8122919561640304e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3004667102131356,
+    "std": 0.005262500594102,
+    "ci_low": 0.2967021440705652,
+    "ci_high": 0.30423127635570596,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 5,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006953185373321868,
+     -9.93439964542078e-06,
+     1.2031788691705402e-05
+    ],
+    "residual_rotation_deg": 0.29693695673312714,
+    "e_max_m": 0.0008751587743151676,
+    "e_min_m": 0.0006953696896887658,
+    "ci_low_m": 0.000788372446400384,
+    "ci_high_m": 0.0009619451022299511,
+    "delta_t_m": 5.907300640511426e-05,
+    "delta_rho_rad": 0.00027713321509669316,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012137457600345423,
+    "max_rotation_deviation_deg": 0.024352013131326646,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.024 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008751587743151676,
+    "std": null,
+    "ci_low": 0.000788372446400384,
+    "ci_high": 0.0009619451022299511,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006953185373321868,
+    -9.93439964542078e-06,
+    1.2031788691705402e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2970862756788649,
+    "std": 0.00969896273797823,
+    "ci_low": 0.2901480557036755,
+    "ci_high": 0.3040244956540543,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 6,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006865143731503537,
+     9.700350452960926e-06,
+     2.359696794297928e-06
+    ],
+    "residual_rotation_deg": 0.3021206795962765,
+    "e_max_m": 0.0008770489304951578,
+    "e_min_m": 0.0006863310236776265,
+    "ci_low_m": 0.0007759199146667152,
+    "ci_high_m": 0.0009781779463236004,
+    "delta_t_m": 7.050137284777598e-05,
+    "delta_rho_rad": 0.00030627642980666576,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012138864058339255,
+    "max_rotation_deviation_deg": 0.027925779955531697,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.028 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008770489304951578,
+    "std": null,
+    "ci_low": 0.0007759199146667152,
+    "ci_high": 0.0009781779463236004,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006865143731503537,
+    9.700350452960926e-06,
+    2.359696794297928e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30239483301958664,
+    "std": 0.008506371951310375,
+    "ci_low": 0.2963097410996155,
+    "ci_high": 0.3084799249395578,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 7,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007000079578259856,
+     -1.6688846492109044e-07,
+     1.6653258701731788e-05
+    ],
+    "residual_rotation_deg": 0.3029639676493988,
+    "e_max_m": 0.0008929056640845544,
+    "e_min_m": 0.000699726776031281,
+    "ci_low_m": 0.0008005937825481017,
+    "ci_high_m": 0.0009852175456210072,
+    "delta_t_m": 7.040471940237404e-05,
+    "delta_rho_rad": 0.0002190716213407877,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012289773000518011,
+    "max_rotation_deviation_deg": 0.018234388232105766,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008929056640845544,
+    "std": null,
+    "ci_low": 0.0008005937825481017,
+    "ci_high": 0.0009852175456210072,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007000079578259856,
+    -1.6688846492109044e-07,
+    1.6653258701731788e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30306102688203856,
+    "std": 0.006506203197815158,
+    "ci_low": 0.2984067694929508,
+    "ci_high": 0.3077152842711263,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 8,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007153326758494959,
+     -1.569345035795676e-05,
+     5.238847738615605e-06
+    ],
+    "residual_rotation_deg": 0.3013976123094545,
+    "e_max_m": 0.0009056905956689158,
+    "e_min_m": 0.0007148938675492782,
+    "ci_low_m": 0.0008131510542112943,
+    "ci_high_m": 0.0009982301371265372,
+    "delta_t_m": 5.457928110968991e-05,
+    "delta_rho_rad": 0.00037960260347931566,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012415614434954946,
+    "max_rotation_deviation_deg": 0.02085614380190726,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.021 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0009056905956689158,
+    "std": null,
+    "ci_low": 0.0008131510542112943,
+    "ci_high": 0.0009982301371265372,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007153326758494959,
+    -1.569345035795676e-05,
+    5.238847738615605e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30170546489934164,
+    "std": 0.008329923051535263,
+    "ci_low": 0.29574659691837235,
+    "ci_high": 0.3076643328803109,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 9,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006937273318939678,
+     4.6714029977076575e-06,
+     -2.961420382317781e-06
+    ],
+    "residual_rotation_deg": 0.2994270106739945,
+    "e_max_m": 0.0008753017700947722,
+    "e_min_m": 0.0006936581935406638,
+    "ci_low_m": 0.0007965152180558069,
+    "ci_high_m": 0.0009540883221337375,
+    "delta_t_m": 5.846471368464409e-05,
+    "delta_rho_rad": 0.00020321838354321235,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012163475064367471,
+    "max_rotation_deviation_deg": 0.017158967405740723,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.017 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008753017700947722,
+    "std": null,
+    "ci_low": 0.0007965152180558069,
+    "ci_high": 0.0009540883221337375,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006937273318939678,
+    4.6714029977076575e-06,
+    -2.961420382317781e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.29952436454595793,
+    "std": 0.005972549413049051,
+    "ci_low": 0.2952518600771903,
+    "ci_high": 0.3037968690147256,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 10,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007031779768087879,
+     -1.1704940157093817e-05,
+     -8.03645131550401e-06
+    ],
+    "residual_rotation_deg": 0.3045162447392972,
+    "e_max_m": 0.0008953839070066281,
+    "e_min_m": 0.0007029410607251213,
+    "ci_low_m": 0.0007976708941808037,
+    "ci_high_m": 0.0009930969198324526,
+    "delta_t_m": 7.255668839925531e-05,
+    "delta_rho_rad": 0.0002515632442656908,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001234801788529338,
+    "max_rotation_deviation_deg": 0.023350255047828034,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.023 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008953839070066281,
+    "std": null,
+    "ci_low": 0.0007976708941808037,
+    "ci_high": 0.0009930969198324526,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007031779768087879,
+    -1.1704940157093817e-05,
+    -8.03645131550401e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30472909206023546,
+    "std": 0.008129659710355569,
+    "ci_low": 0.29891348384338823,
+    "ci_high": 0.3105447002770827,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 11,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007028154904889015,
+     2.6407090608870843e-05,
+     -8.890497117645945e-06
+    ],
+    "residual_rotation_deg": 0.2959528885697704,
+    "e_max_m": 0.0008906301555980848,
+    "e_min_m": 0.0007026984522669391,
+    "ci_low_m": 0.0008085083482035509,
+    "ci_high_m": 0.0009727519629926186,
+    "delta_t_m": 5.700110351411956e-05,
+    "delta_rho_rad": 0.00025120703880414315,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001219902265310338,
+    "max_rotation_deviation_deg": 0.01685167827117105,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.017 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008906301555980848,
+    "std": null,
+    "ci_low": 0.0008085083482035509,
+    "ci_high": 0.0009727519629926186,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007028154904889015,
+    2.6407090608870843e-05,
+    -8.890497117645945e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.29613917584174304,
+    "std": 0.0068547571582743775,
+    "ci_low": 0.29123557796994365,
+    "ci_high": 0.30104277371354243,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 12,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006867048246283963,
+     1.3551248654376558e-05,
+     1.2768588649521571e-05
+    ],
+    "residual_rotation_deg": 0.30077083519000564,
+    "e_max_m": 0.0008754600531821089,
+    "e_min_m": 0.0006867199220794908,
+    "ci_low_m": 0.0007615842341770031,
+    "ci_high_m": 0.0009893358721872146,
+    "delta_t_m": 8.651326086109389e-05,
+    "delta_rho_rad": 0.00027362558144011795,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012119007302327446,
+    "max_rotation_deviation_deg": 0.023117385555919526,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.023 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008754600531821089,
+    "std": null,
+    "ci_low": 0.0007615842341770031,
+    "ci_high": 0.0009893358721872146,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006867048246283963,
+    1.3551248654376558e-05,
+    1.2768588649521571e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30097274232618926,
+    "std": 0.009353677405147108,
+    "ci_low": 0.29428152459836476,
+    "ci_high": 0.30766396005401375,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 13,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.000688118890999007,
+     4.401362031823931e-06,
+     -5.547230859931371e-07
+    ],
+    "residual_rotation_deg": 0.2972764640341171,
+    "e_max_m": 0.0008649096858409521,
+    "e_min_m": 0.0006881139367201258,
+    "ci_low_m": 0.000772281784808524,
+    "ci_high_m": 0.0009575375868733802,
+    "delta_t_m": 5.470058022023041e-05,
+    "delta_rho_rad": 0.000379273208121977,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012069779171267783,
+    "max_rotation_deviation_deg": 0.03347906109558833,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.033 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008649096858409521,
+    "std": null,
+    "ci_low": 0.000772281784808524,
+    "ci_high": 0.0009575375868733802,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.000688118890999007,
+    4.401362031823931e-06,
+    -5.547230859931371e-07
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2976322992624604,
+    "std": 0.00574960720961639,
+    "ci_low": 0.2935192780385466,
+    "ci_high": 0.30174532048637415,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 14,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007052752014716161,
+     -4.744592994252246e-06,
+     -4.0534205651699526e-08
+    ],
+    "residual_rotation_deg": 0.29761146782772663,
+    "e_max_m": 0.0008846633308681978,
+    "e_min_m": 0.0007051356275260741,
+    "ci_low_m": 0.0007801089790218582,
+    "ci_high_m": 0.0009892176827145374,
+    "delta_t_m": 7.824676265601647e-05,
+    "delta_rho_rad": 0.00026307589190323154,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001224720578176406,
+    "max_rotation_deviation_deg": 0.019935283925856525,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.020 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008846633308681978,
+    "std": null,
+    "ci_low": 0.0007801089790218582,
+    "ci_high": 0.0009892176827145374,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007052752014716161,
+    -4.744592994252246e-06,
+    -4.0534205651699526e-08
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.29779960153225116,
+    "std": 0.009122679456779335,
+    "ci_low": 0.2912736297820524,
+    "ci_high": 0.3043255732824499,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 15,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006903688003181868,
+     -1.4982312606480239e-05,
+     -1.5331231649479973e-05
+    ],
+    "residual_rotation_deg": 0.3013969083411611,
+    "e_max_m": 0.0008790577211422043,
+    "e_min_m": 0.0006904663843652917,
+    "ci_low_m": 0.0007777542415043358,
+    "ci_high_m": 0.0009803612007800726,
+    "delta_t_m": 7.716076636425042e-05,
+    "delta_rho_rad": 0.0002414271327361802,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012167377592030401,
+    "max_rotation_deviation_deg": 0.0183002694302673,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008790577211422043,
+    "std": null,
+    "ci_low": 0.0007777542415043358,
+    "ci_high": 0.0009803612007800726,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006903688003181868,
+    -1.4982312606480239e-05,
+    -1.5331231649479973e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3015127612605867,
+    "std": 0.007068217248748517,
+    "ci_low": 0.29645646323892133,
+    "ci_high": 0.30656905928225203,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 16,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.000706842736380006,
+     2.0959230838380096e-06,
+     -2.3211476450794303e-05
+    ],
+    "residual_rotation_deg": 0.3024206033232041,
+    "e_max_m": 0.0009005048765392969,
+    "e_min_m": 0.0007065711185809909,
+    "ci_low_m": 0.0008309260643461511,
+    "ci_high_m": 0.0009700836887324427,
+    "delta_t_m": 4.9499190245423054e-05,
+    "delta_rho_rad": 0.00020079621947722708,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012350497641923296,
+    "max_rotation_deviation_deg": 0.014402901891119325,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.014 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0009005048765392969,
+    "std": null,
+    "ci_low": 0.0008309260643461511,
+    "ci_high": 0.0009700836887324427,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.000706842736380006,
+    2.0959230838380096e-06,
+    -2.3211476450794303e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30253948986810797,
+    "std": 0.004179263680290349,
+    "ci_low": 0.2995498247326155,
+    "ci_high": 0.30552915500360045,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 17,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007030362416514266,
+     1.6015476750311668e-05,
+     -2.0233593506194248e-05
+    ],
+    "residual_rotation_deg": 0.3007394485643193,
+    "e_max_m": 0.0008907273239422709,
+    "e_min_m": 0.0007031695747078847,
+    "ci_low_m": 0.0007904241932662663,
+    "ci_high_m": 0.0009910304546182755,
+    "delta_t_m": 7.640077808698245e-05,
+    "delta_rho_rad": 0.00023902352589022063,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012283984207724801,
+    "max_rotation_deviation_deg": 0.017546945102926478,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008907273239422709,
+    "std": null,
+    "ci_low": 0.0007904241932662663,
+    "ci_high": 0.0009910304546182755,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007030362416514266,
+    1.6015476750311668e-05,
+    -2.0233593506194248e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30091208233657285,
+    "std": 0.006057716264572055,
+    "ci_low": 0.29657865317241,
+    "ci_high": 0.3052455115007357,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 18,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007001865423140232,
+     -9.290724687914511e-06,
+     -2.5041410744358594e-06
+    ],
+    "residual_rotation_deg": 0.30056771626507767,
+    "e_max_m": 0.0008781751634440665,
+    "e_min_m": 0.000700231991493511,
+    "ci_low_m": 0.000781355328046525,
+    "ci_high_m": 0.0009749949988416079,
+    "delta_t_m": 7.290848208497987e-05,
+    "delta_rho_rad": 0.00023911353312561565,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001224841681950368,
+    "max_rotation_deviation_deg": 0.016232751398332617,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.016 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008781751634440665,
+    "std": null,
+    "ci_low": 0.000781355328046525,
+    "ci_high": 0.0009749949988416079,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007001865423140232,
+    -9.290724687914511e-06,
+    -2.5041410744358594e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30071789031249907,
+    "std": 0.006916564825900012,
+    "ci_low": 0.29577007789882287,
+    "ci_high": 0.30566570272617527,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 19,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007135938797148626,
+     -1.0067495002139791e-05,
+     3.0658162865898614e-06
+    ],
+    "residual_rotation_deg": 0.30319316965189913,
+    "e_max_m": 0.000904153645052689,
+    "e_min_m": 0.0007131758460468168,
+    "ci_low_m": 0.000828284760667683,
+    "ci_high_m": 0.000980022529437695,
+    "delta_t_m": 4.873646838393673e-05,
+    "delta_rho_rad": 0.0002713241600106919,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012428427688196732,
+    "max_rotation_deviation_deg": 0.024488602737270306,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.024 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.000904153645052689,
+    "std": null,
+    "ci_low": 0.000828284760667683,
+    "ci_high": 0.000980022529437695,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007135938797148626,
+    -1.0067495002139791e-05,
+    3.0658162865898614e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3033937814354114,
+    "std": 0.0056432357192599345,
+    "ci_low": 0.29935685379172056,
+    "ci_high": 0.30743070907910225,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 20,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006848719606988472,
+     -1.8243735182660547e-06,
+     -2.56025040547736e-05
+    ],
+    "residual_rotation_deg": 0.30201656615454386,
+    "e_max_m": 0.0008809887446071503,
+    "e_min_m": 0.0006848164003307005,
+    "ci_low_m": 0.0007941762305539632,
+    "ci_high_m": 0.0009678012586603374,
+    "delta_t_m": 5.6068482729520344e-05,
+    "delta_rho_rad": 0.00030744031323666737,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001212470507062098,
+    "max_rotation_deviation_deg": 0.022697107171928518,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.023 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008809887446071503,
+    "std": null,
+    "ci_low": 0.0007941762305539632,
+    "ci_high": 0.0009678012586603374,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006848719606988472,
+    -1.8243735182660547e-06,
+    -2.56025040547736e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3023312280823644,
+    "std": 0.006894886780715574,
+    "ci_low": 0.2973989232080184,
+    "ci_high": 0.3072635329567104,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 21,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007100439059992178,
+     -1.3596033885996246e-05,
+     1.8114557469148237e-06
+    ],
+    "residual_rotation_deg": 0.2946721784604535,
+    "e_max_m": 0.0008924039699621473,
+    "e_min_m": 0.0007096718359799722,
+    "ci_low_m": 0.0007904975327134954,
+    "ci_high_m": 0.0009943104072107991,
+    "delta_t_m": 7.599047034809831e-05,
+    "delta_rho_rad": 0.0002591596690055357,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012244757798419146,
+    "max_rotation_deviation_deg": 0.017617947805087686,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008924039699621473,
+    "std": null,
+    "ci_low": 0.0007904975327134954,
+    "ci_high": 0.0009943104072107991,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007100439059992178,
+    -1.3596033885996246e-05,
+    1.8114557469148237e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.29483180365343337,
+    "std": 0.007442066190657159,
+    "ci_low": 0.2895080702093906,
+    "ci_high": 0.3001555370974761,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 22,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.000704658138276325,
+     -1.1733673153719311e-05,
+     1.3898605087055429e-05
+    ],
+    "residual_rotation_deg": 0.29859208942901627,
+    "e_max_m": 0.0008845573257500369,
+    "e_min_m": 0.0007047652377492392,
+    "ci_low_m": 0.0007996241010895552,
+    "ci_high_m": 0.0009694905504105185,
+    "delta_t_m": 6.106840134705573e-05,
+    "delta_rho_rad": 0.00023864823313425967,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012260337769917033,
+    "max_rotation_deviation_deg": 0.016544126125373843,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.017 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008845573257500369,
+    "std": null,
+    "ci_low": 0.0007996241010895552,
+    "ci_high": 0.0009694905504105185,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.000704658138276325,
+    -1.1733673153719311e-05,
+    1.3898605087055429e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.298768585250477,
+    "std": 0.00464643218691772,
+    "ci_low": 0.2954447278975251,
+    "ci_high": 0.30209244260342893,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 23,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.000690832861427556,
+     -1.0360266385844644e-05,
+     -6.362121901682393e-06
+    ],
+    "residual_rotation_deg": 0.2988572915937657,
+    "e_max_m": 0.0008706633039001291,
+    "e_min_m": 0.0006908908099584204,
+    "ci_low_m": 0.0007917711875419131,
+    "ci_high_m": 0.000949555420258345,
+    "delta_t_m": 5.675180304777752e-05,
+    "delta_rho_rad": 0.00022140313310438364,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012125436158373038,
+    "max_rotation_deviation_deg": 0.01576879896126896,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.016 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008706633039001291,
+    "std": null,
+    "ci_low": 0.0007917711875419131,
+    "ci_high": 0.000949555420258345,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.000690832861427556,
+    -1.0360266385844644e-05,
+    -6.362121901682393e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.29898970597627594,
+    "std": 0.006423676761332579,
+    "ci_low": 0.2943944844434496,
+    "ci_high": 0.30358492750910226,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 24,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006940085275181064,
+     -2.203174261553127e-05,
+     -2.5796457811147494e-06
+    ],
+    "residual_rotation_deg": 0.3031424192625845,
+    "e_max_m": 0.0008874656127696995,
+    "e_min_m": 0.0006939437573144147,
+    "ci_low_m": 0.0008053315700171066,
+    "ci_high_m": 0.0009695996555222924,
+    "delta_t_m": 5.5251885204586264e-05,
+    "delta_rho_rad": 0.0002688215754800666,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012234456519272133,
+    "max_rotation_deviation_deg": 0.021001765540630848,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.021 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008874656127696995,
+    "std": null,
+    "ci_low": 0.0008053315700171066,
+    "ci_high": 0.0009695996555222924,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006940085275181064,
+    -2.203174261553127e-05,
+    -2.5796457811147494e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3032946735285683,
+    "std": 0.010035232043785959,
+    "ci_low": 0.2961159009832095,
+    "ci_high": 0.31047344607392713,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 25,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006963777341395765,
+     -3.7767699718071678e-06,
+     -2.0500750169680202e-06
+    ],
+    "residual_rotation_deg": 0.2982220769523855,
+    "e_max_m": 0.0008746937763336229,
+    "e_min_m": 0.0006963347460228544,
+    "ci_low_m": 0.0007749320850629074,
+    "ci_high_m": 0.0009744554676043383,
+    "delta_t_m": 7.730756692988605e-05,
+    "delta_rho_rad": 0.00022454124340829426,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012168861201478174,
+    "max_rotation_deviation_deg": 0.01648670493448103,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.016 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008746937763336229,
+    "std": null,
+    "ci_low": 0.0007749320850629074,
+    "ci_high": 0.0009744554676043383,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006963777341395765,
+    -3.7767699718071678e-06,
+    -2.0500750169680202e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2983693456183907,
+    "std": 0.005337214815486776,
+    "ci_low": 0.29455133214157986,
+    "ci_high": 0.3021873590952015,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 26,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006985573139756397,
+     1.9441846460753777e-05,
+     -1.181075050568442e-05
+    ],
+    "residual_rotation_deg": 0.2967015156099431,
+    "e_max_m": 0.0008771116676683281,
+    "e_min_m": 0.0006988206122814732,
+    "ci_low_m": 0.0007933079429502173,
+    "ci_high_m": 0.000960915392386439,
+    "delta_t_m": 5.9872395027640595e-05,
+    "delta_rho_rad": 0.00023931329690470238,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001216768862920045,
+    "max_rotation_deviation_deg": 0.020790406690745736,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.021 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008771116676683281,
+    "std": null,
+    "ci_low": 0.0007933079429502173,
+    "ci_high": 0.000960915392386439,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006985573139756397,
+    1.9441846460753777e-05,
+    -1.181075050568442e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.29687685932180685,
+    "std": 0.006982379050183027,
+    "ci_low": 0.2918819662482799,
+    "ci_high": 0.3018717523953338,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 27,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007009696806292197,
+     -1.2849795652000182e-06,
+     6.9454107188665636e-06
+    ],
+    "residual_rotation_deg": 0.2996053390693461,
+    "e_max_m": 0.0008803800534986297,
+    "e_min_m": 0.0007009370625516408,
+    "ci_low_m": 0.000772928319889033,
+    "ci_high_m": 0.0009878317871082265,
+    "delta_t_m": 8.106133688215238e-05,
+    "delta_rho_rad": 0.0002639039672744438,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012239146326484774,
+    "max_rotation_deviation_deg": 0.01842257879137423,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008803800534986297,
+    "std": null,
+    "ci_low": 0.000772928319889033,
+    "ci_high": 0.0009878317871082265,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007009696806292197,
+    -1.2849795652000182e-06,
+    6.9454107188665636e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2997735030069627,
+    "std": 0.009055604701014415,
+    "ci_low": 0.29329551364651546,
+    "ci_high": 0.30625149236740995,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 28,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006763148306921935,
+     -2.9355604821511924e-05,
+     9.250131997486088e-06
+    ],
+    "residual_rotation_deg": 0.29929706836989217,
+    "e_max_m": 0.0008723244910937045,
+    "e_min_m": 0.0006764165328296929,
+    "ci_low_m": 0.0007710072842245413,
+    "ci_high_m": 0.0009736416979628676,
+    "delta_t_m": 6.996878510968269e-05,
+    "delta_rho_rad": 0.0003134842175948049,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0011993861546829624,
+    "max_rotation_deviation_deg": 0.025571766084805256,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.026 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008723244910937045,
+    "std": null,
+    "ci_low": 0.0007710072842245413,
+    "ci_high": 0.0009736416979628676,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006763148306921935,
+    -2.9355604821511924e-05,
+    9.250131997486088e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.29946285520290317,
+    "std": 0.009498423084029253,
+    "ci_low": 0.2926680926540835,
+    "ci_high": 0.30625761775172283,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 29,
+   "outcome": "undetermined",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007059339707113921,
+     -2.2923833221787282e-05,
+     -6.60696559741686e-06
+    ],
+    "residual_rotation_deg": 0.30483372922152163,
+    "e_max_m": 0.0009052098731538321,
+    "e_min_m": 0.0007054604243022397,
+    "ci_low_m": 0.0008019580482289403,
+    "ci_high_m": 0.001008461698078724,
+    "delta_t_m": 7.635924169516134e-05,
+    "delta_rho_rad": 0.0002689258322973043,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012383715741465583,
+    "max_rotation_deviation_deg": 0.017603675007257562,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0009052098731538321,
+    "std": null,
+    "ci_low": 0.0008019580482289403,
+    "ci_high": 0.001008461698078724,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007059339707113921,
+    -2.2923833221787282e-05,
+    -6.60696559741686e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3050205405404006,
+    "std": 0.008034290400715162,
+    "ci_low": 0.29927315541782057,
+    "ci_high": 0.31076792566298067,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 30,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006929737686871116,
+     -1.3343660515274802e-05,
+     4.697946247655679e-06
+    ],
+    "residual_rotation_deg": 0.30168342152513505,
+    "e_max_m": 0.0008816961879561144,
+    "e_min_m": 0.0006928647544181181,
+    "ci_low_m": 0.0007885535368008811,
+    "ci_high_m": 0.0009748388391113477,
+    "delta_t_m": 7.265813037055407e-05,
+    "delta_rho_rad": 0.00020484520784679256,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012196544408937843,
+    "max_rotation_deviation_deg": 0.017713255792338505,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008816961879561144,
+    "std": null,
+    "ci_low": 0.0007885535368008811,
+    "ci_high": 0.0009748388391113477,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006929737686871116,
+    -1.3343660515274802e-05,
+    4.697946247655679e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.301784854394127,
+    "std": 0.006787981543581072,
+    "ci_low": 0.29692902491944767,
+    "ci_high": 0.30664068386880633,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 31,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006911788271046079,
+     -1.8380250685577571e-06,
+     1.553565698494686e-06
+    ],
+    "residual_rotation_deg": 0.2993614139207051,
+    "e_max_m": 0.0008718879406287647,
+    "e_min_m": 0.0006911236596574688,
+    "ci_low_m": 0.0007756775360536351,
+    "ci_high_m": 0.0009680983452038943,
+    "delta_t_m": 7.200740525597585e-05,
+    "delta_rho_rad": 0.00024202999319153734,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012136666552954025,
+    "max_rotation_deviation_deg": 0.02125846873842886,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.021 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008718879406287647,
+    "std": null,
+    "ci_low": 0.0007756775360536351,
+    "ci_high": 0.0009680983452038943,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006911788271046079,
+    -1.8380250685577571e-06,
+    1.553565698494686e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2995433943352284,
+    "std": 0.0076800671119848195,
+    "ci_low": 0.29404940528849083,
+    "ci_high": 0.305037383381966,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 32,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006901369495258343,
+     1.4475870014443981e-05,
+     4.856697321703739e-06
+    ],
+    "residual_rotation_deg": 0.29673949861829635,
+    "e_max_m": 0.0008740354834042371,
+    "e_min_m": 0.0006900572449347047,
+    "ci_low_m": 0.000801697555228354,
+    "ci_high_m": 0.0009463734115801202,
+    "delta_t_m": 4.872944016527173e-05,
+    "delta_rho_rad": 0.00023608488010611316,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012082133844860225,
+    "max_rotation_deviation_deg": 0.018131780421747287,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008740354834042371,
+    "std": null,
+    "ci_low": 0.000801697555228354,
+    "ci_high": 0.0009463734115801202,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006901369495258343,
+    1.4475870014443981e-05,
+    4.856697321703739e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.296879084144281,
+    "std": 0.008437598781051901,
+    "ci_low": 0.2908431895865985,
+    "ci_high": 0.3029149787019635,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 33,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006883612254474623,
+     2.1116716901619173e-07,
+     6.701645311757436e-07
+    ],
+    "residual_rotation_deg": 0.3019896738850894,
+    "e_max_m": 0.0008697201953695397,
+    "e_min_m": 0.0006883467240989895,
+    "ci_low_m": 0.0007835314449240267,
+    "ci_high_m": 0.0009559089458150527,
+    "delta_t_m": 5.871733163036254e-05,
+    "delta_rho_rad": 0.0002747141881515044,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012154323855990048,
+    "max_rotation_deviation_deg": 0.02433199694204955,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.024 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008697201953695397,
+    "std": null,
+    "ci_low": 0.0007835314449240267,
+    "ci_high": 0.0009559089458150527,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006883612254474623,
+    2.1116716901619173e-07,
+    6.701645311757436e-07
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30218903463579855,
+    "std": 0.008424530355162985,
+    "ci_low": 0.29616248866682565,
+    "ci_high": 0.30821558060477144,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 34,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.000696440301947281,
+     -5.957270322173883e-06,
+     1.1571218819612373e-05
+    ],
+    "residual_rotation_deg": 0.3027813328985918,
+    "e_max_m": 0.0008795013169449791,
+    "e_min_m": 0.0006965091245729796,
+    "ci_low_m": 0.0007878138035486861,
+    "ci_high_m": 0.0009711888303412722,
+    "delta_t_m": 6.0287853720491525e-05,
+    "delta_rho_rad": 0.00031399659675801554,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012250143993599518,
+    "max_rotation_deviation_deg": 0.023945245144256794,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.024 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008795013169449791,
+    "std": null,
+    "ci_low": 0.0007878138035486861,
+    "ci_high": 0.0009711888303412722,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.000696440301947281,
+    -5.957270322173883e-06,
+    1.1571218819612373e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30301609731769513,
+    "std": 0.0049954489934756485,
+    "ci_low": 0.2994425683818785,
+    "ci_high": 0.30658962625351177,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 35,
+   "outcome": "undetermined",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007134714915835472,
+     1.9036470256072413e-05,
+     4.316099835564303e-06
+    ],
+    "residual_rotation_deg": 0.30066273530447574,
+    "e_max_m": 0.0008978212197591504,
+    "e_min_m": 0.0007134500495174962,
+    "ci_low_m": 0.0007945203991698685,
+    "ci_high_m": 0.0010011220403484322,
+    "delta_t_m": 7.905401151256001e-05,
+    "delta_rho_rad": 0.00024246809076721845,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012384933219777858,
+    "max_rotation_deviation_deg": 0.022946351076027972,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.023 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008978212197591504,
+    "std": null,
+    "ci_low": 0.0007945203991698685,
+    "ci_high": 0.0010011220403484322,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007134714915835472,
+    1.9036470256072413e-05,
+    4.316099835564303e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3008086235438193,
+    "std": 0.0075957083128183125,
+    "ci_low": 0.2953749811466434,
+    "ci_high": 0.30624226594099524,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 36,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007028554380267115,
+     1.6371838553801056e-05,
+     1.1684910229415592e-05
+    ],
+    "residual_rotation_deg": 0.2959724894446653,
+    "e_max_m": 0.0008851528860978487,
+    "e_min_m": 0.0007028135351319001,
+    "ci_low_m": 0.0008038018883133372,
+    "ci_high_m": 0.0009665038838823602,
+    "delta_t_m": 5.640832659606037e-05,
+    "delta_rho_rad": 0.00024942671188451067,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.00121971205595573,
+    "max_rotation_deviation_deg": 0.017738088065511377,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008851528860978487,
+    "std": null,
+    "ci_low": 0.0008038018883133372,
+    "ci_high": 0.0009665038838823602,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007028554380267115,
+    1.6371838553801056e-05,
+    1.1684910229415592e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2961157507118427,
+    "std": 0.007736467049628096,
+    "ci_low": 0.2905814155802167,
+    "ci_high": 0.3016500858434687,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 37,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006990985991598175,
+     6.8801153497198815e-06,
+     3.1516570149964235e-07
+    ],
+    "residual_rotation_deg": 0.29466564698259506,
+    "e_max_m": 0.0008713232106572686,
+    "e_min_m": 0.0006991087874931716,
+    "ci_low_m": 0.0007887576037579466,
+    "ci_high_m": 0.0009538888175565905,
+    "delta_t_m": 5.2692652724229026e-05,
+    "delta_rho_rad": 0.0002987295417509292,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012134205308562554,
+    "max_rotation_deviation_deg": 0.02448911635908226,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.024 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008713232106572686,
+    "std": null,
+    "ci_low": 0.0007887576037579466,
+    "ci_high": 0.0009538888175565905,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006990985991598175,
+    6.8801153497198815e-06,
+    3.1516570149964235e-07
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.29483376235284176,
+    "std": 0.010500471764521043,
+    "ci_low": 0.2873221773603316,
+    "ci_high": 0.3023453473453519,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 38,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006999557120564232,
+     -2.30817929790831e-05,
+     -5.131508419886355e-06
+    ],
+    "residual_rotation_deg": 0.29939911008104536,
+    "e_max_m": 0.0008935105873489087,
+    "e_min_m": 0.0006995626718725352,
+    "ci_low_m": 0.0007876783905191583,
+    "ci_high_m": 0.000999342784178659,
+    "delta_t_m": 8.082186531288584e-05,
+    "delta_rho_rad": 0.0002501033151686447,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001222904412013494,
+    "max_rotation_deviation_deg": 0.017150173792264876,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.017 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008935105873489087,
+    "std": null,
+    "ci_low": 0.0007876783905191583,
+    "ci_high": 0.000999342784178659,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006999557120564232,
+    -2.30817929790831e-05,
+    -5.131508419886355e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.29961164413394237,
+    "std": 0.003842906912609213,
+    "ci_low": 0.2968625941350745,
+    "ci_high": 0.30236069413281025,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 39,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006968544656167637,
+     1.3817845827521816e-05,
+     -5.989931284680617e-06
+    ],
+    "residual_rotation_deg": 0.300789650922616,
+    "e_max_m": 0.0008875451049620762,
+    "e_min_m": 0.0006965668437503601,
+    "ci_low_m": 0.0008117587339025705,
+    "ci_high_m": 0.000963331476021582,
+    "delta_t_m": 5.4458646374864615e-05,
+    "delta_rho_rad": 0.00021327724684641082,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012219935601838483,
+    "max_rotation_deviation_deg": 0.016270727692661538,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.016 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008875451049620762,
+    "std": null,
+    "ci_low": 0.0008117587339025705,
+    "ci_high": 0.000963331476021582,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006968544656167637,
+    1.3817845827521816e-05,
+    -5.989931284680617e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30090787606505104,
+    "std": 0.004836672427052316,
+    "ci_low": 0.29744792904252876,
+    "ci_high": 0.3043678230875733,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 40,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007092870220091291,
+     1.0421707795349358e-05,
+     -4.335422661486122e-07
+    ],
+    "residual_rotation_deg": 0.2987739064118873,
+    "e_max_m": 0.0008905688606051083,
+    "e_min_m": 0.0007091537811804698,
+    "ci_low_m": 0.0007892785745586686,
+    "ci_high_m": 0.000991859146651548,
+    "delta_t_m": 7.639963632884202e-05,
+    "delta_rho_rad": 0.00024890649717597744,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012308219623480775,
+    "max_rotation_deviation_deg": 0.01801116382093076,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008905688606051083,
+    "std": null,
+    "ci_low": 0.0007892785745586686,
+    "ci_high": 0.000991859146651548,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007092870220091291,
+    1.0421707795349358e-05,
+    -4.335422661486122e-07
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2989442599690106,
+    "std": 0.005858800683923742,
+    "ci_low": 0.29475312643916607,
+    "ci_high": 0.3031353934988551,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 41,
+   "outcome": "undetermined",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.000731503351157853,
+     4.542496340153527e-07,
+     -8.393150679945066e-06
+    ],
+    "residual_rotation_deg": 0.30082967761148177,
+    "e_max_m": 0.0009034855191296356,
+    "e_min_m": 0.0007315332663816558,
+    "ci_low_m": 0.000765396774092171,
+    "ci_high_m": 0.0010415742641671003,
+    "delta_t_m": 0.00010948105552617497,
+    "delta_rho_rad": 0.000286076895112896,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012565978745406434,
+    "max_rotation_deviation_deg": 0.021939573002362565,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.022 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0009034855191296356,
+    "std": null,
+    "ci_low": 0.000765396774092171,
+    "ci_high": 0.0010415742641671003,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.000731503351157853,
+    4.542496340153527e-07,
+    -8.393150679945066e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30100813800516535,
+    "std": 0.009017504731996789,
+    "ci_low": 0.29455740372067146,
+    "ci_high": 0.30745887228965924,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 42,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007026193403920326,
+     -3.7133985467021947e-07,
+     2.701100404539635e-06
+    ],
+    "residual_rotation_deg": 0.3027867688211525,
+    "e_max_m": 0.0008837142873330526,
+    "e_min_m": 0.000702583884951302,
+    "ci_low_m": 0.0007774830908514877,
+    "ci_high_m": 0.0009899454838146176,
+    "delta_t_m": 7.849804057232499e-05,
+    "delta_rho_rad": 0.00027733155909239897,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001231086620262722,
+    "max_rotation_deviation_deg": 0.022601290311634274,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.023 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008837142873330526,
+    "std": null,
+    "ci_low": 0.0007774830908514877,
+    "ci_high": 0.0009899454838146176,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007026193403920326,
+    -3.7133985467021947e-07,
+    2.701100404539635e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.303045866769309,
+    "std": 0.006644384307133636,
+    "ci_low": 0.2982927605693981,
+    "ci_high": 0.30779897296921993,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 43,
+   "outcome": "undetermined",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007131835506323958,
+     -5.82621341637799e-06,
+     -9.762271034775285e-06
+    ],
+    "residual_rotation_deg": 0.2990484561762417,
+    "e_max_m": 0.0008942474327303669,
+    "e_min_m": 0.000713053957855767,
+    "ci_low_m": 0.0007772180882230377,
+    "ci_high_m": 0.001011276777237696,
+    "delta_t_m": 8.376594955863023e-05,
+    "delta_rho_rad": 0.0003326339494869893,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012352115832702413,
+    "max_rotation_deviation_deg": 0.0234346692423174,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.023 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008942474327303669,
+    "std": null,
+    "ci_low": 0.0007772180882230377,
+    "ci_high": 0.001011276777237696,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007131835506323958,
+    -5.82621341637799e-06,
+    -9.762271034775285e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2993476550380613,
+    "std": 0.009717578037134533,
+    "ci_low": 0.2923961184800641,
+    "ci_high": 0.30629919159605856,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 44,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007076943380779633,
+     9.527238401734757e-06,
+     -8.024609794271276e-06
+    ],
+    "residual_rotation_deg": 0.30099743404453494,
+    "e_max_m": 0.0008853731643485884,
+    "e_min_m": 0.0007077733281928142,
+    "ci_low_m": 0.000783898038312248,
+    "ci_high_m": 0.0009868482903849288,
+    "delta_t_m": 7.872386420637668e-05,
+    "delta_rho_rad": 0.00022751261829963667,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012331429773607555,
+    "max_rotation_deviation_deg": 0.01717468378272567,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.017 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008853731643485884,
+    "std": null,
+    "ci_low": 0.000783898038312248,
+    "ci_high": 0.0009868482903849288,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007076943380779633,
+    9.527238401734757e-06,
+    -8.024609794271276e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30114029409513826,
+    "std": 0.00787339300253945,
+    "ci_low": 0.295508008037493,
+    "ci_high": 0.3067725801527835,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 45,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006959822446447308,
+     2.1520670311774153e-06,
+     1.2164318083781319e-05
+    ],
+    "residual_rotation_deg": 0.29895382675394144,
+    "e_max_m": 0.00087708824064521,
+    "e_min_m": 0.000695988901958815,
+    "ci_low_m": 0.000778864970518063,
+    "ci_high_m": 0.0009753115107723569,
+    "delta_t_m": 7.364681470801166e-05,
+    "delta_rho_rad": 0.00024576455419135257,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012178641336513948,
+    "max_rotation_deviation_deg": 0.017639522814442823,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.00087708824064521,
+    "std": null,
+    "ci_low": 0.000778864970518063,
+    "ci_high": 0.0009753115107723569,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006959822446447308,
+    2.1520670311774153e-06,
+    1.2164318083781319e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2991412385764959,
+    "std": 0.007271529664481001,
+    "ci_low": 0.29393949961417043,
+    "ci_high": 0.30434297753882134,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 46,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007056974200075109,
+     -1.8784782236398446e-05,
+     -9.23923036675267e-06
+    ],
+    "residual_rotation_deg": 0.3000834169043183,
+    "e_max_m": 0.0008986433733379626,
+    "e_min_m": 0.0007052255094454361,
+    "ci_low_m": 0.0008021047401508748,
+    "ci_high_m": 0.0009951820065250505,
+    "delta_t_m": 6.971800081431999e-05,
+    "delta_rho_rad": 0.00026820632372767845,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012297516139485425,
+    "max_rotation_deviation_deg": 0.02021224358912229,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.020 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008986433733379626,
+    "std": null,
+    "ci_low": 0.0008021047401508748,
+    "ci_high": 0.0009951820065250505,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007056974200075109,
+    -1.8784782236398446e-05,
+    -9.23923036675267e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3002911970818562,
+    "std": 0.0029407527759946154,
+    "ci_low": 0.29818750927484927,
+    "ci_high": 0.3023948848888631,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 47,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007135858158508546,
+     -1.1946553969997203e-05,
+     -7.822513361885053e-06
+    ],
+    "residual_rotation_deg": 0.30081824377930283,
+    "e_max_m": 0.000896270445742551,
+    "e_min_m": 0.0007135172800631079,
+    "ci_low_m": 0.0007932601178946821,
+    "ci_high_m": 0.0009992807735904198,
+    "delta_t_m": 7.429408051241674e-05,
+    "delta_rho_rad": 0.00028716247335452044,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012387549572366006,
+    "max_rotation_deviation_deg": 0.02241127585481642,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.022 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.000896270445742551,
+    "std": null,
+    "ci_low": 0.0007932601178946821,
+    "ci_high": 0.0009992807735904198,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007135858158508546,
+    -1.1946553969997203e-05,
+    -7.822513361885053e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3009614107801274,
+    "std": 0.009667615164664986,
+    "ci_low": 0.29404561550799246,
+    "ci_high": 0.3078772060522623,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 48,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007012368283481312,
+     -9.336387415129979e-06,
+     -1.5676992638530276e-06
+    ],
+    "residual_rotation_deg": 0.2950965650229753,
+    "e_max_m": 0.0008733085313221553,
+    "e_min_m": 0.0007012798183822373,
+    "ci_low_m": 0.000773226858239877,
+    "ci_high_m": 0.0009733902044044336,
+    "delta_t_m": 7.718906424979817e-05,
+    "delta_rho_rad": 0.0002289260883248011,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.001216340828792688,
+    "max_rotation_deviation_deg": 0.01808882286902847,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008733085313221553,
+    "std": null,
+    "ci_low": 0.000773226858239877,
+    "ci_high": 0.0009733902044044336,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007012368283481312,
+    -9.336387415129979e-06,
+    -1.5676992638530276e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.29523409179360544,
+    "std": 0.005996052578390102,
+    "ci_low": 0.29094477417319936,
+    "ci_high": 0.2995234094140115,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 49,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007081345439461908,
+     2.1867355445778153e-05,
+     -1.390294722008356e-05
+    ],
+    "residual_rotation_deg": 0.3016335209525764,
+    "e_max_m": 0.0008923823217980362,
+    "e_min_m": 0.0007084229806116773,
+    "ci_low_m": 0.00078680005473908,
+    "ci_high_m": 0.0009979645888569923,
+    "delta_t_m": 8.038857281022177e-05,
+    "delta_rho_rad": 0.0002519369424873441,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012350576990212106,
+    "max_rotation_deviation_deg": 0.02009755519250293,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.020 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008923823217980362,
+    "std": null,
+    "ci_low": 0.00078680005473908,
+    "ci_high": 0.0009979645888569923,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007081345439461908,
+    2.1867355445778153e-05,
+    -1.390294722008356e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30173508677976796,
+    "std": 0.009442375158045658,
+    "ci_low": 0.29498041850186496,
+    "ci_high": 0.30848975505767096,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 50,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007102709535415554,
+     -1.2814748140203874e-05,
+     -1.3621058281926156e-07
+    ],
+    "residual_rotation_deg": 0.30425968388250696,
+    "e_max_m": 0.0008939279516224499,
+    "e_min_m": 0.0007102896412946024,
+    "ci_low_m": 0.0008142105166537733,
+    "ci_high_m": 0.0009736453865911265,
+    "delta_t_m": 5.9335090119769476e-05,
+    "delta_rho_rad": 0.00020382344848907124,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012414192619210126,
+    "max_rotation_deviation_deg": 0.01322231804898195,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.013 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008939279516224499,
+    "std": null,
+    "ci_low": 0.0008142105166537733,
+    "ci_high": 0.0009736453865911265,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007102709535415554,
+    -1.2814748140203874e-05,
+    -1.3621058281926156e-07
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30432583435907984,
+    "std": 0.006366904896860252,
+    "ci_low": 0.2997712249715676,
+    "ci_high": 0.30888044374659207,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 51,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007055523712149737,
+     -1.4047034755280987e-05,
+     -1.5142741210338593e-05
+    ],
+    "residual_rotation_deg": 0.3011633234957535,
+    "e_max_m": 0.0008907044703617108,
+    "e_min_m": 0.0007056271334215131,
+    "ci_low_m": 0.0007962466444635831,
+    "ci_high_m": 0.0009851622962598384,
+    "delta_t_m": 6.962563889902965e-05,
+    "delta_rho_rad": 0.0002483218699909804,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012314831912644884,
+    "max_rotation_deviation_deg": 0.019844674375735477,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.020 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008907044703617108,
+    "std": null,
+    "ci_low": 0.0007962466444635831,
+    "ci_high": 0.0009851622962598384,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007055523712149737,
+    -1.4047034755280987e-05,
+    -1.5142741210338593e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30131230317636015,
+    "std": 0.005474334802093887,
+    "ci_low": 0.2973961999701858,
+    "ci_high": 0.3052284063825345,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 52,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006897335466035648,
+     -5.660741772645781e-07,
+     -3.2418524744726194e-07
+    ],
+    "residual_rotation_deg": 0.3001758573325226,
+    "e_max_m": 0.0008683588005207782,
+    "e_min_m": 0.0006897241307811389,
+    "ci_low_m": 0.0007955537019328023,
+    "ci_high_m": 0.0009411638991087541,
+    "delta_t_m": 5.079573274240544e-05,
+    "delta_rho_rad": 0.00022009365845570406,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012136389604598579,
+    "max_rotation_deviation_deg": 0.019176392473406797,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.019 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008683588005207782,
+    "std": null,
+    "ci_low": 0.0007955537019328023,
+    "ci_high": 0.0009411638991087541,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006897335466035648,
+    -5.660741772645781e-07,
+    -3.2418524744726194e-07
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3002776875430436,
+    "std": 0.006793058122314237,
+    "ci_low": 0.29541822650270894,
+    "ci_high": 0.3051371485833783,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 53,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006901602313787918,
+     -4.1465984381686916e-06,
+     -1.5380045932509578e-05
+    ],
+    "residual_rotation_deg": 0.30182219745178795,
+    "e_max_m": 0.0008802616212150689,
+    "e_min_m": 0.0006900619436079832,
+    "ci_low_m": 0.0007948255702402541,
+    "ci_high_m": 0.0009656976721898837,
+    "delta_t_m": 6.007195534393822e-05,
+    "delta_rho_rad": 0.0002536409563087654,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012171225348810775,
+    "max_rotation_deviation_deg": 0.019945695791929126,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.020 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008802616212150689,
+    "std": null,
+    "ci_low": 0.0007948255702402541,
+    "ci_high": 0.0009656976721898837,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006901602313787918,
+    -4.1465984381686916e-06,
+    -1.5380045932509578e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30202724188640107,
+    "std": 0.004605783089047615,
+    "ci_low": 0.2987324631463313,
+    "ci_high": 0.30532202062647085,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 54,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007051362683509342,
+     2.0140560954174666e-07,
+     6.323627609611247e-06
+    ],
+    "residual_rotation_deg": 0.30480696235452304,
+    "e_max_m": 0.000889552369545666,
+    "e_min_m": 0.0007050883744279453,
+    "ci_low_m": 0.0008101900448388172,
+    "ci_high_m": 0.0009689146942525148,
+    "delta_t_m": 5.468742050681653e-05,
+    "delta_rho_rad": 0.0002467490420003229,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012371525318147308,
+    "max_rotation_deviation_deg": 0.01806131227904867,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.018 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.000889552369545666,
+    "std": null,
+    "ci_low": 0.0008101900448388172,
+    "ci_high": 0.0009689146942525148,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007051362683509342,
+    2.0140560954174666e-07,
+    6.323627609611247e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.3050048963634004,
+    "std": 0.006424367162063657,
+    "ci_low": 0.30040918094764324,
+    "ci_high": 0.30960061177915754,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 55,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006918573030261492,
+     2.789918954953753e-05,
+     -1.3228952912374692e-05
+    ],
+    "residual_rotation_deg": 0.2961482938790288,
+    "e_max_m": 0.0008881044197034402,
+    "e_min_m": 0.000691356062818424,
+    "ci_low_m": 0.0007910797165725245,
+    "ci_high_m": 0.000985129122834356,
+    "delta_t_m": 6.814012113539861e-05,
+    "delta_rho_rad": 0.0002888458199551716,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012094216583738422,
+    "max_rotation_deviation_deg": 0.02491048981554991,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.025 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008881044197034402,
+    "std": null,
+    "ci_low": 0.0007910797165725245,
+    "ci_high": 0.000985129122834356,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006918573030261492,
+    2.789918954953753e-05,
+    -1.3228952912374692e-05
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2963937132842476,
+    "std": 0.004890128400501296,
+    "ci_low": 0.2928955261619542,
+    "ci_high": 0.29989190040654096,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 56,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007015248676359222,
+     -1.823904073092523e-05,
+     -2.0340399362445146e-06
+    ],
+    "residual_rotation_deg": 0.30484513691793624,
+    "e_max_m": 0.0008876585001619322,
+    "e_min_m": 0.000701668404490141,
+    "ci_low_m": 0.000804903546804931,
+    "ci_high_m": 0.0009704134535189334,
+    "delta_t_m": 6.201972778485765e-05,
+    "delta_rho_rad": 0.00020735225572143516,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012338193822641883,
+    "max_rotation_deviation_deg": 0.017461522070757796,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.017 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008876585001619322,
+    "std": null,
+    "ci_low": 0.000804903546804931,
+    "ci_high": 0.0009704134535189334,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007015248676359222,
+    -1.823904073092523e-05,
+    -2.0340399362445146e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.30496802122216327,
+    "std": 0.00605982561833752,
+    "ci_low": 0.3006330831172172,
+    "ci_high": 0.30930295932710933,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 57,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007165991407356445,
+     -5.357694299275413e-06,
+     5.130474394869632e-06
+    ],
+    "residual_rotation_deg": 0.2967700775921836,
+    "e_max_m": 0.0008938300933110781,
+    "e_min_m": 0.0007164478557716801,
+    "ci_low_m": 0.0008168865746452017,
+    "ci_high_m": 0.0009707736119769545,
+    "delta_t_m": 5.580958914318268e-05,
+    "delta_rho_rad": 0.0002113392952269372,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012345984525497355,
+    "max_rotation_deviation_deg": 0.014425050608346231,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.014 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008938300933110781,
+    "std": null,
+    "ci_low": 0.0008168865746452017,
+    "ci_high": 0.0009707736119769545,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007165991407356445,
+    -5.357694299275413e-06,
+    5.130474394869632e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2968507702127053,
+    "std": 0.0076222365111540645,
+    "ci_low": 0.2913981506856474,
+    "ci_high": 0.3023033897397632,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 58,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0007092951392018529,
+     -5.948268670457145e-06,
+     -9.318134435173652e-06
+    ],
+    "residual_rotation_deg": 0.29988793203783387,
+    "e_max_m": 0.0008886855731973174,
+    "e_min_m": 0.0007092793201824045,
+    "ci_low_m": 0.0008089689349750081,
+    "ci_high_m": 0.0009684022114196266,
+    "delta_t_m": 5.487505182986459e-05,
+    "delta_rho_rad": 0.00024841586392444683,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.0012327838652058621,
+    "max_rotation_deviation_deg": 0.020360253445257014,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.020 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008886855731973174,
+    "std": null,
+    "ci_low": 0.0008089689349750081,
+    "ci_high": 0.0009684022114196266,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0007092951392018529,
+    -5.948268670457145e-06,
+    -9.318134435173652e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2999695173709983,
+    "std": 0.00941016698867656,
+    "ci_low": 0.2932378894294816,
+    "ci_high": 0.306701145312515,
+    "alpha": 0.05
+   }
+  },
+  {
+   "replicate": 59,
+   "outcome": "conformant",
+   "spatial_decision": {
+    "n": 10,
+    "r_ws_m": 0.1,
+    "residual_translation_m": [
+     0.0006914343203393811,
+     5.506970264625283e-06,
+     -6.208238525591824e-06
+    ],
+    "residual_rotation_deg": 0.2976006381505992,
+    "e_max_m": 0.0008729528508968239,
+    "e_min_m": 0.0006913507226618008,
+    "ci_low_m": 0.0007506736969973963,
+    "ci_high_m": 0.0009952320047962515,
+    "delta_t_m": 9.237871227255312e-05,
+    "delta_rho_rad": 0.0002990044162687444,
+    "alpha": 0.05,
+    "bound_eq3_m": 0.00121089463535465,
+    "max_rotation_deviation_deg": 0.020616987067068014,
+    "model": "hotelling-t2-mvn/small-angle-rotation/lipschitz",
+    "assumptions": [
+     "the per-trial translation errors are iid multivariate normal (Hotelling T^2 / F region, n = 10, level 1 - 0.05); the region is not distribution-free: heavy-tailed or mixture errors reduce its coverage (RC4 review stress case: 42.8 %)",
+     "the per-trial rotation deviations from the mean rotation, mapped to rotation vectors, are iid multivariate normal; this is a small-angle approximation (largest deviation in this run 0.021 deg)",
+     "e_max is 1-Lipschitz in the translation and r_ws-Lipschitz in the rotation vector (exact); the interval is conservative under (a) and (b)",
+     "the coverage reported for the validation campaign is empirical for its Gaussian-noise configurations, not a guarantee for other error distributions"
+    ]
+   },
+   "predicted_abs_error_at_workspace_edge_m": {
+    "n": 10,
+    "mean": 0.0008729528508968239,
+    "std": null,
+    "ci_low": 0.0007506736969973963,
+    "ci_high": 0.0009952320047962515,
+    "alpha": 0.05,
+    "statistic": "exact maximum positional error over the ball (eq. 3'), interval propagated from Hotelling T^2 regions"
+   },
+   "binding_translation_m": [
+    0.0006914343203393811,
+    5.506970264625283e-06,
+    -6.208238525591824e-06
+   ],
+   "binding_rotation_deg": {
+    "n": 10,
+    "mean": 0.2978611594379123,
+    "std": 0.008553069738807097,
+    "ci_low": 0.2917426619331627,
+    "ci_high": 0.30397965694266194,
+    "alpha": 0.05
+   }
+  }
+ ],
+ "coverage": 1.0
+}

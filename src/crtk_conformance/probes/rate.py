@@ -1,6 +1,10 @@
 """RateSensitivityProbe — temporal binding class (state precondition, command liveness / stop behaviour, rate).
 
 Version 0.1.3 (designs: rc3/LIVENESS_PROBE_DESIGN.md, rc3/RATE_ESTIMATOR_DESIGN.md, revised in rc4/; 0.1.3 changes in CHANGELOG.md).
+0.1.5 (RC7 adversarial review): the response latency of the last streamed command is accepted only after its departure
+was observed (last_command_latency); the onset-based drift lower bound carries the granularity term G; post-gap
+non-responses are not read as a stop policy when calibration commands sent without a silence were also unanswered
+(timeout_interval_from_trials is the interval logic as a pure, replayable function).
 
 Sub-probes, each reported separately:
 
@@ -47,6 +51,7 @@ import numpy as np
 
 from ..adapter import PlatformAdapter, pose_msg_to_matrix
 from ..expectations import Expectations, TemporalExpectation, combine
+from ..liveness import attributable, drift_evaluated, last_command_latency, timeout_interval_from_trials  # noqa: F401 (0.1.5: ROS-free liveness decision logic)
 from ..rate_estimator import (
     AppliedAgeEstimate,
     estimate_applied_age,
@@ -176,8 +181,12 @@ class RateSensitivityProbe:
         return {"attained": attained, "responded": bool(responded), "closest_m": closest, "moved_m": moved, "settled_distance_m": settled_d,
                 "initial_distance_m": d0, "reduction_m": reduction, "time_to_attain_s": t_att, "time_to_respond_s": t_resp}
 
-    def _stream(self, buf, base_T) -> Tuple[float, np.ndarray]:
-        """Stream small oscillating commands to keep any liveness policy fed; return (t_last, last setpoint)."""
+    def _stream(self, buf, base_T) -> Tuple[float, np.ndarray, float]:
+        """Stream small oscillating commands to keep any liveness policy fed; return (t_last, last setpoint, t_half).
+
+        t_last is the send time of the last command (the return to base), t_half the send time of the half-step
+        offset that precedes it (0.1.5: the departure to that offset must be observed before the return to base can
+        be read as the response to the last command, see last_command_latency)."""
         period = 1.0 / self.stream_rate
         t_end = time.monotonic() + self.stream_duration
         k = 0
@@ -191,10 +200,11 @@ class RateSensitivityProbe:
         # base -- so that the latency of the last command before the silence can be bounded from the feedback
         # observed during the gap itself (its response latency bounds its one-way transport latency)
         T = base_T.copy(); T[self.probe_axis, 3] += 0.5 * self.step * self.probe_sign
+        t_half = time.monotonic()
         self.a.servo_cp(T)
         time.sleep(period)
         self.a.servo_cp(base_T)
-        return time.monotonic(), base_T[:3, 3].copy()
+        return time.monotonic(), base_T[:3, 3].copy(), t_half
 
     def _recover(self, buf, base_T):
         if self.a.has("operating_state"):
@@ -364,8 +374,16 @@ class RateSensitivityProbe:
         onset (first sustained departure from the settled pose by more than max(3 sigma_hat, still tolerance)) is
         located inside the gap, so that a drift policy can be timed without the fixed 0.2 s window of 0.1.1."""
         self._recover(buf, base_T)
-        t_last, p_last = self._stream(buf, base_T)
-        buf.clear()
+        t_last, p_last, t_half = self._stream(buf, base_T)
+        # 0.1.5: the operating state at the start of the silence, from the latest state message already received (no
+        # waiting, so the gap timing is untouched).  A silence that starts in FAULT/DISABLED -- the recovery before the
+        # stream failed, e.g. its enable or return-to-base command was lost -- cannot evidence a silence-triggered policy
+        state0 = None
+        if self.a.has("operating_state"):
+            d0s = self.a.subscribe("operating_state").latest()
+            state0 = None if d0s is None else d0s[1].state
+        # 0.1.5: the buffer is not cleared here -- the samples between the half-step send and t_last are needed by the
+        # departure guard of last_command_latency(); gap samples are still selected by time (since t_last)
         deadline = t_last + gap_s
         while True:
             remaining = deadline - time.monotonic()
@@ -383,19 +401,25 @@ class RateSensitivityProbe:
         ok, t_exec = resp["attained"], resp["time_to_attain_s"]
         st = self.a.operating_state(0.2) if self.a.has("operating_state") else None
         state = None if st is None else st.state
+        # 0.1.5: when the state was read, relative to the last streamed send.  Under baseline command loss the post-gap
+        # command itself may have been lost, and a FAULT seen afterwards then bounds tau_w by this time, not by the gap
+        t_state = time.monotonic() - t_last
         # settled reference: samples in the first max(0.1 s, settle_hint) of the gap (the stream's tracking error
         # settles there; measuring from the last streamed setpoint would confuse it with a drift -- live SRC v1.0.0)
         fp = self.resolution.get("feedback_period_s", 0.01)
         ref_len = max(0.1, float(self.resolution.get("settle_hint_s", 0.0) or 0.0))
         gap_pos = [(tq - t_last, pose_msg_to_matrix(m)[:3, 3]) for tq, m in gap_samples]
         # 0.1.3: latency of the last streamed transaction (half-step offset -> base): the first gap sample that has
-        # come back within half of that offset to the base pose; NaN if the gap ended before it could be seen
-        r_last = float("nan")
+        # come back within half of that offset to the base pose; NaN if the gap ended before it could be seen.
+        # 0.1.5: accepted only after the departure to the half-step offset was observed (last_command_latency): an
+        # implementation that applies commands later than one feedback period is still executing the in-band stream
+        # when the gap starts, and the first in-band sample is then NOT the response to the last command.
+        # Only samples up to the post-gap send can be attributed to the last streamed command: after it, an in-band
+        # sample may be the pose passing the base on its way to the post-gap goal (live SRC v1.0.0: a 2.05-s "response"
+        # read after a 2.0-s silence).  A response that arrives later is not attributable and L is used.
         half = 0.25 * self.step
-        for tq, q in gap_pos:
-            if float(np.linalg.norm(q - p_last)) <= half + 3.0 * self.sigma_hat:
-                r_last = float(tq)
-                break
+        since_half = [(tq, pose_msg_to_matrix(m)[:3, 3]) for tq, m in buf.since(t_half) if tq <= t_send]
+        r_last, departure_seen = last_command_latency(since_half, t_last, p_last, half + 3.0 * self.sigma_hat)
         if not math.isnan(r_last):
             self._latencies.append(r_last)
         if resp["responded"] and not math.isnan(resp["time_to_respond_s"]):
@@ -423,10 +447,27 @@ class RateSensitivityProbe:
             if early_pts:
                 ref_motion = float(np.linalg.norm(np.mean(early_pts, axis=0) - ref)) > thr
         n_gap = len(gap_samples)
-        if not resp["responded"]:
+        # 0.1.5: (i) the drift can only be evaluated on samples after the reference window; (ii) an onset can only be
+        # located if the reference window itself was still (a drift that began inside it is censored: the reference is
+        # then a mean over drifting samples and the first sample after the window already exceeds the threshold);
+        # (iii) the response to the post-gap command can only be observed if the pose was not already at its goal (the
+        # previous return to base may have been lost); (iv) the silence must have started in an enabled state.
+        drift_eval = bool(ref_pts and after)
+        still_thr = max(4.0 * self.sigma_hat, self.still_tol)
+        ref_still = bool(ref_pts) and (max(float(np.linalg.norm(q - np.mean(ref_pts, axis=0))) for q in ref_pts) <= still_thr)
+        d_pre_goal = float(np.linalg.norm(p_pre - goal[:3, 3]))
+        not_observable_reason = None
+        if state0 in ("FAULT", "DISABLED"):
+            not_observable_reason = f"operating state {state0} at the start of the silence (recovery before the stream failed)"
+        elif d_pre_goal < 0.25 * self.step:
+            not_observable_reason = "pose already at the post-gap goal when the silence ended (previous return to base lost): the response cannot be observed"
+        if not_observable_reason is not None:
+            cls = "not_observable"
+        elif not resp["responded"]:
             cls = "faulted" if state in ("FAULT", "DISABLED") else "rejected"
         elif (n_gap < 2 and gap_s >= 2 * fp) or (not after and gap_s >= ref_len + 0.1):
             cls = "not_observable"
+            not_observable_reason = "too few feedback samples during the silence" if n_gap < 2 else "no feedback sample after the reference window"
         elif after and drift > self.hold_tol:
             cls = "drifted"
         else:
@@ -437,8 +478,10 @@ class RateSensitivityProbe:
                 "executed": ok, "responded": resp["responded"], "closest_approach_m": resp["closest_m"], "moved_m": resp["moved_m"],
                 "initial_distance_m": resp["initial_distance_m"], "settled_distance_m": resp["settled_distance_m"], "reduction_m": resp["reduction_m"],
                 "time_to_execute_s": t_exec, "time_to_respond_s": resp["time_to_respond_s"], "last_stream_latency_s": r_last,
+                "last_stream_departure_observed": departure_seen, "state_observed_at_s": t_state, "state_at_gap_start": state0,
+                "distance_to_goal_at_gap_end_m": d_pre_goal, "not_observable_reason": not_observable_reason,
                 "drift_m": drift, "drift_onset_s": onset, "drift_speed_m_s": speed, "onset_threshold_m": thr,
-                "reference_window_motion": ref_motion, "reference_window_s": ref_len,
+                "reference_window_motion": ref_motion, "reference_window_still": ref_still, "drift_evaluated": drift_eval, "reference_window_s": ref_len,
                 "samples_in_gap": n_gap, "class": cls, "state": state}
 
     @staticmethod
@@ -516,6 +559,8 @@ class RateSensitivityProbe:
                 mid = 0.5 * (lo + hi)
                 r = self._gap_trial(buf, base_T, mid)
                 out["trials"].append(r)
+                if r["class"] == "not_observable":
+                    continue  # 0.1.5: an unobservable trial moves neither end of the bracket
                 if self._tripped(r):
                     hi, hi_real = mid, min(hi_real, hi_of(r))
                 else:
@@ -525,17 +570,48 @@ class RateSensitivityProbe:
         out["brackets_s"] = brackets
         L, Lsrc, cond = allowance()
         out["latency_allowance_s"], out["latency_allowance_source"], out["latency_allowance_conditional"] = L, Lsrc, cond
+        # 0.1.5 (RC7 review, finding F10): a post-gap command that draws no response is evidence of a stop policy only if
+        # commands sent WITHOUT a preceding silence are answered.  The calibration of measure_resolution() sent 12 such
+        # commands; every one that drew no response is a baseline command loss that rejection-class trials inherit.
+        # A FAULT seen in the operating state and a drift seen in the pose are not producible by loss and remain
+        # attributable (a faulted trial then bounds tau_w by the time its state was observed, since the post-gap
+        # command may itself have been lost); a `rejected` trial is not, and the run is confounded when no attributable
+        # tripping trial remains.
+        n_probes = 12
+        n_resp = int(self.resolution.get("latency_probes_responded", n_probes) or 0)
+        baseline_loss = max(0, n_probes - n_resp)
+        tripped_trials = [b for b in out["trials"] if self._tripped(b)]
+        n_attrib = sum(1 for b in tripped_trials if attributable(b, baseline_loss))
+        confounded = baseline_loss > 0 and n_attrib == 0
+        out["baseline_command_loss"] = {"calibration_commands": n_probes, "responded": n_resp, "lost": baseline_loss,
+                                        "tripped_trials": len(tripped_trials), "attributable_tripped_trials": n_attrib}
+        out["rejection_confounded_by_command_loss"] = confounded
+        if baseline_loss > 0:
+            out["confound_note"] = (f"{baseline_loss} of {n_probes} calibration commands sent without any preceding silence drew no response: "
+                                    "post-gap non-responses cannot be attributed to a silence-triggered stop policy (random command loss "
+                                    "is indistinguishable from rejection through the pose alone)"
+                                    + ("" if confounded else f"; {n_attrib} of {len(tripped_trials)} tripped trials show the policy in the operating state or in the pose and are used, "
+                                       f"the {len(tripped_trials) - n_attrib} non-responses without a state change are not"))
         if below > 0 and not brackets:
-            out["tau_w_estimate_s"] = {"upper_bound_s": lo0 + L, "n": below, "status": "upper_bound", "latency_allowance_s": L, "latency_allowance_source": Lsrc, "conditional": cond}
-            out["finding"] = f"{out['stop_class']} at every gap down to the resolution floor {lo0*1e3:.1f} ms: tau_w <= {(lo0 + L)*1e3:.1f} ms (below resolution, n={below})"
+            status = "undetermined" if confounded else "upper_bound"
+            below_trials = [b for b in out["trials"][len(big):] if self._tripped(b)]
+            ub = lo0 + L
+            if baseline_loss > 0 and not confounded:
+                highs = [float(b["state_observed_at_s"]) for b in below_trials if b["class"] == "faulted" and b.get("state_observed_at_s") is not None]
+                highs += [float(min(b["gap_s"], b["drift_onset_s"])) for b in below_trials if b["class"] == "drifted" and b.get("drift_onset_s") is not None]
+                if not highs:
+                    status = "undetermined"
+                else:
+                    ub = min(highs)
+            out["tau_w_estimate_s"] = {"upper_bound_s": ub, "n": below, "status": status, "latency_allowance_s": L, "latency_allowance_source": Lsrc, "conditional": cond}
+            if status == "undetermined":
+                out["tau_w_estimate_s"]["reason"] = out.get("confound_note")
+                out["finding"] = f"no response at every gap down to the resolution floor, but {out.get('confound_note')}"
+            else:
+                out["finding"] = f"{out['stop_class']} at every gap down to the resolution floor {lo0*1e3:.1f} ms: tau_w <= {ub*1e3:.1f} ms (below resolution, n={below})"
             return out
-        # ---- the interval from all trials
+        # ---- the interval from all trials (timeout_interval_from_trials; replayable offline)
         trials = out["trials"]
-        passing = [t for t in trials if t["class"] == "held"]
-        tripping = [t for t in trials if self._tripped(t)]
-        drifted = [t for t in tripping if t["class"] == "drifted"]
-        speeds = [t["drift_speed_m_s"] for t in drifted if t.get("drift_speed_m_s") is not None and t["drift_speed_m_s"] > 0]
-        v_min = min(speeds) if speeds else None
         assumptions = [f"the implementation evaluates its stop policy at least once per feedback period (G = {G*1e3:.1f} ms)",
                        "the timeout is deterministic (one value tau_w)"]
         if cond:
@@ -543,44 +619,42 @@ class RateSensitivityProbe:
         else:
             assumptions.append(f"one-way transport latencies do not exceed the client-supplied bound L = {L*1e3:.1f} ms")
         est = {"n": len(brackets), "brackets_s": brackets, "latency_allowance_s": L, "latency_allowance_source": Lsrc, "conditional": cond,
-               "granularity_allowance_s": G, "feedback_period_s": fp, "drift_speed_min_m_s": v_min, "detection_delay_s": 0.0,
+               "granularity_allowance_s": G, "feedback_period_s": fp, "drift_speed_min_m_s": None, "detection_delay_s": 0.0,
                "last_stream_latencies_s": [t.get("last_stream_latency_s") for t in trials],
+               "last_stream_departures_observed": [bool(t.get("last_stream_departure_observed")) for t in trials],
                "interval_semantics": ("intersection over trials of [passing gap - r_last - G - t_det, trip evidence + L] (rejection/fault) or "
-                                      "[onset - r_last - thr / v_min - fp - L, onset] (drift), r_last = the observed response latency of the last streamed "
-                                      "command of that trial (its own transaction), L = the latency allowance for the transactions that drew no response; "
-                                      "contains tau_w under the listed assumptions")}
+                                      "[onset - r_last - G - thr / v_min - fp - L, onset] (drift); r_last = the response latency of the last streamed "
+                                      "command of that trial, accepted only after its departure to the half-step offset was observed (0.1.5), else L; "
+                                      "L = the latency allowance for the transactions that drew no response; under baseline command loss a rejected trial "
+                                      "contributes no bound and a faulted trial bounds tau_w by the time its FAULT state was observed (0.1.5); contains tau_w "
+                                      "under the listed assumptions")}
         if math.isnan(L):
             est.update(status="undetermined", reason="no response latency observed in the run and no latency bound supplied: the allowance is unknown", assumptions=assumptions)
             out["tau_w_estimate_s"] = est
             out["finding"] = f"{out['stop_class']} observed but tau_w undetermined ({est['reason']}; n={len(brackets)})"
             return out
+        iv = timeout_interval_from_trials(trials, L=L, G=G, fp=fp, hold_tol=self.hold_tol, stop_class=out["stop_class"], baseline_loss=baseline_loss)
+        est.update({k: iv[k] for k in ("drift_speed_min_m_s", "detection_delay_s", "n_trials_with_own_last_latency", "onset_based_lower_bounds_s",
+                                       "reference_window_motion_trials", "passing_lower_bounds_s", "tripping_upper_bounds_s", "lower_bound_uses_L_for_all_trials",
+                                       "unattributable_trials", "attributable_tripping_trials")})
         if out["stop_class"] == "drifted":
-            if v_min is None:
+            if iv["drift_speed_min_m_s"] is None:
                 est.update(status="undetermined", reason="drift speed not estimable (too few samples after the onset)", assumptions=assumptions)
                 out["tau_w_estimate_s"] = est
                 out["finding"] = f"drifted observed but tau_w undetermined ({est['reason']}; n={len(brackets)})"
                 return out
-            est["detection_delay_s"] = self.hold_tol / v_min + fp
-            assumptions.append(f"the drift speed during detection is at least the slowest observed, v_min = {v_min*1e3:.2f} mm/s (t_det = {est['detection_delay_s']*1e3:.0f} ms)")
-
-        def l1_of(t):
-            r = t.get("last_stream_latency_s")
-            return float(r) if (r is not None and not (isinstance(r, float) and math.isnan(r))) else L
-        est["n_trials_with_own_last_latency"] = sum(1 for t in passing + drifted if t.get("last_stream_latency_s") is not None and not math.isnan(t["last_stream_latency_s"]))
-        lows = [t["gap_s"] - l1_of(t) - G - est["detection_delay_s"] for t in passing]
-        highs = [(hi_of(t) if t["class"] == "drifted" else hi_of(t) + L) for t in tripping]
-        onset_lows = []
-        for t in drifted:
-            if t.get("drift_onset_s") is not None and not t.get("reference_window_motion") and v_min is not None and t.get("onset_threshold_m") is not None:
-                onset_lows.append(t["drift_onset_s"] - l1_of(t) - t["onset_threshold_m"] / v_min - fp - L)
-        est["onset_based_lower_bounds_s"] = onset_lows
-        est["reference_window_motion_trials"] = sum(1 for t in drifted if t.get("reference_window_motion"))
-        lo_all = max(lows + onset_lows) if (lows or onset_lows) else 0.0
-        hi_all = min(highs)
-        est.update(interval_low_s=max(0.0, lo_all), interval_high_s=hi_all, point_s=0.5 * (max(0.0, lo_all) + hi_all),
+            assumptions.append(f"the drift speed during detection is at least the slowest observed, v_min = {iv['drift_speed_min_m_s']*1e3:.2f} mm/s (t_det = {iv['detection_delay_s']*1e3:.0f} ms)")
+        if est["n_trials_with_own_last_latency"] == 0 and cond:
+            assumptions.append("no trial's last streamed command showed an observable departure before its return to base, so every lower bound uses the allowance L instead of a measured response latency")
+        est.update(interval_low_s=iv["interval_low_s"], interval_high_s=iv["interval_high_s"], point_s=iv["point_s"],
                    bracket_width_median_s=float(np.median([b[1] - b[0] for b in brackets])), assumptions=assumptions)
-        if lo_all > hi_all:
-            est.update(status="inconsistent", reason=f"lower bound {lo_all:.4f} s above upper bound {hi_all:.4f} s: the deterministic-timeout model with the listed allowances does not describe the observations")
+        if confounded:
+            est.update(status="undetermined", reason=out["confound_note"])
+            out["tau_w_estimate_s"] = est
+            out["finding"] = f"post-gap non-responses observed but tau_w undetermined ({est['reason']}; n={len(brackets)})"
+            return out
+        if iv["status"] == "inconsistent":
+            est.update(status="inconsistent", reason=f"lower bound {iv['interval_low_s']:.4f} s above upper bound {iv['interval_high_s']:.4f} s: the deterministic-timeout model with the listed allowances does not describe the observations")
             out["tau_w_estimate_s"] = est
             out["finding"] = f"{out['stop_class']} observed but tau_w undetermined ({est['reason']}; n={len(brackets)})"
             return out
@@ -790,14 +864,25 @@ class RateSensitivityProbe:
                     # + L is an upper bound of tau_w); satisfied only if the interval's lower end is beyond it
                     L_ = float(B.get("latency_allowance_s") or 0.0)
 
+                    loss_ = int((B.get("baseline_command_loss") or {}).get("lost", 0) or 0)
+
                     def _hi(t):
                         # a drift onset needs no latency term (the drift cannot precede the policy); a rejection/fault
-                        # is evidenced by a command that drew no response, so the allowance L is added
-                        return min(t["gap_s"], t["drift_onset_s"]) if t["class"] == "drifted" and t.get("drift_onset_s") is not None else t["gap_s"] + L_
-                    trips = [t for t in B.get("trials", []) if self._tripped(t)]
+                        # is evidenced by a command that drew no response, so the allowance L is added; under baseline
+                        # command loss a fault is evidenced by the time its state was observed (0.1.5)
+                        if t["class"] == "drifted" and t.get("drift_onset_s") is not None:
+                            return min(t["gap_s"], t["drift_onset_s"])
+                        if t["class"] == "faulted" and loss_ > 0:
+                            return float(t["state_observed_at_s"])
+                        return t["gap_s"] + L_
+                    trips = [t for t in B.get("trials", []) if self._tripped(t) and attributable(t, loss_)]
                     trip_hi = min((_hi(t) for t in trips), default=None)
                     tau_lo = tau.get("interval_low_s") if isinstance(tau, dict) and tau.get("status") == "ok" else None
-                    if trip_hi is not None and trip_hi <= horizon + 1e-9:
+                    if B.get("rejection_confounded_by_command_loss"):
+                        # 0.1.5: the non-responses that would evidence the trip also occur without a silence
+                        sub["stop_behaviour"] = "undetermined"
+                        notes.append("hold expectation undetermined: " + str(B.get("confound_note")))
+                    elif trip_hi is not None and trip_hi <= horizon + 1e-9:
                         sub["stop_behaviour"] = "violated"
                         notes.append(f"client expects the pose to be held for silences up to {horizon} s; observed {stop_class} evidenced by {trip_hi:.3f} s of silence")
                     elif tau_lo is not None and tau_lo > horizon:
@@ -850,6 +935,9 @@ class RateSensitivityProbe:
                     else:
                         sub["stop_behaviour"] = "violated"
                         notes.append(f"client expects a {te.stop_behaviour} stop policy within {horizon} s of silence; the pose was held and commands acted on up to {tested_to} s")
+                elif B.get("rejection_confounded_by_command_loss"):
+                    sub["stop_behaviour"] = "undetermined"
+                    notes.append(f"client expects {te.stop_behaviour} stop behaviour; the observed non-responses are confounded: " + str(B.get("confound_note")))
                 else:
                     sub["stop_behaviour"] = "violated"
                     notes.append(f"client expects {te.stop_behaviour} stop behaviour; observed {stop_class}")

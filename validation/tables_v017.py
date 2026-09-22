@@ -93,13 +93,36 @@ def loss_main():
 
 
 def confirm():
-    c, _ = v17_runs()
-    L = [r"\begin{tabular}{@{}lp{6.2cm}p{7.2cm}l@{}}\toprule", r"ID & Prediction & Observed & Outcome \\\midrule"]
+    """Supplement: every pre-registered prediction with a concise observation recomputed from the analysis rows."""
+    c, rows = v17_runs()
+    K = c["K"]
+    k1 = [v for n, v in K.items() if "_K1_" in n]
+    ct = [v for n, v in K.items() if "_ctrl_" in n]
+    hold = [r for r in rows if r["policy"] == "hold"]
+    fault = [r for r in rows if r["policy"] == "fault"]
+    formed = [r for r in fault if r["status"] == "ok"]
+    odd = [r["run"].replace("L17_017_", "").replace("_", r"\_") for r in hold if r["stop_class"] != "held_through_range"]
+    wn = [r["width_ms"] for r in formed if r["loss"] == "none"]
+    obs = {
+        "K-1": f"raised in {sum(bool(v['flag']) for v in k1)}/{len(k1)}",
+        "K-2": f"undetermined in {sum(v['unit'] == 'undetermined' for v in k1)}/{len(k1)}; ungated divergent in {sum(v['unit_ungated'] == 'divergent' for v in k1)}/{len(k1)}",
+        "K-3": f"conformant in {sum(v['frame'] == 'conformant' for v in k1)}/{len(k1)}",
+        "K-4": f"all three as predicted in {sum(v['command_semantic'] == 'undetermined' and v['dimensional_summary'] == 'undetermined' and v['assumption'].startswith('contradicted') for v in k1)}/{len(k1)}",
+        "K-5": f"no flag and all conformant in {sum((not v['flag']) and v['frame'] == v['unit'] == v['command_semantic'] == 'conformant' for v in ct)}/{len(ct)}",
+        "L-1": f"{sum(r['stop_class'] == 'held_through_range' for r in hold)}/{len(hold)} held; " + ", ".join(f"not observable: \\code{{{o}}}" for o in odd) if odd else f"{len(hold)}/{len(hold)} held",
+        "L-2": f"{sum(r['sub_verdict'] == 'satisfied' for r in hold)}/{len(hold)} satisfied; {sum(r['sub_verdict'] == 'undetermined' for r in hold)} undetermined",
+        "L-3": f"{len(formed)}/{len(fault)} formed; {sum(bool(r.get('contains')) for r in formed)} contain",
+        "L-4": f"{sum(r['status'] == 'inconsistent' for r in fault)} contradictory",
+        "L-5": f"{sum(r['sub_verdict'] == 'satisfied' for r in formed)}/{len(formed)} satisfied; {sum(r['sub_verdict'] == 'violated' for r in fault)} violated",
+        "L-6": f"{statistics.median(wn):.1f} ms ($n={len(wn)}$)",
+        "L-7": f"{sum(r['cond_status'] is not None for r in formed)}/{len(formed)}",
+        "L-8": f"{sum(r.get('decision_at_0245') == 'satisfied' for r in formed)} of {len(formed)} decide satisfied",
+    }
+    L = [r"\begin{tabular}{@{}lp{8.3cm}p{5.2cm}l@{}}\toprule", r"ID & Prediction & Observed & Outcome \\\midrule"]
     for p in c["predictions"]:
-        obs = p["observed"].replace("_", r"\_").replace("%", r"\%")
-        if len(obs) > 150:
-            obs = obs[:147] + r"\ldots"
-        L.append(f"{p['id']} & {p['prediction'].replace('%', chr(92) + '%')} & \\footnotesize\\texttt{{{obs}}} & {'matched' if p['matched'] else 'deviates'} \\\\")
+        outc = "matched" if p["matched"] else r"\textbf{deviates}"
+        pr = p["prediction"].replace("%", "\\%")
+        L.append(f"{p['id']} & {pr} & {obs[p['id']]} & {outc} " + "\\\\")
     L += [r"\bottomrule\end{tabular}"]
     open(os.path.join(out, "confirm_v017.tex"), "w").write("\n".join(L) + "\n")
 

@@ -9,6 +9,9 @@ covered coverage), the live boundary counts are checked against the supplement's
 analysis output B_live_boundary.csv is cross-checked against the raw recomputation, and the RC10 wording corrections
 are checked.
 
+RC13: the confirmatory v0.1.7 campaign (validation/v0.1.7/mock) is recomputed from its raw records, the sensitivity studies from
+their outputs, and the RC13 wording is checked (reads <paper>/supplement_<tag>_v017.tex as well).
+
 RC12: the counts of the dVRK-sim text are checked as cases and launches, and the post hoc v0.1.7 re-derivation (consistency
 gate; sound fault bound) is recomputed from the raw archive with the package's ROS-free decision functions and compared
 with the text and with validation/v0.1.7/.
@@ -29,7 +32,7 @@ import sys
 ap = argparse.ArgumentParser()
 ap.add_argument("--repo", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 ap.add_argument("--paper", default=".")
-ap.add_argument("--tag", default="rc12", help="manuscript tag: reads manuscript_<tag>.tex and supplement_<tag>_campaigns.tex")
+ap.add_argument("--tag", default="rc13", help="manuscript tag: reads manuscript_<tag>.tex and supplement_<tag>_campaigns.tex")
 a = ap.parse_args()
 V = os.path.join(a.repo, "validation", "v0.1.6")
 checks = []
@@ -139,7 +142,7 @@ for p in glob.glob(os.path.join(V, "mock", "L", "L16_*.json")):
             c["other"] += 1
 check("L: 128 runs, 8 per cell", len(cells) == 16 and all(c["n"] == 8 for c in cells.values()))
 check("L: no false stop verdict in any hold run", sum(c["false_verdict"] for k, c in cells.items() if k[1] == "hold") == 0)
-lt = open(os.path.join(a.paper, "loss_main_v016.tex")).read()
+lt = open(os.path.join(a.paper, "loss_main_v017.tex" if os.path.exists(os.path.join(a.paper, "loss_main_v017.tex")) else "loss_main_v016.tex")).read()
 for rule in ("0.1.5", "0.1.6"):
     hold = " & ".join(f"{cells[(rule, 'hold', lo)]['hold']}" + (f" ({cells[(rule, 'hold', lo)]['false_trip']})" if cells[(rule, 'hold', lo)]['false_trip'] else "") for lo in ("none", "iid2", "iid5", "ge5"))
     fault = " & ".join(f"{cells[(rule, 'fault', lo)]['contains']}/{cells[(rule, 'fault', lo)]['excludes']}/{cells[(rule, 'fault', lo)]['other']}" for lo in ("none", "iid2", "iid5", "ge5"))
@@ -323,9 +326,9 @@ lr = [r for r in lrows if r]
 w0 = statistics.median([r["w"] for r in lr if r["loss"] == "none"])
 n_contra = sum(1 for r in lr if r["released"] == "inconsistent")
 check("v0.1.7 bound: 64/64 fault-policy loss intervals formed and containing; none decides a 245-ms horizon satisfied",
-      len(lrows) == 64 and len(lr) == 64 and all(r["ok"] and r["contains"] for r in lr) and not any(r["hi245"] for r in lr) and intex("all 64 fault-policy intervals contain the timeout"), f"{len(lr)} formed")
+      len(lrows) == 64 and len(lr) == 64 and all(r["ok"] and r["contains"] for r in lr) and not any(r["hi245"] for r in lr) and intex("Every interval is formed and contains \\SI{250}{ms}", sup), f"{len(lr)} formed")
 check(f"v0.1.7 bound: median width without loss {w0:.0f} ms; {n_contra} contradictory 0.1.6 intervals become determinate",
-      f"{w0:.0f}" == "334" and intex("from 45 to \\SI{334}{ms}") and n_contra == 10 and intex("the ten contradictory ones become determinate and correct"), f"{w0:.1f}; {n_contra}")
+      f"{w0:.0f}" == "334" and intex("The median width without loss is \\SI{334}{ms} (0.1.6: \\SI{45}{ms})", sup) and n_contra == 10 and intex("the ten runs whose 0.1.6 intervals were contradictory", sup), f"{w0:.1f}; {n_contra}")
 rj = json.load(open(os.path.join(a.repo, "validation", "v0.1.7", "rederivation_v017.json")))["summary"]
 av = rj["archived_v013"]
 check("v0.1.7 archived: 23/23 contain; fault width/tau median 2.1; overall 0.53; range 0.05-10.7 (validation/v0.1.7)",
@@ -341,6 +344,147 @@ check("MC accounting: 42 000 frame replicates = 7 ratios x 3 noise models x 2000
 check("text: RC12 wording (illustrative parameters; stationary arm; ROS 1 scope; SRC v1 contingency)",
       intex("illustrative engineering settings, not task-derived or clinical thresholds") and intex("The pairing assumes a stationary arm")
       and intex("the executable validation is ROS~1 only") and intex("counts the primary prediction as not matched") and not intex("reviewer-supplied"))
+
+# ---------------------------------------------------------------- RC13: the confirmatory v0.1.7 campaign and the sensitivity studies,
+# recomputed from the raw v0.1.7 records and study outputs, and the RC13 wording
+V17 = os.path.join(a.repo, "validation", "v0.1.7")
+s17p = os.path.join(a.paper, f"supplement_{a.tag}_v017.tex")
+sup17 = open(s17p).read() if os.path.exists(s17p) else ""
+from crtk_conformance.liveness import fault_horizon_decision  # noqa: E402
+K7 = {os.path.basename(p)[:-5]: json.load(open(p)) for p in glob.glob(os.path.join(V17, "mock", "K", "K17_*.json"))}
+k7 = [K7[f"K17_K1_{i}"] for i in range(3) if f"K17_K1_{i}" in K7]
+c7 = [r for n, r in K7.items() if "_ctrl_" in n]
+
+
+def kcf(r):
+    return r["scale"]["result"]["estimates"]["command_feedback_consistency"]
+
+
+check("RC13 K: 9 confirmatory runs (3 K1, 6 controls)", len(K7) == 9 and len(k7) == 3 and len(c7) == 6, str(sorted(K7)))
+check("RC13 K1: flag raised, unit withheld (ungated divergent), frame C, command-semantic U, dimensional summary U, assumption contradicted, 3/3",
+      all(kcf(r)["flag_non_shared_binding_or_tracking_deficit"] and r["scale"]["result"]["outcome"] == "undetermined"
+          and r["scale"]["result"]["estimates"]["unit_outcome_without_consistency_gate"] == "divergent" and r["frame"]["result"]["outcome"] == "conformant"
+          and r["verdict_kinds"]["spatial_command_semantic"] == "undetermined" and r["report_summary"]["dimensional"] == "undetermined"
+          and r["verdict_kinds"]["shared_binding_assumption"].startswith("contradicted") for r in k7))
+check("RC13 K controls: no flag; frame, unit and command-semantic reading conformant, 6/6",
+      all(not kcf(r)["flag_non_shared_binding_or_tracking_deficit"] and r["frame"]["result"]["outcome"] == r["scale"]["result"]["outcome"]
+          == r["verdict_kinds"]["spatial_command_semantic"] == "conformant" for r in c7))
+g7 = [kcf(r)["goal_residual_if"] for r in k7]
+ri7 = [r["scale"]["result"]["estimates"]["internal_ratio"]["mean"] for r in k7]
+sa7 = [r["scale"]["result"]["estimates"]["scale_anchored"]["mean"] for r in k7]
+pe7 = [r["scale"]["result"]["estimates"]["predicted_error_at_workspace_edge_m"]["mean"] for r in k7]
+fh7 = [r["frame"]["result"]["estimates"]["spatial_decision"]["ci_high_m"] for r in k7]
+cr7 = [kcf(r)["goal_residual_if"]["mean"] for r in c7]
+check("RC13 K1 numbers: residual 24.1 mm (>= 23.9 at 95 %), ratio 4.99, anchored 5.52, 452 mm ungated error, frame interval [0, 0.04] mm; controls < 8 um",
+      all(f"{x['mean'] * 1e3:.1f}" == "24.1" and x["ci_low"] * 1e3 >= 23.9 for x in g7) and all(f"{x:.2f}" == "4.99" for x in ri7)
+      and all(f"{x:.2f}" == "5.52" for x in sa7) and all(f"{x * 1e3:.0f}" == "452" for x in pe7) and max(fh7) * 1e3 <= 0.04 and max(cr7) < 8e-6
+      and intex("\\SI{24.1}{mm}") and intex("\\SI{23.9}{mm}") and intex("4.99") and intex("5.52") and intex("\\SI{452}{mm}") and intex("[0, 0.04]")
+      and intex("\\SI{8}{\\micro m}") and intex("matched all five pre-registered predictions"),
+      f"res {[round(x['mean'] * 1e3, 3) for x in g7]}; frame hi {max(fh7) * 1e3:.4f} mm; ctrl {max(cr7) * 1e6:.2f} um")
+# L
+L7, fail7 = {}, []
+for p in glob.glob(os.path.join(V17, "mock", "L", "L17_*.json")):
+    d = json.load(open(p))
+    if "liveness" not in d["result"]["observations"]:
+        fail7.append(os.path.basename(p)); continue
+    L7[os.path.basename(p)[:-5]] = d
+sf = glob.glob(os.path.join(V17, "mock", "L_failed_startup", "*.json"))
+check("RC13 L: 64 runs with a liveness observation, 8 per cell; start-up failures archived apart and not pooled",
+      len(L7) == 64 and not fail7 and all(sum(1 for n in L7 if f"_{pol}_{lo}_" in n) == 8 for pol in ("hold", "fault250") for lo in ("none", "iid2", "iid5", "ge5")),
+      f"{len(L7)} runs; failed in pool {fail7}; archived start-up failures {[os.path.basename(x) for x in sf]}")
+hold7 = [d for n, d in L7.items() if "_hold_" in n]
+fault7 = {n: d for n, d in L7.items() if "_fault250_" in n}
+check("RC13 L hold: 31/32 held through the range and satisfied; no trip class",
+      len(hold7) == 32 and 31 == sum(d["result"]["observations"]["liveness"]["stop_class"] == "held_through_range"
+                               and d["result"]["estimates"]["sub_verdicts"]["stop_behaviour"] == "satisfied" for d in hold7)
+      and not any(d["result"]["observations"]["liveness"]["stop_class"] in ("rejected", "faulted", "drifted") for d in hold7))
+fr7 = {}
+for n, d in fault7.items():
+    tau = d["result"]["observations"]["liveness"].get("tau_w_estimate_s") or {}
+    ce = tau.get("conditional_estimate_s") or {}
+    tt = d["truth"]["tau_w_s"]
+    ok = tau.get("status") == "ok"
+    fr7[n] = {"ok": ok, "contains": ok and tau["interval_low_s"] <= tt <= tau["interval_high_s"], "w": (tau["interval_high_s"] - tau["interval_low_s"]) * 1e3 if ok else None,
+              "loss": d["truth"]["loss"], "sv": d["result"]["estimates"]["sub_verdicts"]["stop_behaviour"],
+              "d245": fault_horizon_decision(tau, 0.245, 1.0 / 100 + 0.005)[0] if ok else None,
+              "cond": ce.get("status"), "cw": (ce["interval_high_s"] - ce["interval_low_s"]) * 1e3 if ce.get("status") == "formed" else None,
+              "cc": (ce["interval_low_s"] <= tt <= ce["interval_high_s"]) if ce.get("status") == "formed" else None,
+              "cd245": fault_horizon_decision(dict(ce, status="ok"), 0.245, 1.0 / 100 + 0.005)[0] if ce.get("status") == "formed" else None,
+              "lost": ((d["result"]["observations"]["liveness"].get("baseline_command_loss") or {}).get("lost") or 0)}
+nf7 = sum(r["ok"] for r in fr7.values()); nc7 = sum(r["contains"] for r in fr7.values())
+check("RC13 L fault: every interval formed and containing 250 ms; stop sub-verdict satisfied in all; no 245-ms horizon decided satisfied",
+      len(fr7) == 32 and nf7 == 32 and nc7 == 32 and all(r["sv"] == "satisfied" for r in fr7.values()) and not any(r["d245"] == "satisfied" for r in fr7.values()),
+      f"{nc7}/{nf7} of {len(fr7)}")
+w7 = {lo: statistics.median([r["w"] for r in fr7.values() if r["loss"] == lo and r["ok"]]) for lo in ("none", "iid2", "iid5", "ge5")}
+cw7 = statistics.median([r["cw"] for r in fr7.values() if r["loss"] == "none" and r["cw"] is not None])
+ce_ex = sorted(n for n, r in fr7.items() if r["cc"] is False)
+ce_245 = sorted(n for n, r in fr7.items() if r["cd245"] == "satisfied")
+check("RC13 L fault: a conditional estimate reported with every formed interval", all(r["cond"] is not None for r in fr7.values() if r["ok"]))
+print("RC13 L widths (median, ms):", {k: round(v, 1) for k, v in w7.items()}, "conditional none:", round(cw7, 1), "cond excluding:", ce_ex, "cond 245 satisfied:", ce_245)
+lt7p = os.path.join(a.paper, "loss_main_v017.tex")
+lt7 = open(lt7p).read() if os.path.exists(lt7p) else ""
+h7 = " & ".join(str(sum(1 for n, d in L7.items() if f"_hold_{lo}_" in n and d["result"]["observations"]["liveness"]["stop_class"] == "held_through_range"))
+               + ("$^f$" if any(f"_hold_{lo}_" in n and d["result"]["observations"]["liveness"]["stop_class"] == "not_observable" for n, d in L7.items()) else "") for lo in ("none", "iid2", "iid5", "ge5"))
+f7 = " & ".join(f"{sum(r['contains'] for r in fr7.values() if r['loss'] == lo)}/{sum(r['ok'] and not r['contains'] for r in fr7.values() if r['loss'] == lo)}/{sum(not r['ok'] for r in fr7.values() if r['loss'] == lo)}" for lo in ("none", "iid2", "iid5", "ge5"))
+check("RC13 loss table: v0.1.7 rows equal the raw recomputation", f"0.1.7$^d$ & {h7} \\\\" in lt7 and f"0.1.7$^d$ & {f7} \\\\" in lt7, f"hold {h7}; fault {f7}")
+for rule in ("0.1.5", "0.1.6"):
+    hold = " & ".join(f"{cells[(rule, 'hold', lo)]['hold']}" + (f" ({cells[(rule, 'hold', lo)]['false_trip']})" if cells[(rule, 'hold', lo)]['false_trip'] else "") for lo in ("none", "iid2", "iid5", "ge5"))
+    fault = " & ".join(f"{cells[(rule, 'fault', lo)]['contains']}/{cells[(rule, 'fault', lo)]['excludes']}/{cells[(rule, 'fault', lo)]['other']}" for lo in ("none", "iid2", "iid5", "ge5"))
+    check(f"RC13 loss table rows for rule {rule} (v0.1.6 campaign)", f"{rule} & {hold} \\\\" in lt7 and f"{rule} & {fault} \\\\" in lt7, f"hold {hold}; fault {fault}")
+wtxt = f"\\SI{{{w7['none']:.0f}}}{{ms}}"
+check(f"RC13 text: median v0.1.7 width without loss {wtxt}, conditional {cw7:.0f} ms", intex(wtxt) and intex(f"\\SI{{{cw7:.0f}}}{{ms}}"), f"{w7['none']:.1f} / {cw7:.1f}")
+an = json.load(open(os.path.join(V17, "analysis", "confirmatory_v017.json")))
+check("RC13 analysis output: 11 of 13 pre-registered predictions matched; L-1 and L-2 deviate (analyze_v017.py)", len(an["predictions"]) == 13
+      and sorted(p["id"] for p in an["predictions"] if not p["matched"]) == ["L-1", "L-2"] and intex("Eleven of the thirteen predictions matched", sup17),
+      str([p["id"] for p in an["predictions"] if not p["matched"]]))
+
+bs = json.load(open(os.path.join(V17, "studies", "boundary_sensitivity.json")))["rows"]
+bsi = {(r["probe"], r["model"], r["ratio"]): r for r in bs}
+bst = open(os.path.join(a.paper, "boundary_sens_v017.tex")).read() if os.path.exists(os.path.join(a.paper, "boundary_sens_v017.tex")) else ""
+cells_ok = all(f"{pct(bsi[(pr, m, rt)]['false_C' if rt == '1.05' else 'false_D'], bsi[(pr, m, rt)]['n_rep'], 1)}/{pct(bsi[(pr, m, rt)]['U'], bsi[(pr, m, rt)]['n_rep'], 0)}" in bst
+               for pr in ("frame", "scale") for m in ("gauss", "ar1-0.5", "ar1-0.9", "bias", "drift", "t3") for rt in ("0.95", "1.00", "1.05"))
+scale_max = max(bsi[("scale", m, "1.00")]["false_D"] / bsi[("scale", m, "1.00")]["n_rep"] for m in ("gauss", "ar1-0.5", "ar1-0.9", "bias", "drift", "t3"))
+f9 = bsi[("frame", "ar1-0.9", "1.00")]
+frame_other = sum(bsi[("frame", m, rt)]["false_C"] + bsi[("frame", m, rt)]["false_D"] for m in ("gauss", "bias", "drift", "t3") for rt in ("0.95", "1.00", "1.05"))
+check("RC13 boundary sensitivity: table cells from the study output; scale <= 2.8 % false D at epsilon in every model; frame 11 % at AR 0.9 (coverage 0.82), none under bias/drift/t3",
+      len(bs) == 36 and cells_ok and pct(round(scale_max * 2000), 2000, 1) == "2.8" and f"{100 * f9['false_D'] / f9['n_rep']:.0f}" == "11" and f"{f9['coverage']:.3f}" == "0.815"
+      and frame_other == 0 and intex("at or below 2.8\\% false divergence") and intex("11\\% of replicates at $\\varepsilon$, with coverage 0.815"),
+      f"scale max {scale_max:.4f}; frame AR0.9 {f9['false_D']}/{f9['n_rep']}, cov {f9['coverage']}")
+an_ = {(r["factor"], r["level"]): r for r in json.load(open(os.path.join(V17, "studies", "anchor_sensitivity.json")))["rows"]}
+ok_c = an_[("c", 0.02)]["gate_pass"] == 0 and an_[("c", 0.05)]["gate_pass"] == 0 and an_[("c", 0.1)]["gate_pass"] == 0 and an_[("c", 0.01)]["gate_pass"] == 1 and an_[("c", 0.005)]["gate_pass"] == 1 \
+    and abs(an_[("c", 0.01)]["lambda_bias_pct_median"]) < 0.1
+n05 = an_[("sigma_t_mm", 0.05)]["gate_pass"]
+l97 = an_[("L_impl_ratio", 0.97)]
+l99 = an_[("L_impl_ratio", 9.0 / 9.1)]
+check("RC13 anchor sensitivity: coupling >= 2 % fails the gates, <= 1 % passes unbiased; 0.05-mm noise fails 83 %; 3 % length mismatch false D 23 % at 1 mm; 1.1 % covered",
+      ok_c and f"{100 * (1 - n05):.0f}" == "83" and f"{100 * l97['eps1mm_divergent']:.0f}" == "23" and l97["gate_pass"] == 1 and l99["coverage_widened"] >= 0.95
+      and intex("from 2\\% of the step it failed the axis-angle gate in every replicate") and intex("failed the gates in 83\\% of replicates")
+      and intex("a 3\\% mismatch gave false divergence at \\SI{1}{mm} in 23\\% of replicates"), f"noise pass {n05}; L0.97 D {l97['eps1mm_divergent']}; L9.0 cov {l99['coverage_widened']}")
+import subprocess
+try:
+    rc = subprocess.run(["git", "-C", a.repo, "log", "--format=%h", "-1", "--", "validation/v0.1.7/RESULTS.md"], capture_output=True, text=True).stdout.strip()
+except Exception:
+    rc = ""
+check("RC13 chronology: the results commit in the supplement is the commit that added the confirmatory results", bool(rc) and f"\\code{{{rc}}}" in sup17, rc)
+check("RC13 abstract: 32 timeouts contained, two excluded by the earlier bound; no revision-history wording",
+      intex("contained all 32 injected timeouts, where an earlier bound excluded two") and nc7 == 32 and len(ce_ex) == 2
+      and not re.search(r"\bnow (withholds|contains)\b", tex))
+check("RC13 wording: v0.1.7 is the evaluated system; no 'v0.1.6 throughout' or 'since v0.1.7'; Table II in v0.1.7",
+      intex("The evaluated system is \\code{crtk-conformance} v0.1.7") and not intex("v0.1.6 throughout") and not intex("since v0.1.7")
+      and intex("\\caption{Decision evidence in v0.1.7."))
+check("RC13 wording: chronology in four steps; evidence taxonomy (i)-(iv); one-sided gate",
+      intex("The evidence was produced in four steps") and intex("(iv) Independent physical anchors") and intex("an unraised flag does not establish \\tA{}")
+      and intex("An unraised flag is weak evidence for \\tA"))
+check("RC13 wording: TOST, observational equivalence and the oracle problem are cited",
+      intex("\\cite{schuirmann1987tost}") and intex("\\cite{bellman1970structural}") and intex("\\cite{barr2015oracle}"))
+check("RC13 wording: freshness naming (Table II row; no rate-conformance verdict)",
+      intex("Freshness & Inferred source age") and not intex("Rate & Inferred source age") and not intex("rate conformance") and intex("freshness requirement"))
+check("RC13 Table V: primary (contingency) scoring and client definitions",
+      intex("Primary (contingency)") and intex("0/2 (2/2)") and intex("0/1 (1/1)") and intex("\\emph{dVRK-authored} client declares") and intex("\\emph{SRC-authored} client declares"))
+check("RC13 deviation reported: one undetermined hold run (calibration lost 5 of 30)",
+      intex("its calibration lost 5 of 30 commands") and intex("answered 25 of 30 commands", sup17)
+      and sum(1 for d in hold7 if d["result"]["observations"]["liveness"]["stop_class"] == "not_observable") == 1
+      and any(30 - d["result"]["observations"]["resolution"]["latency_probes_responded"] == 5 for d in hold7 if d["result"]["observations"]["liveness"]["stop_class"] == "not_observable"))
 
 # ---------------------------------------------------------------- abstract length
 ab = re.search(r"\\begin\{abstract\}(.*?)\\end\{abstract\}", tex, re.S).group(1)

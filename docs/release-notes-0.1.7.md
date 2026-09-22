@@ -36,9 +36,25 @@ The archived fault-horizon claims are unchanged: within 0.1 s violated, 0.25 s u
 ## Tests
 
 - New: `tests/test_v017.py`.
-- Full ROS suite at the release commit: see `pytest_final_<commit>.log` in the RC12 package.
+- Full ROS suite at the release commit: see `pytest_final_<commit>.log` in the RC13 package. `src/` and `tests/` are
+  unchanged since `2fac51b`.
 
 Known intermittent timing tests are as in 0.1.6 (`validation/v0.1.6/tests/README.md`).
+
+## Confirmatory campaign (RC13)
+
+A second external review asked that one version be the evaluated system. The 0.1.7 rules were therefore tested by a
+pre-registered confirmatory campaign of the frozen code (`validation/v0.1.7/PREREGISTRATION.md`, commit `ed12de7`,
+before any run; results `b1eb920`; `validation/v0.1.7/RESULTS.md`):
+
+| Experiment | Runs | Outcome |
+|---|---|---|
+| K1 and controls | 9 | 5/5 predictions matched: the gate withheld the misattributed unit verdict in 3/3 K1 runs; controls conformant |
+| Loss, hold policy | 32 | 31 held; 1 undetermined (calibration lost 5/30, confirmation impossible): predictions L-1/L-2 deviate; no false trip |
+| Loss, fault policy | 32 | 32/32 intervals contain τ_w; median width without loss 328 ms; the 0.1.6-rule conditional estimates excluded τ_w in 2 and were contradictory in 4 |
+
+Two offline sensitivity studies (`validation/v0.1.7/studies/`) test the boundary decisions under non-iid trial errors
+and the geometry anchor under noise, coupling, axis angle, step size and length mismatch.
 
 ## Also
 

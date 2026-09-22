@@ -1,4 +1,8 @@
-# validation/v0.1.7: offline re-derivation under the 0.1.7 decision rules (RC12)
+# validation/v0.1.7: the 0.1.7 decision rules — offline re-derivation (RC12) and confirmatory campaign (RC13)
+
+**RC13.** A pre-registered confirmatory campaign of the frozen 0.1.7 code re-ran K1 and the loss experiment with fresh seeds: `PREREGISTRATION.md` (before any run), `mock/`, `analysis/`, and the outcome in `RESULTS.md` (11 of 13 predictions matched; L-1/L-2 deviate by one undetermined hold run). Two offline sensitivity studies are in `studies/` (see `RESULTS.md`). The re-derivation below is unchanged.
+
+## Re-derivation (RC12)
 
 **POST HOC.** The 0.1.7 rules were changed after the pre-registered v0.1.6 campaigns, in response to an external review of the RC11 manuscript. The campaigns remain reported under their own (0.1.6) rules. **No run was repeated or added.** Every input is an archived probe report in `validation/v0.1.6/` or `validation/v0.1.3/`.
 

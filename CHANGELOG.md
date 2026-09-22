@@ -1,5 +1,16 @@
 # Changelog
 
+## Validation additions after 0.1.7 (RC13) — 2026-09-22
+
+No change to `src/` or `tests/` (identical to the 0.1.7 release commit `2fac51b`).
+- **Confirmatory campaign of 0.1.7**, pre-registered in `validation/v0.1.7/PREREGISTRATION.md` before any run: K1 and
+  controls (9 runs) and the loss experiment (64 runs) with fresh seeds (`validation/run_validation_v017.py`,
+  `validation/analyze_v017.py`). 11 of 13 predictions matched. One hold run under 5 % loss was undetermined (its
+  calibration lost 5 of 30 commands, too many for confirmation), so L-1 and L-2 deviate. All 32 fault intervals contain
+  τ_w; 2 of the 32 conditional (0.1.6-rule) estimates exclude it. `validation/v0.1.7/RESULTS.md`.
+- **Offline sensitivity studies** (`validation/boundary_sensitivity_v017.py`, `validation/anchor_sensitivity_v017.py`;
+  `validation/v0.1.7/studies/`), and the RC13 table generator `validation/tables_v017.py`.
+
 ## 0.1.7 — 2026-09-21
 
 Two decision-rule changes made after the pre-registered v0.1.6 campaigns, in response to an external review of the RC11

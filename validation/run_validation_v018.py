@@ -182,7 +182,7 @@ def record_trace(version, path, seconds=20.0):
     return len(h["cp"]), len(h["js"])
 
 
-def exp_S(version, launches):
+def exp_S(version, launches, only=None):
     import src_live_v016 as S
     out = os.path.join(OUT, "src_live")
     exps = os.path.join(out, "expectations")
@@ -191,6 +191,8 @@ def exp_S(version, launches):
     subprocess.run(f"cd {src}/scripts && pip3 install -q --no-deps --no-build-isolation -e . > /dev/null 2>&1", shell=True)
     rows = []
     for k in range(launches):
+        if only and k + 1 != only:  # --only-launch: repeat one launch after a start-up failure (pre-registration, "Start-up failures")
+            continue
         odir = os.path.join(out, f"live-src-{version}", f"launch{k + 1}")
         os.makedirs(odir, exist_ok=True)
         meta(os.path.join(odir, "meta.json"), version=version, launch=k + 1)
@@ -203,7 +205,7 @@ def exp_S(version, launches):
                 r.update(version=version, launch=k + 1)
                 rows.append(r)
                 print(json.dumps(r), flush=True)
-        json.dump(rows, open(os.path.join(out, f"live-src-{version}", "rows.json"), "w"), indent=1)
+        json.dump(rows, open(os.path.join(out, f"live-src-{version}", f"rows_rerun_launch{only}.json" if only else "rows.json"), "w"), indent=1)
     return rows
 
 
@@ -215,6 +217,7 @@ if __name__ == "__main__":
     ap.add_argument("--launches", type=int, default=3)
     ap.add_argument("--port", type=int, default=11418)
     ap.add_argument("--rerun", default=None)
+    ap.add_argument("--only-launch", type=int, default=None, help="S: repeat only this launch (after a start-up failure)")
     a = ap.parse_args()
     if a.rerun:
         RERUN.update(a.rerun.split(","))
@@ -223,6 +226,6 @@ if __name__ == "__main__":
     elif a.part == "D":
         exp_D(a.launches)
     elif a.part == "S":
-        exp_S(a.version, a.launches)
+        exp_S(a.version, a.launches, a.only_launch)
     else:
         exp_D(1, [c for c in D_CASES if c[0] in ("F4_0874", "U_si_5mm")], sub="exploratory-smoke")

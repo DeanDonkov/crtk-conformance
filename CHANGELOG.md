@@ -1,5 +1,25 @@
 # Changelog
 
+## Validation of 0.1.8 (RC14) — 2026-09-22
+
+No change to `src/` or `tests/` (identical to `a52e89e`).
+- **Pre-registered campaigns** (`validation/v0.1.8/PREREGISTRATION.md`, commit `79b3f71`, before any run;
+  `validation/v0.1.8/RESULTS.md`): F (reference node, correlation guard, 160 runs): 6/6 predictions matched; D (dVRK
+  console, 27 runs): 2/2 matched; S (SRC, 18 anchor runs): S-1 deviates — the joint-space anchor detected the 0.1-m
+  unit of SRC v1.0.0 in one launch (3 runs) and abstained in two (wrist-yaw chatter; residual gates failed, no false
+  verdict); S-2 (SRC v2.0.0 control) and S-3 matched. One SRC v2.0.0 launch failed at start-up and was repeated
+  (`--only-launch`, commit `da00219`), as pre-registered.
+- **Offline studies** (`validation/v0.1.8/studies/`): correlation guard, operating characteristic (decision rate and
+  error among determinate verdicts), joint-space anchor operating range, deadlines decidable by the sound fault bound.
+- Exploratory, after campaign S: the single-joint estimator on the campaign-S poses (`validation/rederive_single_joint_S_v018.py`): on
+  v1.0.0 launch 1 it also decides divergent in 2 of 3 runs, so the detection does not show that the joint-space fit was needed.
+- **Known issue** (found by the final test run): `poe_fit_trial`'s `max_nfev=200` allows only about six LM iterations under
+  SciPy 1.10.1 (the campaign image), which counts the Jacobian's evaluations in the budget; one unit test fails there.
+  Refitting every campaign trial to convergence changes no verdict (`validation/poe_scipy_budget_v018.py`). To be fixed
+  in a later version (bound iterations, not evaluations) with new validation runs.
+- RC14 tables, figure, SRC trace analysis and reporting checks (`validation/tables_v018.py`, `fig_v018.py`,
+  `src_traces_v018.py`, `verify_reporting_v016.py --tag rc14`).
+
 ## 0.1.8 — 2026-09-22
 
 Two probe changes in response to an external review of the RC13 manuscript (points 1 and 3).  Both change how evidence

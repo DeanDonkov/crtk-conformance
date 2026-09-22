@@ -12,11 +12,16 @@ are checked.
 RC13: the confirmatory v0.1.7 campaign (validation/v0.1.7/mock) is recomputed from its raw records, the sensitivity studies from
 their outputs, and the RC13 wording is checked (reads <paper>/supplement_<tag>_v017.tex as well).
 
+RC14: the v0.1.8 campaigns F, D and S (validation/v0.1.8) are recomputed from their raw records, the four offline studies
+from their outputs, every v0.1.8 table of the paper is compared with a fresh run of tables_v018.py, and the RC14 wording is
+checked (reads <paper>/supplement_<tag>_v018.tex and oc_main_v018.tex / loss_main_v018.tex as well).  Checks of earlier
+rounds whose text RC14 moved to the supplement read it there (R14 switch).
+
 RC12: the counts of the dVRK-sim text are checked as cases and launches, and the post hoc v0.1.7 re-derivation (consistency
 gate; sound fault bound) is recomputed from the raw archive with the package's ROS-free decision functions and compared
 with the text and with validation/v0.1.7/.
 
-Usage: python3 validation/verify_reporting_v016.py [--repo .] [--paper <dir>] [--tag rc12]
+Usage: python3 validation/verify_reporting_v016.py [--repo .] [--paper <dir>] [--tag rc14]
        (reads <paper>/manuscript_<tag>.tex and <paper>/supplement_<tag>_campaigns.tex)
 """
 import argparse
@@ -32,8 +37,9 @@ import sys
 ap = argparse.ArgumentParser()
 ap.add_argument("--repo", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 ap.add_argument("--paper", default=".")
-ap.add_argument("--tag", default="rc13", help="manuscript tag: reads manuscript_<tag>.tex and supplement_<tag>_campaigns.tex")
+ap.add_argument("--tag", default="rc14", help="manuscript tag: reads manuscript_<tag>.tex and supplement_<tag>_campaigns.tex")
 a = ap.parse_args()
+R14 = a.tag not in ("rc9", "rc10", "rc11", "rc12", "rc13")  # RC14 moved version history and some numbers to the supplement
 V = os.path.join(a.repo, "validation", "v0.1.6")
 checks = []
 
@@ -46,6 +52,10 @@ def check(name, ok, detail=""):
 AB = {"conformant": "C", "divergent": "D", "undetermined": "U"}
 tex = open(os.path.join(a.paper, f"manuscript_{a.tag}.tex")).read()
 sup = open(os.path.join(a.paper, f"supplement_{a.tag}_campaigns.tex")).read()
+_s18 = os.path.join(a.paper, f"supplement_{a.tag}_v018.tex")
+sup18 = open(_s18).read() if os.path.exists(_s18) else ""
+_oc = os.path.join(a.paper, "oc_main_v018.tex")
+ocmain = open(_oc).read() if os.path.exists(_oc) else ""
 
 
 def pct(k, n, nd):
@@ -85,7 +95,7 @@ check("dVRK-sim: 51 case runs with a report", runs == 51, f"{runs}")
 check("dVRK-sim: all runs match their prediction", match == runs, f"{match}/{runs}")
 check("dVRK-sim: 17 cases x 3 launches", len(per_case) == 17 and all(len(v) == 3 for v in per_case.values()))
 check("text: 17 cases matched in each of three launches (51 runs)", len(per_case) == 17
-      and intex("All 17 cases matched their predicted outcomes in each of the three launches (51 runs") and intex("all 17 pre-registered cases matched"))
+      and intex("All 17 cases matched their predicted outcomes in each of the three launches (51 runs") and intex("all pre-registered cases matched" if R14 else "all 17 pre-registered cases matched"))
 truths = json.load(open(os.path.join(V, "dvrk_sim", "derived_truths.json")))["E_max_m"]
 for k, txt in (("F2_identity", "278.07"), ("F3_inverse", "412.31")):
     check(f"table: E_max {k} = {txt} mm", f"{truths[k]['jhu'] * 1e3:.2f}" == txt and intex(txt))
@@ -211,8 +221,9 @@ check("B live text: scale cells", sc[0]["cC"] + sc[0]["U"] == 30 and sc[1]["cC"]
 mx = [g("frame", "mixture", "0.001mm", x) for x in ("0.95", "1.00", "1.05")]
 mx_txt = f"It gave {mx[0]['cC']} C and {mx[0]['U']} U at $0.95\\varepsilon$, {mx[1]['cC']} C and {mx[1]['U']} U at $\\varepsilon$, and {mx[2]['cD']} D and {mx[2]['U']} U at $1.05\\varepsilon$, with no false verdict."
 check("B live text: mixture cells, no false verdict", all(c["fC"] + c["fD"] == 0 for c in mx) and intex(mx_txt, sup), mx_txt)
+_bl = (f" & \\quad live$^b$ &  & {30 - sc[0]['U']}/0 &  & {30 - sc[1]['U']}/{sc[1]['fD']} &  & {30 - sc[2]['U']}/" + ("--" if sc[2]["U"] == 30 else "0") + " &  \\\\")
 check("B live: the only false verdict is one false D, scale at epsilon", sum(c["fC"] + c["fD"] for c in live.values()) == 1 and sc[1]["fD"] == 1
-      and intex("for scale, one false divergence occurred in 30 runs at $\\varepsilon$"))
+      and (intex(sc_txt, sup) if R14 else intex("for scale, one false divergence occurred in 30 runs at $\\varepsilon$")))
 check("B live: one correct conformant scale verdict exactly at epsilon", sc[1]["cC"] == 1)
 # live interval coverage (RC10 point 1)
 cov = [c["covered"] for c in sc]
@@ -244,7 +255,7 @@ check("rescoring: one false D at exactly 1 mm (S_si_020), none on the frame swee
 mix = rs["mixture_stress"]
 check("mixture: 2000/2000 C at 1 mm; 60.9 % false D at 1 um; coverage 39.2 %",
       mix["decisions"]["1 mm"]["conformant"] == 2000 and pct(mix["decisions"]["0.001 mm"]["divergent"], 2000, 1) == "60.9"
-      and pct(round(mix["coverage"] * 2000), 2000, 1) == "39.2" and intex("60.9") and intex("39.2"))
+      and pct(round(mix["coverage"] * 2000), 2000, 1) == "39.2" and (intex("1217 divergent (all false)", sup) if R14 else intex("60.9")) and intex("39.2"))
 lw = json.load(open(os.path.join(V, "reanalysis", "L_liveness_v016_summary.json")))
 check("width/tau median 0.14, range 0.03-1.30; 23/23 unchanged under 0.1.6",
       f"{lw['width_over_tau']['median']:.2f}" == "0.14" and f"{lw['width_over_tau']['min']:.2f}" == "0.03" and f"{lw['width_over_tau']['max']:.2f}" == "1.30"
@@ -252,12 +263,14 @@ check("width/tau median 0.14, range 0.03-1.30; 23/23 unchanged under 0.1.6",
 
 # ---------------------------------------------------------------- RC10 wording corrections (review of the RC9 copy, points 2-4)
 check("text: closed-boundary sentence (divergence erroneous, conformance correct, undetermined an abstention)",
-      intex("At the closed boundary, divergence is erroneous; conformance is correct, and undetermined is an abstention.")
+      (intex("At $E=\\varepsilon$ every determinate verdict comes from an interval that excludes the truth") if R14 else
+       intex("At the closed boundary, divergence is erroneous; conformance is correct, and undetermined is an abstention."))
       and not intex("only false divergent or undetermined verdicts are possible"))
 check("text: scale calibration stated only under the tested Monte Carlo model",
-      intex("Under the tested Monte Carlo model") and not intex("The decision is calibrated") and not intex("The scale interval is calibrated", sup)
+      intex("Under the tested model it is calibrated" if R14 else "Under the tested Monte Carlo model") and not intex("The decision is calibrated") and not intex("The scale interval is calibrated", sup)
       and intex("under the simulated trial model", sup))
-check("text: repetition could reduce the cost, subject to validation", intex("could reduce that cost, subject to validation") and not intex("would avoid that cost"))
+check("text: repetition could reduce the cost, subject to validation", intex("could narrow the margin, subject to validation" if R14 else "could reduce that cost, subject to validation")
+      and not intex("would avoid that cost"))
 exc = []
 for p in glob.glob(os.path.join(V, "mock", "L", "L16_*fault*.json")):
     r = json.load(open(p)); tr = r["truth"]; tau = r["result"]["observations"]["liveness"].get("tau_w_estimate_s") or {}
@@ -273,7 +286,7 @@ n5 = sum(cells[("0.1.6", "fault", lo)]["n"] for lo in ("iid5", "ge5"))
 e5 = sum(cells[("0.1.6", "fault", lo)]["excludes"] for lo in ("iid5", "ge5"))
 t1 = f"under 5\\% loss, {e5} of {n5} fault intervals (0.1.6 rule) excluded $\\tau_w$"
 row = [ln for ln in tex.splitlines() if ln.startswith("Liveness estimates enclose injected timeouts")]
-check("Table I liveness row states the observed exclusion", e5 == 1 and n5 == 16 and len(row) == 1 and t1 in row[0], t1)
+check("Table I liveness row states the observed exclusion", e5 == 1 and n5 == 16 and len(row) == 1 and t1.lower() in row[0].lower(), t1)
 logs = sorted(glob.glob(os.path.join(a.paper, "code", "pytest_final_*.log")))
 if logs:
     last = open(logs[-1]).read().strip().splitlines()
@@ -310,7 +323,8 @@ for p in glob.glob(os.path.join(V, "dvrk_sim", "runs", "*", "*.json")):
 diag = [(n, r) for n, r in diag if cflag(r) is not None]
 changed = [n for n, r in diag if consistency_gate(Outcome(r["outcome"]), bool(cflag(r)))[0].value != r["outcome"]]
 check("v0.1.7 gate: 102 runs carry the diagnostic; only the 3 K1 unit verdicts change (divergent -> undetermined)",
-      len(diag) == 102 and sorted(changed) == ["K1_0.json", "K1_1.json", "K1_2.json"] and intex("102 archived runs"), f"{len(diag)}; {sorted(changed)}")
+      len(diag) == 102 and sorted(changed) == ["K1_0.json", "K1_1.json", "K1_2.json"]
+      and (intex("no other archived verdict changes") and intex("102 archived runs", sup) if R14 else intex("102 archived runs")), f"{len(diag)}; {sorted(changed)}")
 lrows = []
 for p in glob.glob(os.path.join(V, "mock", "L", "L16_*_fault250_*.json")):
     d = json.load(open(p)); obs = d["result"]["observations"]; Lv = obs["liveness"]; R = obs["resolution"]; tau = Lv.get("tau_w_estimate_s") or {}
@@ -337,12 +351,14 @@ check("v0.1.7 archived: 23/23 contain; fault width/tau median 2.1; overall 0.53;
       and f"{av['width_over_tau_v017']['min']:.2f}--{av['width_over_tau_v017']['max']:.1f}" == "0.05--10.7" and intex("range 0.05--10.7", sup), json.dumps(av["width_over_tau_v017"]))
 check("v0.1.7 archived: horizon claims unchanged (0.1 violated, 0.25 undetermined, 1 s satisfied)",
       [av["fault_horizon_claims"][k][f"v017_fault_horizon_{h}"] for k, h in (("L_horizon_fault_0100", "0.1"), ("L_horizon_fault_0250", "0.25"), ("L_horizon_fault_1000", "1.0"))] == ["violated", "undetermined", "satisfied"]
-      and intex("violated, undetermined and satisfied under every rule, v0.1.7 included"))
+      and intex("violated, undetermined and satisfied under every rule" + ("." if R14 else ", v0.1.7 included")))
 ratios = sorted({r["ratio"] for r in mc if r["probe"] == "frame"})
 check("MC accounting: 42 000 frame replicates = 7 ratios x 3 noise models x 2000; Table III shows five ratios",
-      len(ratios) == 7 and sum(r["n_rep"] for r in mc if r["probe"] == "frame") == 42000 and intex("0 of 42\\,000 replicates over the supplement's full grid of seven ratios"), str(ratios))
+      len(ratios) == 7 and sum(r["n_rep"] for r in mc if r["probe"] == "frame") == 42000
+      and (intex("nor in 42\\,000 v0.1.6 replicates, mixture included") and intex("42\\,000 replicates", sup) if R14 else
+           intex("0 of 42\\,000 replicates over the supplement's full grid of seven ratios")), str(ratios))
 check("text: RC12 wording (illustrative parameters; stationary arm; ROS 1 scope; SRC v1 contingency)",
-      intex("illustrative engineering settings, not task-derived or clinical thresholds") and intex("The pairing assumes a stationary arm")
+      intex("illustrative engineering settings, not task-derived or clinical thresholds") and intex("The pairing requires a still arm" if R14 else "The pairing assumes a stationary arm")
       and intex("the executable validation is ROS~1 only") and intex("counts the primary prediction as not matched") and not intex("reviewer-supplied"))
 
 # ---------------------------------------------------------------- RC13: the confirmatory v0.1.7 campaign and the sensitivity studies,
@@ -421,18 +437,23 @@ ce_ex = sorted(n for n, r in fr7.items() if r["cc"] is False)
 ce_245 = sorted(n for n, r in fr7.items() if r["cd245"] == "satisfied")
 check("RC13 L fault: a conditional estimate reported with every formed interval", all(r["cond"] is not None for r in fr7.values() if r["ok"]))
 print("RC13 L widths (median, ms):", {k: round(v, 1) for k, v in w7.items()}, "conditional none:", round(cw7, 1), "cond excluding:", ce_ex, "cond 245 satisfied:", ce_245)
-lt7p = os.path.join(a.paper, "loss_main_v017.tex")
+lt7p = os.path.join(a.paper, "loss_main_v018.tex" if R14 else "loss_main_v017.tex")
 lt7 = open(lt7p).read() if os.path.exists(lt7p) else ""
 h7 = " & ".join(str(sum(1 for n, d in L7.items() if f"_hold_{lo}_" in n and d["result"]["observations"]["liveness"]["stop_class"] == "held_through_range"))
                + ("$^f$" if any(f"_hold_{lo}_" in n and d["result"]["observations"]["liveness"]["stop_class"] == "not_observable" for n, d in L7.items()) else "") for lo in ("none", "iid2", "iid5", "ge5"))
 f7 = " & ".join(f"{sum(r['contains'] for r in fr7.values() if r['loss'] == lo)}/{sum(r['ok'] and not r['contains'] for r in fr7.values() if r['loss'] == lo)}/{sum(not r['ok'] for r in fr7.values() if r['loss'] == lo)}" for lo in ("none", "iid2", "iid5", "ge5"))
-check("RC13 loss table: v0.1.7 rows equal the raw recomputation", f"0.1.7$^d$ & {h7} \\\\" in lt7 and f"0.1.7$^d$ & {f7} \\\\" in lt7, f"hold {h7}; fault {f7}")
-for rule in ("0.1.5", "0.1.6"):
+_r7 = "sound$^d$" if R14 else "0.1.7$^d$"
+check("RC13 loss table: v0.1.7 rows equal the raw recomputation", f"{_r7} & {h7} \\\\" in lt7 and f"{_r7} & {f7} \\\\" in lt7, f"hold {h7}; fault {f7}")
+for rule in (("0.1.6",) if R14 else ("0.1.5", "0.1.6")):
     hold = " & ".join(f"{cells[(rule, 'hold', lo)]['hold']}" + (f" ({cells[(rule, 'hold', lo)]['false_trip']})" if cells[(rule, 'hold', lo)]['false_trip'] else "") for lo in ("none", "iid2", "iid5", "ge5"))
     fault = " & ".join(f"{cells[(rule, 'fault', lo)]['contains']}/{cells[(rule, 'fault', lo)]['excludes']}/{cells[(rule, 'fault', lo)]['other']}" for lo in ("none", "iid2", "iid5", "ge5"))
     check(f"RC13 loss table rows for rule {rule} (v0.1.6 campaign)", f"{rule} & {hold} \\\\" in lt7 and f"{rule} & {fault} \\\\" in lt7, f"hold {hold}; fault {fault}")
 wtxt = f"\\SI{{{w7['none']:.0f}}}{{ms}}"
-check(f"RC13 text: median v0.1.7 width without loss {wtxt}, conditional {cw7:.0f} ms", intex(wtxt) and intex(f"\\SI{{{cw7:.0f}}}{{ms}}"), f"{w7['none']:.1f} / {cw7:.1f}")
+if R14:
+    _wr = "width$^e$ (ms) & 0.1.6 & 46 & 333 & 243 & 275 \\\\\n & sound & " + " & ".join(f"{w7[lo]:.0f}" for lo in ("none", "iid2", "iid5", "ge5")) + " \\\\"
+    check(f"RC14 loss table: sound-bound median widths {[round(w7[lo]) for lo in ('none', 'iid2', 'iid5', 'ge5')]} ms from the raw records", _wr in lt7, _wr)
+else:
+    check(f"RC13 text: median v0.1.7 width without loss {wtxt}, conditional {cw7:.0f} ms", intex(wtxt) and intex(f"\\SI{{{cw7:.0f}}}{{ms}}"), f"{w7['none']:.1f} / {cw7:.1f}")
 an = json.load(open(os.path.join(V17, "analysis", "confirmatory_v017.json")))
 check("RC13 analysis output: 11 of 13 pre-registered predictions matched; L-1 and L-2 deviate (analyze_v017.py)", len(an["predictions"]) == 13
       and sorted(p["id"] for p in an["predictions"] if not p["matched"]) == ["L-1", "L-2"] and intex("Eleven of the thirteen predictions matched", sup17),
@@ -448,7 +469,8 @@ f9 = bsi[("frame", "ar1-0.9", "1.00")]
 frame_other = sum(bsi[("frame", m, rt)]["false_C"] + bsi[("frame", m, rt)]["false_D"] for m in ("gauss", "bias", "drift", "t3") for rt in ("0.95", "1.00", "1.05"))
 check("RC13 boundary sensitivity: table cells from the study output; scale <= 2.8 % false D at epsilon in every model; frame 11 % at AR 0.9 (coverage 0.82), none under bias/drift/t3",
       len(bs) == 36 and cells_ok and pct(round(scale_max * 2000), 2000, 1) == "2.8" and f"{100 * f9['false_D'] / f9['n_rep']:.0f}" == "11" and f"{f9['coverage']:.3f}" == "0.815"
-      and frame_other == 0 and intex("at or below 2.8\\% false divergence") and intex("11\\% of replicates at $\\varepsilon$, with coverage 0.815"),
+      and frame_other == 0 and ((intex("at most 2.8\\% in every model", sup17) and intex("in 11.1\\%", sup17) and intex("coverage 0.815", sup17)) if R14 else
+                                (intex("at or below 2.8\\% false divergence") and intex("11\\% of replicates at $\\varepsilon$, with coverage 0.815"))),
       f"scale max {scale_max:.4f}; frame AR0.9 {f9['false_D']}/{f9['n_rep']}, cov {f9['coverage']}")
 an_ = {(r["factor"], r["level"]): r for r in json.load(open(os.path.join(V17, "studies", "anchor_sensitivity.json")))["rows"]}
 ok_c = an_[("c", 0.02)]["gate_pass"] == 0 and an_[("c", 0.05)]["gate_pass"] == 0 and an_[("c", 0.1)]["gate_pass"] == 0 and an_[("c", 0.01)]["gate_pass"] == 1 and an_[("c", 0.005)]["gate_pass"] == 1 \
@@ -458,33 +480,209 @@ l97 = an_[("L_impl_ratio", 0.97)]
 l99 = an_[("L_impl_ratio", 9.0 / 9.1)]
 check("RC13 anchor sensitivity: coupling >= 2 % fails the gates, <= 1 % passes unbiased; 0.05-mm noise fails 83 %; 3 % length mismatch false D 23 % at 1 mm; 1.1 % covered",
       ok_c and f"{100 * (1 - n05):.0f}" == "83" and f"{100 * l97['eps1mm_divergent']:.0f}" == "23" and l97["gate_pass"] == 1 and l99["coverage_widened"] >= 0.95
-      and intex("from 2\\% of the step it failed the axis-angle gate in every replicate") and intex("failed the gates in 83\\% of replicates")
-      and intex("a 3\\% mismatch gave false divergence at \\SI{1}{mm} in 23\\% of replicates"), f"noise pass {n05}; L0.97 D {l97['eps1mm_divergent']}; L9.0 cov {l99['coverage_widened']}")
+      and ((intex("2\\% or more failed the axes-angle gate in every replicate", sup17) and intex("only 17\\% passed", sup17)
+            and intex("falsely divergent in 23\\% of replicates", sup17) and intex("(single-joint anchor: 23\\%)", sup18)) if R14 else
+           (intex("from 2\\% of the step it failed the axis-angle gate in every replicate") and intex("failed the gates in 83\\% of replicates")
+            and intex("a 3\\% mismatch gave false divergence at \\SI{1}{mm} in 23\\% of replicates"))), f"noise pass {n05}; L0.97 D {l97['eps1mm_divergent']}; L9.0 cov {l99['coverage_widened']}")
 import subprocess
 try:
     rc = subprocess.run(["git", "-C", a.repo, "log", "--format=%h", "-1", "--", "validation/v0.1.7/RESULTS.md"], capture_output=True, text=True).stdout.strip()
 except Exception:
     rc = ""
-check("RC13 chronology: the results commit in the supplement is the commit that added the confirmatory results", bool(rc) and f"\\code{{{rc}}}" in sup17, rc)
-check("RC13 abstract: 32 timeouts contained, two excluded by the earlier bound; no revision-history wording",
-      intex("contained all 32 injected timeouts, where an earlier bound excluded two") and nc7 == 32 and len(ce_ex) == 2
-      and not re.search(r"\bnow (withholds|contains)\b", tex))
-check("RC13 wording: v0.1.7 is the evaluated system; no 'v0.1.6 throughout' or 'since v0.1.7'; Table II in v0.1.7",
-      intex("The evaluated system is \\code{crtk-conformance} v0.1.7") and not intex("v0.1.6 throughout") and not intex("since v0.1.7")
-      and intex("\\caption{Decision evidence in v0.1.7."))
-check("RC13 wording: chronology in four steps; evidence taxonomy (i)-(iv); one-sided gate",
-      intex("The evidence was produced in four steps") and intex("(iv) Independent physical anchors") and intex("an unraised flag does not establish \\tA{}")
-      and intex("An unraised flag is weak evidence for \\tA"))
+check("RC13 chronology: the results commit in the supplement is the commit that added the confirmatory results", bool(rc) and f"\\code{{{rc}}}" in (sup18 if R14 else sup17), rc)
+if not R14:
+    check("RC13 abstract: 32 timeouts contained, two excluded by the earlier bound; no revision-history wording",
+          intex("contained all 32 injected timeouts, where an earlier bound excluded two") and nc7 == 32 and len(ce_ex) == 2
+          and not re.search(r"\bnow (withholds|contains)\b", tex))
+    check("RC13 wording: v0.1.7 is the evaluated system; no 'v0.1.6 throughout' or 'since v0.1.7'; Table II in v0.1.7",
+          intex("The evaluated system is \\code{crtk-conformance} v0.1.7") and not intex("v0.1.6 throughout") and not intex("since v0.1.7")
+          and intex("\\caption{Decision evidence in v0.1.7."))
+    check("RC13 wording: chronology in four steps; evidence taxonomy (i)-(iv); one-sided gate",
+          intex("The evidence was produced in four steps") and intex("(iv) Independent physical anchors") and intex("an unraised flag does not establish \\tA{}")
+          and intex("An unraised flag is weak evidence for \\tA"))
+else:
+    check("RC14 abstract: all 32 injected timeouts contained; no revision-history wording", intex("all 32 injected timeouts") and nc7 == 32
+          and not re.search(r"\bnow (withholds|contains)\b", tex))
+    check("RC14 wording: v0.1.8 is the evaluated system; Table II in v0.1.8; the conditional estimate excluded tau_w in 2 of 32 confirmatory runs",
+          intex("The evaluated system is \\code{crtk-conformance} v0.1.8") and intex("\\caption{Decision evidence in v0.1.8.") and not intex("since v0.1.7")
+          and len(ce_ex) == 2 and intex("excluded the timeout in 2 of 32 runs"))
+    check("RC14 wording: rule revisions tested on fresh runs; evidence taxonomy (i)-(iv); one-sided gate",
+          intex("Each revision of a decision rule was introduced after an external review") and intex("(iv) Independent physical anchors")
+          and intex("an unraised flag does not establish \\tA{}") and intex("An unraised flag is weak evidence for \\tA"))
 check("RC13 wording: TOST, observational equivalence and the oracle problem are cited",
       intex("\\cite{schuirmann1987tost}") and intex("\\cite{bellman1970structural}") and intex("\\cite{barr2015oracle}"))
 check("RC13 wording: freshness naming (Table II row; no rate-conformance verdict)",
       intex("Freshness & Inferred source age") and not intex("Rate & Inferred source age") and not intex("rate conformance") and intex("freshness requirement"))
 check("RC13 Table V: primary (contingency) scoring and client definitions",
-      intex("Primary (contingency)") and intex("0/2 (2/2)") and intex("0/1 (1/1)") and intex("\\emph{dVRK-authored} client declares") and intex("\\emph{SRC-authored} client declares"))
+      (intex("Primary (cont.)") and intex("0/3 (3/3)") and intex("3/9 (6/9)") if R14 else intex("Primary (contingency)") and intex("0/2 (2/2)") and intex("0/1 (1/1)"))
+      and intex("\\emph{dVRK-authored} client declares") and intex("\\emph{SRC-authored} client declares"))
 check("RC13 deviation reported: one undetermined hold run (calibration lost 5 of 30)",
       intex("its calibration lost 5 of 30 commands") and intex("answered 25 of 30 commands", sup17)
       and sum(1 for d in hold7 if d["result"]["observations"]["liveness"]["stop_class"] == "not_observable") == 1
       and any(30 - d["result"]["observations"]["resolution"]["latency_probes_responded"] == 5 for d in hold7 if d["result"]["observations"]["liveness"]["stop_class"] == "not_observable"))
+
+# ---------------------------------------------------------------- RC14: the v0.1.8 campaigns (recomputed from the raw records), the offline
+# studies (from their outputs) and the RC14 wording
+if R14:
+    V18 = os.path.join(a.repo, "validation", "v0.1.8")
+    # F, raw records
+    F18 = {}
+    for p in glob.glob(os.path.join(V18, "mock", "F", "F18_*.json")):
+        d = json.load(open(p)); tr = d["truth"]; r = d["result"]; cpn = r["observations"].get("correlation_plan") or {}
+        o = r["outcome"]; tc = tr["truth_conformant"]
+        cl = "U" if o == "undetermined" else (("cC" if tc else "fC") if o == "conformant" else ("fD" if tc else "cD"))
+        F18.setdefault((tr["procedure"], tr["phi"], tr["ratio"]), []).append({"cl": cl, "ok": cpn.get("ok"), "sp": cpn.get("spacing_samples"), "tau": cpn.get("tau_int_samples")})
+    nF = lambda k, c=None: sum(1 for x in F18.get(k, []) if c is None or x["cl"] == c)
+    check("RC14 F: 160 runs, 20 per cell", len(F18) == 8 and all(len(v) == 20 for v in F18.values()), str({k: len(v) for k, v in F18.items()}))
+    g99 = F18[("0.1.8", 0.99, "0.95")] + F18[("0.1.8", 0.99, "1.00")]
+    wh = sum(x["ok"] is False for x in g99)
+    tres = [x["tau"] for x in g99 if x["ok"]]
+    check("RC14 F: back to back 4/20 false D at epsilon (8 decided); guard 0 false of 40, 23 withheld, all 20 at epsilon U; iid 20/20 C at 0.95 both; spacing 5 in all 40 iid guard runs",
+          nF(("0.1.7", 0.99, "1.00"), "fD") == 4 and 20 - nF(("0.1.7", 0.99, "1.00"), "U") == 8 and not any(x["cl"] in ("fC", "fD") for x in g99) and wh == 23
+          and nF(("0.1.8", 0.99, "1.00"), "U") == 20 and nF(("0.1.7", 0.0, "0.95"), "cC") == 20 and nF(("0.1.8", 0.0, "0.95"), "cC") == 20
+          and all(x["sp"] == 5 for k in (("0.1.8", 0.0, "0.95"), ("0.1.8", 0.0, "1.00")) for x in F18[k])
+          and intex("4 of 20 runs at $\\varepsilon$ were falsely divergent, half of the determinate verdicts") and intex("none of 40 was false and 23 were withheld"),
+          f"withheld {wh}")
+    check(f"RC14 F: resolved guard runs underestimated tau_int ({min(tres):.0f}--{max(tres):.0f} samples)",
+          f"{min(tres):.0f}--{max(tres):.0f}" == "31--137" and intex("(31--137 samples)") and intex("from 31 to 137 samples", sup18))
+    an18 = json.load(open(os.path.join(V18, "analysis", "campaigns_v018.json")))
+    pr18 = {p_["id"]: p_["matched"] for p_ in an18["predictions"]}
+    check("RC14 analysis output: every pre-registered prediction of F, D and S", sorted(pr18) == ["D-1", "D-2", "F-1", "F-2", "F-3", "F-4", "F-5", "F-6", "S-1", "S-2", "S-3"],
+          str(pr18))
+    check("RC14 F and D predictions matched (analyze_v018.py)", all(pr18[k] for k in pr18 if k[0] in "FD") and intex("matched all six pre-registered predictions")
+          and intex("matching both pre-registered predictions"), str({k: v for k, v in pr18.items() if k[0] in "FD"}))
+    # D, raw records
+    D18 = {}
+    for p in glob.glob(os.path.join(V18, "dvrk_sim", "D", "runs", "*", "*.json")):
+        if p.endswith(".bring_up.json"):
+            continue
+        for r in json.load(open(p)).get("probes") or []:
+            if r.get("probe") in ("FrameSemanticsProbe", "GeometryAnchorProbe"):
+                D18.setdefault(os.path.basename(p)[:-5], []).append(r)
+    dg = [r["estimates"]["geometry_anchor"] for k, v in D18.items() if k.startswith("U") for r in v]
+    check("RC14 D: 27 runs; frame plans deterministic; anchor gates passed with d_int 9.1000 mm in all 9",
+          sum(len(v) for v in D18.values()) == 27 and all(r["observations"]["correlation_plan"]["deterministic"] for k, v in D18.items() if k.startswith("F") for r in v)
+          and len(dg) == 9 and all(x["gates_passed"] and abs(x["d_int_mean_if"] - 0.0091) < 1e-9 for x in dg) and intex("\\SI{9.1000}{mm}"))
+    # studies
+    fgs = {(r["sigma_mm"], r["phi"], r["ratio"]): r for r in json.load(open(os.path.join(V18, "studies", "frame_guard.json")))["rows"]}
+    v17f = lambda sg, ph, rt: fgs[(sg, ph, rt)]["v017_false_rate"]
+    v18max = max(r["v018_false_rate"] for r in fgs.values())
+    v18off = max(r["v018_false_rate"] for r in fgs.values() if r["ratio"] != "1.00")
+    whf = [fgs[(0.02, 0.99, rt)]["withheld"]["unresolved"] / 1000 for rt in ("0.95", "1.00", "1.05")]
+    check("RC14 guard study: back to back 20 % (0.02 mm) and 22 % (0.1 mm) false D at epsilon, phi 0.99; guard <= 0.2 %, 0 off the boundary; 37--41 % withheld; decided 82 % -> 26 %",
+          f"{100 * v17f(0.02, 0.99, '1.00'):.0f}" == "20" and f"{100 * v17f(0.1, 0.99, '1.00'):.0f}" == "22" and v18max <= 0.002 and v18off == 0
+          and f"{100 * min(whf):.0f}--{100 * max(whf):.0f}" == "37--41" and f"{100 * fgs[(0.02, 0.99, '0.95')]['v017_decided']:.0f}" == "82"
+          and f"{100 * fgs[(0.02, 0.99, '0.95')]['v018_decided']:.0f}" == "26" and f"{fgs[(0.1, 0.99, '0.95')]['v017_false_given_decided']:.2f}" == "0.34"
+          and intex("in 20\\% of replicates at \\SI{0.02}{mm} and 22\\% at \\SI{0.1}{mm}") and intex("at most 0.2\\% in every cell") and intex("37--41\\%") and intex("from 82\\% to 26\\%"),
+          f"max guard {v18max}; withheld {whf}")
+    oc = {(r["probe"], r["sigma_mm"], r["trials"], r["ratio"]): r for r in json.load(open(os.path.join(V18, "studies", "operating_characteristic.json")))["rows"]}
+    ocf = lambda *k: oc[k]
+    fr_false = sum(r["false_C"] + r["false_D"] for k, r in oc.items() if k[0] == "frame")
+    c1 = f"{100 * ocf('scale', 0.02, 9, '1.00')['false']:.1f}" == "2.2" and f"{100 * ocf('scale', 0.1, 9, '1.00')['false']:.1f}" == "3.3"
+    c2 = f"{100 * ocf('scale', 0.02, 9, '1.05')['decided']:.0f}--{100 * ocf('scale', 0.02, 9, '0.95')['decided']:.0f}" == "43--48" \
+        and ocf('scale', 0.02, 9, '0.95')['false'] == 0 and ocf('scale', 0.02, 9, '1.05')['false'] == 0
+    c3 = max(ocf('scale', 0.1, 9, rt)['decided'] for rt in ("0.90", "0.95", "0.98", "1.00", "1.02", "1.05", "1.10")) <= 0.13 \
+        and f"{100 * ocf('scale', 0.1, 9, '0.95')['false_given_decided']:.0f}--{100 * ocf('scale', 0.1, 9, '1.05')['false_given_decided']:.0f}" == "13--21"
+    c4 = f"{100 * ocf('frame', 0.1, 10, '1.05')['decided']:.1f}--{100 * ocf('frame', 0.1, 10, '0.95')['decided']:.1f}" == "0.4--0.5" \
+        and f"{100 * ocf('frame', 0.1, 40, '1.05')['decided']:.0f}--{100 * ocf('frame', 0.1, 40, '0.95')['decided']:.0f}" == "87--88" \
+        and ocf('frame', 0.02, 10, '0.95')['decided'] == 1 and ocf('frame', 0.02, 10, '1.05')['decided'] == 1
+    check("RC14 operating characteristic: frame never false; scale 2.2/3.3 % at epsilon; 43--48 % decided at 5 %; <= 13 % decided and 13--21 % false among decided at 0.1 mm; frame 0.4--0.5 % -> 87--88 % with 40 trials",
+          fr_false == 0 and c1 and c2 and c3 and c4 and intex("2.2\\% and 3.3\\%") and intex("43--48\\%") and intex("13--21\\%") and intex("0.4--0.5\\%") and intex("87--88\\%"),
+          f"{c1} {c2} {c3} {c4}")
+    import subprocess as _sp
+    _tmp = os.path.join(a.paper, "build", "tables_check")
+    _sp.run([sys.executable, os.path.join(a.repo, "validation", "tables_v018.py"), _tmp], capture_output=True)
+    same = {f: open(os.path.join(_tmp, f)).read() == open(os.path.join(a.paper, f)).read() for f in os.listdir(_tmp) if os.path.exists(os.path.join(a.paper, f))}
+    check("RC14 tables: every v0.1.8 table in the paper equals a fresh run of tables_v018.py", same and all(same.values()), str(same))
+    ap_ = {(r["factor"], r["level"]): r for r in json.load(open(os.path.join(V18, "studies", "anchor_poe.json")))["rows"]}
+    check("RC14 anchor study: noise 0.02 mm all pass, 0.05 mm 5 %, 0.1 mm 0 %; reach 0.44 unchanged; coupling 5/10 % fail 8/14 %; kappa 0.98 -2 % bias passes, 0.95 false D 100 %; 3 % length false D 60 %",
+          ap_[("sigma_t_mm", 0.02)]["gate_pass"] == 1 and f"{100 * ap_[('sigma_t_mm', 0.05)]['gate_pass']:.0f}" == "5" and ap_[("sigma_t_mm", 0.1)]["gate_pass"] == 0
+          and ap_[("reach", 0.44)]["gate_pass"] == 1 and ap_[("reach", 0.44)]["eps5mm_conformant"] == 1
+          and f"{100 * (1 - ap_[('coupling', 0.05)]['gate_pass']):.0f}/{100 * (1 - ap_[('coupling', 0.1)]['gate_pass']):.0f}" == "8/14"
+          and ap_[("kappa", 0.98)]["gate_pass"] == 1 and f"{ap_[('kappa', 0.98)]['lambda_bias_pct_median']:.1f}" == "-2.0" and ap_[("kappa", 0.95)]["eps1mm_divergent"] == 1
+          and f"{100 * ap_[('L_impl_ratio', 0.97)]['eps1mm_divergent']:.0f}" == "60" and ap_[("L_impl_ratio", 0.97)]["gate_pass"] == 1
+          and intex("at \\SI{0.05}{mm} they passed in 5\\%") and intex("8--14\\%") and intex("in 60\\%"))
+    dl = json.load(open(os.path.join(V18, "studies", "deadline_resolution.json")))
+    sm = dl["summary"]["confirmatory"]
+    arch_f = [r for r in dl["archived_rows"] if r["mode"] == "fault"]
+    arch_r = [r for r in dl["archived_rows"] if r["mode"] != "fault"]
+    wait = sorted(r["sound_confirm_margin_s"] for r in arch_f if r["run"] not in ("L_delayed", "L_slowfb"))
+    check("RC14 deadlines: sound confirm 310 / 125 / 249 ms, refute 18 ms, conditional 21 ms; archived 0.51--0.52 s, 1.77 s delayed; drift band <= 36 ms; replay consistent",
+          [f"{sm[k]['sound_confirm_margin_median_ms']:.0f}" for k in ("none", "iid5", "ge5")] == ["310", "125", "249"]
+          and f"{sm['none']['sound_refute_margin_median_ms']:.0f}" == "18" and f"{sm['none']['conditional_confirm_margin_median_ms']:.0f}" == "21"
+          and f"{wait[0]:.2f}--{wait[-1]:.2f}" == "0.51--0.52" and any(r["run"] == "L_delayed" and f"{r['sound_confirm_margin_s']:.2f}" == "1.77" for r in arch_f)
+          and max(r["sound_confirm_margin_s"] + r["sound_refute_margin_s"] for r in arch_r) <= 0.036
+          and all(r["replay_at_hi"] == "satisfied" and r["replay_below_hi"] != "satisfied" for r in dl["confirmatory_rows"])
+          and intex("$\\tau_w+\\SI{310}{ms}$") and intex("125 and \\SI{249}{ms}") and intex("\\SI{18}{ms} (median)") and intex("$\\tau_w+\\SI{21}{ms}$")
+          and intex("0.51--\\SI{0.52}{s}") and intex("\\SI{1.77}{s}") and intex("at most \\SI{36}{ms} wide"), f"archived waits {wait[0]:.3f}..{wait[-1]:.3f}")
+    # S, raw records
+    S18 = {}
+    for v in ("v1", "v2"):
+        for p in glob.glob(os.path.join(V18, "src_live", f"live-src-{v}", "launch*", "*_geometry_*.json")):
+            for r in json.load(open(p)).get("probes") or []:
+                if r.get("probe") == "GeometryAnchorProbe":
+                    S18.setdefault(v, []).append((os.path.basename(p)[:-5], r["outcome"], r["estimates"].get("geometry_anchor") or {}))
+    s1 = S18.get("v1", []); s2 = S18.get("v2", [])
+    lam1 = [g_["lambda_hat_m"] for _, _, g_ in s1 if g_.get("lambda_hat_m")]
+    lam2 = [g_["lambda_hat_m"] for _, _, g_ in s2 if g_.get("lambda_hat_m")]
+    check("RC14 S: 9 runs per release", len(s1) == 9 and len(s2) == 9, f"{len(s1)} / {len(s2)}")
+    s1l = {}
+    for p in glob.glob(os.path.join(V18, "src_live", "live-src-v1", "launch*", "*_geometry_*.json")):
+        for r in json.load(open(p)).get("probes") or []:
+            if r.get("probe") == "GeometryAnchorProbe":
+                s1l.setdefault(os.path.basename(os.path.dirname(p)), []).append((r["outcome"], r["estimates"].get("geometry_anchor") or {}))
+    l1 = s1l.get("launch1", []); l23 = s1l.get("launch2", []) + s1l.get("launch3", [])
+    lam23 = [g_["lambda_hat_m"] for _, g_ in l23]
+    err1 = [g_["predicted_error_ci_m"] for _, g_ in l1]
+    check("RC14 S-1 (deviation): SRC v1.0.0 launch 1 gates passed and divergent 3/3 (lambda 0.1011); launches 2-3 gates failed and undetermined 6/6 (lambda 0.096-0.101); no false verdict",
+          len(l1) == 3 and all(o == "divergent" and g_["gates_passed"] and f"{g_['lambda_hat_m']:.4f}" == "0.1011" for o, g_ in l1)
+          and len(l23) == 6 and all(o == "undetermined" and not g_["gates_passed"] for o, g_ in l23)
+          and f"{min(lam23):.3f}--{max(lam23):.3f}" == "0.096--0.101" and not pr18.get("S-1")
+          and f"{min(e[0] for e in err1) * 1e3:.1f}--{max(e[1] for e in err1) * 1e3:.1f}" == "89.7--90.0"
+          and intex("in one of three launches") and intex("0.096--\\SI{0.101}{m} per unit") and intex("89.7--\\SI{90.0}{mm}") and intex("3/9 (6/9)"),
+          f"lambda 2-3 {min(lam23):.4f}..{max(lam23):.4f}")
+    P2 = {"src_client_geometry_1mm": "undetermined", "src_client_geometry_5mm": "conformant", "dvrk_client_geometry_1mm": "undetermined"}
+    check("RC14 S-2: SRC v2.0.0 gates passed; SRC 1 mm U, 5 mm C, dVRK 1 mm U in 9/9; lambda 1.0111", len(s2) == 9 and pr18.get("S-2")
+          and all(o == P2[n] and g_.get("gates_passed") and f"{g_['lambda_hat_m']:.4f}" == "1.0111" for n, o, g_ in s2),
+          f"lambda {min(lam2) if lam2 else None}..{max(lam2) if lam2 else None}")
+    fs = sorted(glob.glob(os.path.join(V18, "src_live", "live-src-v2", "failed_startup_launch2", "*_geometry_*.json")))
+    check("RC14 S: the v2.0.0 start-up failure (launch 2) is archived apart, not pooled, and was repeated",
+          len(fs) == 3 and all(any("measured_cp missing" in str(x) for x in (r.get("notes") or [])) for p in fs for r in json.load(open(p))["probes"] if r.get("probe") == "GeometryAnchorProbe")
+          and os.path.exists(os.path.join(V18, "src_live", "live-src-v2", "launch2", "resting_trace.json")) and intex("repeated", sup18))
+    trj = json.load(open(os.path.join(V18, "analysis", "src_traces_v018.json")))["rows"]
+    tv1 = {r["trace"].split("/")[-2]: r for r in trj if r["version"] == "v1"}
+    check("RC14 S-3 and traces: >= 1000 samples in all 6; v1 yaw chatter 0.038/0.349/0.116 rad; averaging offset 0.65 mm in launch 2; v2 constant",
+          pr18.get("S-3") and len(trj) == 6 and all(r["samples"] >= 1000 for r in trj)
+          and [f"{tv1[k]['yaw_sd_rad']:.3f}" for k in ("launch1", "launch2", "launch3")] == ["0.038", "0.349", "0.116"]
+          and f"{tv1['launch2']['window_average_offset_mm_median']:.2f}" == "0.65" and all(r["plan"]["deterministic"] for r in trj if r["version"] == "v2")
+          and intex("0.35 and \\SI{0.12}{rad}") and intex("\\SI{0.65}{mm}"))
+    try:
+        rc18 = _sp.run(["git", "-C", a.repo, "log", "--diff-filter=A", "--format=%h", "-1", "--", "validation/v0.1.8/RESULTS.md"], capture_output=True, text=True).stdout.strip()
+    except Exception:
+        rc18 = ""
+    check("RC14 chronology: the v0.1.8 results commit in the supplement is the commit that added RESULTS.md", bool(rc18) and f"\\code{{{rc18}}}" in sup18, rc18)
+    sj = json.load(open(os.path.join(V18, "analysis", "single_joint_on_S_v018.json")))["rows"]
+    sj1 = [r for r in sj if r["release"] == "v1" and "/launch1/" in r["run"]]
+    sj23 = [r for r in sj if r["release"] == "v1" and "/launch1/" not in r["run"]]
+    sjl = [r["single_joint_lambda_hat_m"] for r in sj23]
+    check("RC14 exploratory: single-joint estimator on the S poses: v1 launch 1 divergent 2/3; launches 2-3 undetermined 6/6 with lambda 0.105-0.125; v2 agrees 9/9; stated as exploratory",
+          sj and sum(r["single_joint_outcome"] == "divergent" for r in sj1) == 2 and len(sj1) == 3 and all(r["single_joint_outcome"] == "undetermined" for r in sj23)
+          and f"{min(sjl):.3f}--{max(sjl):.3f}" == "0.105--0.125"
+          and all(r["single_joint_outcome"] == r["joint_space_outcome"] for r in sj if r["release"] == "v2")
+          and intex("also decided divergent in two of the three runs") and intex("(exploratory, after the campaign)", sup18) and intex("0.105--\\SI{0.125}{m}"),
+          f"{min(sjl):.4f}..{max(sjl):.4f}")
+    pbh = json.load(open(os.path.join(V18, "analysis", "poe_scipy_budget_host.json")))
+    pbc = json.load(open(os.path.join(V18, "analysis", "poe_scipy_budget_container.json")))
+    lam_ok = max(abs(x["refit_lambda"] / x["archived_lambda"] - 1) for x in pbh["campaign_refits"] if x["archived_gates"])
+    c10 = {r["factor"] + str(r["level"]): r["gate_pass"] for r in pbc["study_rows"]}; h10 = {r["factor"] + str(r["level"]): r["gate_pass"] for r in pbh["study_rows"]}
+    check("RC14 SciPy budget: 81/135 campaign fits stopped in the image; converged refit (host) keeps every gate outcome and verdict, lambda to 7e-8; study 10 % coupling 89 % -> 76 %",
+          pbc["campaign_fits_stopped_at_budget"] == 81 and pbc["campaign_fits"] == 135 and pbh["campaign_fits_stopped_at_budget"] == 0 and pbh["campaign_outcomes_equal"]
+          and lam_ok < 7e-8 and f"{100 * h10['coupling0.1']:.0f}/{100 * c10['coupling0.1']:.0f}" == "89/76" and not any(r["eps1mm_divergent"] or r["eps5mm_divergent"] for r in pbc["study_rows"] + pbh["study_rows"])
+          and intex("changed no verdict") and intex("from 89\\% to 76\\%", sup18) and intex("81 of the 135 fits", sup18),
+          f"lambda {lam_ok:.1e}; {pbh['scipy']} vs {pbc['scipy']}")
+    check("RC14 wording: v0.1.8 in the abstract-level claims; freshness tied to its observation model; recommendation to timestamp state transitions",
+          intex("a limit of that observation model rather than of freshness testing") and intex("timestamp state transitions") and intex("Decidable deadlines")
+          and intex("Correlated trials") and intex("Decision rate and error among determinate verdicts"))
 
 # ---------------------------------------------------------------- abstract length
 ab = re.search(r"\\begin\{abstract\}(.*?)\\end\{abstract\}", tex, re.S).group(1)

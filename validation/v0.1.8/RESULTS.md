@@ -22,11 +22,17 @@ Pre-registration: `PREREGISTRATION.md` (commit `79b3f71`, before any run). Code:
 
 **Deviation (S-1).** In launches 2 and 3 of SRC v1.0.0 the joint-space fit left translation residuals of 8.4–9.1 % and 5.2–6.0 % of d_int (gate 2 %) in 4–5 of the 5 trials of every run; in launch 2 the rotation residual (up to 0.108 rad) and in two runs the axes angle also failed. No run gave a false verdict. The resting traces show that the wrist-yaw joint chatters, alternating sample to sample (lag-1 correlation −0.73 to −0.82), with standard deviation 0.038, 0.349 and 0.116 rad in launches 1–3; `measured_js` reports the chatter. The probe averages pose and joints over 0.3-s windows, and averaging a pose that swings about the yaw axis pulls the published point (10.6 mm beyond the axis) toward it by 10.6(1 − mean cos δ) mm: 0.007, 0.649 and 0.070 mm from the traces (0.1, 7.2 and 0.8 % of d_int). This accounts for launch 2 but not fully for launch 3, where the chatter during the steps may exceed that at rest; the cause was not isolated further.
 
+**Exploratory, after the campaign: was the joint-space fit necessary?** `rederive_single_joint_S_v018.py` applies the single-joint estimator (unchanged) to the same recorded poses (+Δq wrist steps against the reference pose, commanded 0.25 rad, single-joint gates) → `analysis/single_joint_on_S_v018.json`. v1.0.0 launch 1: divergent in 2 of 3 runs (λ̂ 0.1019–0.1020); the third failed the step gate (a yaw step of 12.0° against 14.3°). Launch 1 tracked well (wrist steps 84–103 % of the command; other wrist joints ≤ 0.017 rad). Launches 2–3: gates failed in every run, λ̂ biased to 0.105–0.125 m/unit (joint-space: 0.096–0.101). v2.0.0: both estimators agree in 9/9. The launch-1 detection is therefore grounded, but it does not show that the joint-space fit was needed for it.
+
 ## Other results
 
 - **F, unguarded outcomes of the 23 withheld runs:** 10 conformant, 1 divergent (at ε, false), 12 undetermined.
 - **F, τ_int estimates** (true ≈ 199 samples): resolved runs 31–137, withheld runs 153–286. At this correlation the guard decides only when it underestimates τ_int.
 - **Wall time:** F about 31 s per guarded φ = 0.99 run, 5 s per iid guarded run, 1 s per back-to-back run; D 5 s per frame case, 88 s per anchor case; S 155 s per anchor run.
+
+## Known issue: the joint-space fit's budget depends on the SciPy version (found after the campaigns)
+
+`poe_fit_trial` calls `least_squares(method="lm", max_nfev=200)`. SciPy 1.10.1 (the campaign image) counts the finite-difference Jacobian's residual evaluations in `max_nfev`, so the fit stops after about six iterations (status 0); SciPy 1.17.1 counts residual evaluations only and converges. The final ROS test run in the image therefore fails `test_poe_fit_is_unbiased_under_coupled_and_incomplete_joint_motion` (150 passed, 1 failed). `poe_scipy_budget_v018.py` (exploratory) → `analysis/poe_scipy_budget_{container,host}.json`: 81 of the 135 D and S fits stopped at the budget in the image; refitted under SciPy 1.17.1 (none stopped) every run keeps its gate outcome and verdict, and λ̂ agrees to 7e-8 where the gates passed. On the anchor study's coupling levels the early stop lowers the gate-pass rate at 10 % coupling from 89 % to 76 % (no false verdict). `src/` is not changed (frozen by the pre-registration).
 
 # Offline studies (not pre-registered; `studies/`)
 

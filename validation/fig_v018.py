@@ -79,7 +79,7 @@ for noise in sorted({r["noise_mm"] for r in srows}):
     ax.plot([r["s_true"] for r in sub], [r["s_hat_mean"] for r in sub], marker=markers.get(noise, "o"), color=cols.get(noise, C_GREY), lw=0.9, ms=3, label=f"ŝ, noise {noise:g} mm")
     ax.plot([r["s_true"] for r in sub], [r["r_int_mean"] for r in sub], marker=markers.get(noise, "o"), mfc="none", color=cols.get(noise, C_GREY), lw=0.9, ls="--", ms=3)
 ax.plot([0.1, 10], [0.1, 10], color=C_GREY, lw=0.7, ls=":")
-ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected scale s"); ax.set_ylabel("estimate"); ax.set_title("(b) scale: ŝ; internal ratio (dashed)", loc="left"); ax.legend(fontsize=5.2, loc="upper left")
+ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("injected scale s"); ax.set_ylabel("estimate"); ax.set_title("(b) scale: ŝ; ratio dashed", loc="left"); ax.legend(fontsize=5.2, loc="upper left")
 ax = axs[2]
 ok = [r for r in lrows if r["tau_status"] == "ok" and r["mode"] == "fault" and r["expect"] == "fault" and r["sound_low_s"] is not None]
 if ok:

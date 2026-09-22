@@ -61,9 +61,9 @@ temporal:
 | Implemented | Not implemented |
 |---|---|
 | ROS 1 (`rospy`) transport; discovery through the ROS master API | ROS 2 (no `rclpy` backend) |
-| `FrameSemanticsProbe` — binding of the unqualified `measured_cp` relative to `local/measured_cp`, decided on the exact maximum error eq. (3′) against a declared expected transform with a propagated interval; **passive** (never publishes `servo_cp`, so it never tests the command frame) | inferring the binding when `local/` is absent (undetermined by construction); TF beyond a one-hop `/tf` lookup; an active command-frame test |
+| `FrameSemanticsProbe` — binding of the unqualified `measured_cp` relative to `local/measured_cp`, decided on the exact maximum error eq. (3′) against a declared expected transform with a propagated interval; **passive** (never publishes `servo_cp`, so it never tests the command frame); 0.1.8: correlation guard (resting window, trial spacing by 2 τ_int, withheld when the correlation is unresolved or too long) | inferring the binding when `local/` is absent (undetermined by construction); TF beyond a one-hop `/tf` lookup; an active command-frame test |
 | `ScalingUnitsProbe` — internal command/measurement ratio, and a unit estimate **only with an out-of-band anchor topic**; noise-adaptive step; goals streamed at the client rate; no-response accounting; 0.1.6: command/feedback consistency diagnostic; 0.1.7: a raised diagnostic withholds the unit verdict | detecting a uniform unit scale without an anchor (impossible; paper Sec. 5.2) |
-| 0.1.6: `GeometryAnchorProbe` — unit anchor from instrument geometry: screw axes of wrist-pitch/yaw steps (`servo_jp`), their common normal against a declared link length L with relative uncertainty u_rel, eq. (6) decision; gates return undetermined | an anchor for instruments without a declared, perpendicular pitch–yaw pair |
+| 0.1.6: `GeometryAnchorProbe` — unit anchor from instrument geometry: screw axes of wrist-pitch/yaw steps (`servo_jp`), their common normal against a declared link length L with relative uncertainty u_rel, eq. (6) decision; gates return undetermined. 0.1.8: joint-space method (default): every joint stepped, product-of-exponentials fit to the measured joints and poses, so reported coupled or incomplete motion is data; `--anchor-method single_joint` restores 0.1.6 | an anchor for instruments without a declared, perpendicular pitch–yaw pair |
 | `RateSensitivityProbe` — operating-state precondition; liveness / stop-behaviour probe with measured timing resolution, observational stop classes, drift onset/speed estimation and a timeout **interval** with explicit allowances; source age of the applied setpoint reported by `setpoint_cp` (bracketed between samples) as a **diagnostic**, with the feedback-crossing statistic likewise | identifying the internal controller rate (not identifiable through the interface); identifying a physical release from the pose; measuring the platform's own jitter; **any rate verdict at all (0.1.4)** |
 | JSON report validated against `schema/report.schema.json`; text summary; every outcome-affecting constant recorded | PDF reports |
 | `crtk-mock` with presets emulating *documented* behaviours (built from cited configuration values) | any emulation of dVRK/AMBF/SRC *code* |
@@ -159,6 +159,16 @@ python validation/reanalyze_liveness_v016.py; python validation/rescore_v016.py;
 python validation/verify_reporting_v016.py --paper <manuscript dir> --tag rc12  # paper numbers recomputed from the raw v0.1.6 archive
 # 0.1.7 (post hoc rule changes; the v0.1.6 campaign scripts above pin the 0.1.6 rules)
 python validation/rederive_v017.py                                             # offline re-derivation under the 0.1.7 rules -> validation/v0.1.7/
+python validation/run_validation_v017.py --only K,L                            # pre-registered confirmatory campaign of 0.1.7 (validation/v0.1.7/PREREGISTRATION.md)
+# 0.1.8 (pre-registered: validation/v0.1.8/PREREGISTRATION.md; results: validation/v0.1.8/RESULTS.md)
+python validation/run_validation_v018.py F                                     # reference node: correlation guard under AR(1) noise
+python validation/run_validation_v018.py D --launches 3                        # dVRK console: frame and joint-space anchor controls
+python validation/run_validation_v018.py S v1|v2 --launches 3                  # SRC releases: joint-space anchor, resting traces
+python validation/analyze_v018.py; python validation/src_traces_v018.py; python validation/rederive_single_joint_S_v018.py   # the last is exploratory
+python validation/frame_guard_study_v018.py; python validation/operating_characteristic_v018.py
+python validation/anchor_poe_study_v018.py; python validation/deadline_resolution_v018.py   # offline studies -> validation/v0.1.8/studies/
+python validation/tables_v018.py <dir>; python validation/fig_v018.py --figdir <dir>
+python validation/verify_reporting_v016.py --paper <manuscript dir> --tag rc14  # paper numbers recomputed from the raw archives
 python validation/analyze_v013.py validation/v0.1.3/mock --live validation/v0.1.3/live-src-v1 validation/v0.1.3/live-src-v2
 ```
 

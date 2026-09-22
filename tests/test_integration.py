@@ -110,6 +110,25 @@ def test_frame_probe_orientation_noise_and_stamp_skew(master):
     assert r.outcome in (Outcome.CONFORMANT, Outcome.UNDETERMINED)
 
 
+def test_frame_probe_correlation_guard_spaces_trials_under_ar1_noise(master):
+    # 0.1.8 (RC13 review, point 1): AR(1) position noise at phi = 0.95 per publish step (tau_int ~ 39 samples at 100 Hz):
+    # the resting window resolves the correlation time and the trials are spaced; iid noise keeps back-to-back trials
+    E_ID = Expectations.from_dict({"spatial": {"mode": "identity"}})
+    with mock_node("reference", {"noise_m": 2e-5, "noise_model": "ar1", "ar_phi": 0.95, "seed": 7}):
+        a = adapter()
+        r = FrameSemanticsProbe(a, TOL, trials=10, samples_per_trial=5, expectations=E_ID).run()
+        a.close()
+    cp_ = r.observations["correlation_plan"]
+    assert cp_["tau_int_samples"] > 10 and cp_["spacing_samples"] >= 2 * 10
+    assert r.outcome != Outcome.DIVERGENT
+    with mock_node("reference", {"noise_m": 2e-5, "seed": 8}):
+        a = adapter()
+        r = FrameSemanticsProbe(a, TOL, trials=10, samples_per_trial=5, expectations=E_ID).run()
+        a.close()
+    assert r.observations["correlation_plan"]["spacing_samples"] <= 6 and r.observations["correlation_plan"]["ok"]
+    assert r.outcome == Outcome.CONFORMANT
+
+
 # ------------------------------------------------------------------ dimensional
 def test_scale_probe_internal_ratio_is_one_but_anchor_recovers_scale(master):
     e = Expectations.from_dict({"dimensional": {"mode": "si"}})

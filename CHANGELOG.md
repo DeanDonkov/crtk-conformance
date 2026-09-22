@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.8 — 2026-09-22
+
+Two probe changes in response to an external review of the RC13 manuscript (points 1 and 3).  Both change how evidence
+is collected, not how an interval is decided.
+
+### Changed
+- **Frame probe: correlation guard** (`spatial.correlation_plan`, `spatial.correlation_guard`; `--no-correlation-guard`
+  restores 0.1.7).  Before the trials the probe records a resting window of paired residuals (at least 3 s, extended up
+  to 30 s until it spans 20 integrated autocorrelation times), spaces the ten trials by max(5, ceil(2 tau_int)) samples,
+  and withholds the verdict when the correlation time is not resolved, when the spaced trials would exceed 60 s, or when
+  fewer than four effectively independent trials remain.  A residual without noise (the dVRK computes one channel from
+  the other) keeps back-to-back trials.  The report adds `observations.correlation_plan` and
+  `estimates.outcome_without_correlation_guard`.
+- **Geometry anchor: joint-space method** (`dimensional.poe_fit_trial`, `dimensional.geometry_anchor_poe_decision`;
+  `dimensional.anchor_method: poe`, the new default; `single_joint` and `--anchor-method single_joint` restore 0.1.7).
+  Each trial steps every joint of the declared chain (`joint_types`, default `RRPRRR`) by +- a small step and fits the
+  spatial twists of all joints to the measured joint changes and poses (product of exponentials at the measured
+  reference configuration).  Coupled or incomplete joint motion is then part of the data.  Gates: largest fit residual
+  <= 0.02 rad and <= 2 % of d_int, each wrist joint moved >= 0.05 rad, axes at the model angle +- 2 deg.
+- `dimensional.se3_exp` (closed form).  crtk-mock: `noise_model: ar1` with `ar_phi` (AR(1) position noise per publish
+  step on measured_cp and local/measured_cp).
+- The campaign scripts of v0.1.3, v0.1.6 and v0.1.7 pin the 0.1.7 frame procedure (and, for v0.1.6, the single-joint
+  anchor), so they reproduce their archives.
+
+### Tests
+- `tests/test_v018.py` (6, ROS-free) and one integration test of the guard under AR(1) noise.
+
+
 ## Validation additions after 0.1.7 (RC13) — 2026-09-22
 
 No change to `src/` or `tests/` (identical to the 0.1.7 release commit `2fac51b`).

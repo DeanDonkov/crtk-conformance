@@ -69,7 +69,7 @@ def exp_K(out):
     for name, preset, over, e, what in cases:
         if RERUN and name not in RERUN:
             continue
-        rf = run_probe(lambda a, e=e: FrameSemanticsProbe(a, TOL, trials=10, samples_per_trial=5, expectations=e), preset, over, expectation=e)
+        rf = run_probe(lambda a, e=e: FrameSemanticsProbe(a, TOL, correlation_guard=False, trials=10, samples_per_trial=5, expectations=e), preset, over, expectation=e)
         rs = run_probe(lambda a, e=e: ScalingUnitsProbe(a, TOL, trials=9, step_if=0.005, settle_s=0.6, expectations=e, consistency_gate=True), preset, over, expectation=e)
         rep = build_report(NS, TOL, rf.get("discovery") or {"topics": {}}, [as_result(rf["result"]), as_result(rs["result"])], expectations=e)
         cc = rs["result"]["estimates"].get("command_feedback_consistency", {})

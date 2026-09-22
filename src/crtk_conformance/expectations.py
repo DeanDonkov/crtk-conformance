@@ -104,6 +104,12 @@ class DimensionalExpectation:
     delta_q_rad: float = 0.5
     axes_angle_deg: Optional[float] = 90.0  # angle between the two wrist axes in the instrument model (gate)
     reference_joints: Optional[List[float]] = None  # joint configuration the steps start from (default: the current one)
+    # 0.1.8: the joint-space (product-of-exponentials) anchor, the default.  'single_joint' is the 0.1.6/0.1.7 procedure.
+    anchor_method: str = "poe"
+    joint_types: str = "RRPRRR"  # one letter per joint of measured_js in chain order (base to tip): R revolute, P prismatic
+    step_rad: float = 0.25  # +- step of each wrist and roll joint (poe)
+    outer_step_rad: float = 0.1  # +- step of the revolute joints before the prismatic joint (poe)
+    prismatic_step_rel: float = 0.05  # +- step of a prismatic joint, relative to its reference value (poe)
 
     @property
     def declared(self) -> bool:
@@ -184,6 +190,16 @@ class Expectations:
                 e.dimensional.yaw_joint = str(di.get("yaw_joint", "wrist_yaw"))
                 e.dimensional.axes_angle_deg = (float(aa) if aa is not None else None)
                 e.dimensional.reference_joints = ([float(v) for v in ref] if ref is not None else None)
+                am = str(di.get("anchor_method", "poe"))
+                if am not in ("poe", "single_joint"):
+                    raise ExpectationError("dimensional.anchor_method must be 'poe' or 'single_joint'")
+                jt = str(di.get("joint_types", "RRPRRR")).upper()
+                if not jt or any(c not in "RP" for c in jt):
+                    raise ExpectationError("dimensional.joint_types must be a string of R and P, one per joint in chain order")
+                e.dimensional.anchor_method, e.dimensional.joint_types = am, jt
+                e.dimensional.step_rad = float(di.get("step_rad", 0.25))
+                e.dimensional.outer_step_rad = float(di.get("outer_step_rad", 0.1))
+                e.dimensional.prismatic_step_rel = float(di.get("prismatic_step_rel", 0.05))
         if te:
             sm = te.get("state_machine", "any")
             sb = te.get("stop_behaviour", "any")

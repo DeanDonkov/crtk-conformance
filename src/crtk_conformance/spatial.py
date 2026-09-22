@@ -188,3 +188,123 @@ def rotation_angle_interval(residuals: Sequence[np.ndarray], alpha: float = 0.05
     d_rho = hotelling_radius(rhos, alpha)
     th = G.rotation_angle(R_bar)
     return th, max(0.0, th - d_rho), th + d_rho
+
+
+# ------------------------------------------------------------------ 0.1.8: the frame probe's correlation guard
+# RC13 external review, point 1: the Hotelling region assumes independent trials, and the probe took its ten trials back
+# to back (about 0.5 s at 100 Hz).  Strongly correlated trial errors (AR(1), rho = 0.9 between trials) gave 11 % false
+# divergence at the boundary offline.  0.1.8 therefore (1) measures the pose-error correlation of the paired residual on
+# a resting window before the trials, (2) spaces the trials so that their means are nearly independent, and (3)
+# withholds the verdict when the correlation time is not resolved by the window, when the required spacing exceeds the
+# sampling budget, or when the implied effective number of independent trials is below the minimum.
+
+DETERMINISTIC_FLOOR = 1e-12  # a residual component with a smaller standard deviation carries no noise (metres or rad)
+
+
+def integrated_autocorr_time(x: Sequence[float], c: float = 5.0):
+    """Sokal's automatic-window estimate of the integrated autocorrelation time tau_int = 1 + 2 sum_{k>=1} rho(k), in
+    samples, with the window M the smallest lag with M >= c tau_int(M).  Returns (tau_int, acf[0..M]).  A series without
+    variance returns (1.0, [1.0])."""
+    x = np.asarray(x, dtype=float)
+    n = len(x)
+    if n < 4:
+        return 1.0, np.array([1.0])
+    x = x - x.mean()
+    v = float(x @ x) / n
+    if not (v > 0 and math.isfinite(v)):
+        return 1.0, np.array([1.0])
+    f = np.fft.rfft(x, 2 * n)
+    acf = np.fft.irfft(f * np.conj(f))[:n] / (v * n)
+    tau = 1.0
+    M = n - 1
+    for m in range(1, n):
+        tau = 1.0 + 2.0 * float(np.sum(acf[1:m + 1]))
+        if m >= c * tau:
+            M = m
+            break
+    return max(tau, 1.0), acf[:M + 1]
+
+
+def block_mean_correlation(acf: Sequence[float], m: int, spacing: int) -> float:
+    """Correlation between the means of two blocks of m consecutive samples whose starts are `spacing` samples apart,
+    from an autocorrelation function (taken as zero beyond its window)."""
+    acf = np.asarray(acf, dtype=float)
+
+    def rho(k):
+        k = abs(int(k))
+        return float(acf[k]) if k < len(acf) else 0.0
+    num = sum(rho(spacing + j - i) for i in range(m) for j in range(m))
+    den = sum(rho(j - i) for i in range(m) for j in range(m))
+    return num / den if den > 0 else 0.0
+
+
+def effective_trials(n: int, r: float) -> float:
+    """Effective number of independent trials for a mean of n equally correlated neighbours with lag-1 correlation r
+    (AR(1)-like decay); r <= 0 gives n."""
+    if not math.isfinite(r) or r <= 0:
+        return float(n)
+    r = min(r, 0.999999)
+    return float(n) * (1.0 - r) / (1.0 + r)
+
+
+@dataclass
+class CorrelationPlan:
+    samples: int
+    tau_int_samples: float
+    component_tau: List[float]
+    deterministic: bool
+    resolved: bool  # samples >= window_factor x tau_int
+    spacing_samples: int
+    between_trial_correlation: float
+    effective_trials: float
+    reason: str = ""
+
+    def to_dict(self):
+        return asdict(self)
+
+
+def residual_series(Ts: Sequence[np.ndarray]) -> np.ndarray:
+    """(n, 6) series of a paired-residual stream: translation (3) and the rotation vector of R_t R_bar^T (3)."""
+    from . import geometry as G
+    Rbar = G.average_pose([np.asarray(T, dtype=float) for T in Ts])[:3, :3]
+    out = []
+    for T in Ts:
+        T = np.asarray(T, dtype=float)
+        out.append(np.concatenate([T[:3, 3], _Rot.from_matrix(T[:3, :3] @ Rbar.T).as_rotvec()]))
+    return np.array(out)
+
+
+def correlation_plan(series: np.ndarray, m: int, n_trials: int, window_factor: float = 20.0, spacing_factor: float = 2.0) -> CorrelationPlan:
+    """Plan the trial spacing from a resting residual series (n, k): tau_int is the largest over the components with
+    variance; the spacing between trial starts is max(m, ceil(spacing_factor x tau_int)) samples."""
+    series = np.asarray(series, dtype=float)
+    n = len(series)
+    taus, acfs = [], []
+    for j in range(series.shape[1]):
+        if float(np.std(series[:, j])) <= DETERMINISTIC_FLOOR:
+            continue
+        t, a = integrated_autocorr_time(series[:, j])
+        taus.append(t); acfs.append(a)
+    if not taus:
+        return CorrelationPlan(n, 1.0, [], True, True, int(m), 0.0, float(n_trials), "the paired residual carries no noise (deterministic relation)")
+    k = int(np.argmax(taus))
+    tau = float(taus[k])
+    spacing = max(int(m), int(math.ceil(spacing_factor * tau)))
+    r = block_mean_correlation(acfs[k], int(m), spacing)
+    ne = effective_trials(n_trials, r)
+    resolved = n >= window_factor * tau
+    return CorrelationPlan(n, tau, [float(t) for t in taus], False, bool(resolved), spacing, float(r), float(ne),
+                           "" if resolved else f"the resting window ({n} samples) is shorter than {window_factor:g} x tau_int ({tau:.1f} samples)")
+
+
+def correlation_guard(plan: CorrelationPlan, n_trials: int, rate_hz: float, max_sampling_s: float = 60.0, neff_min: float = 4.0):
+    """(ok, reason): the verdict is withheld when the correlation time is unresolved, when the spaced trials would exceed
+    the sampling budget, or when the effective number of independent trials is below neff_min."""
+    if not plan.resolved:
+        return False, plan.reason
+    need_s = n_trials * plan.spacing_samples / max(rate_hz, 1e-9)
+    if need_s > max_sampling_s:
+        return False, f"trials spaced by {plan.spacing_samples} samples need {need_s:.1f} s (> {max_sampling_s:g} s budget)"
+    if plan.effective_trials < neff_min:
+        return False, f"effective number of independent trials {plan.effective_trials:.2f} < {neff_min:g}"
+    return True, ""

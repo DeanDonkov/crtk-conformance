@@ -180,3 +180,219 @@ def consistency_gate(outcome: Outcome, flagged: bool) -> Tuple[Outcome, bool]:
     if flagged and outcome in (Outcome.CONFORMANT, Outcome.DIVERGENT):
         return Outcome.UNDETERMINED, True
     return outcome, False
+
+
+# ------------------------------------------------------------------ joint-space (product-of-exponentials) anchor, 0.1.8
+# RC13 external review, point 3: on SRC v1.0.0 a commanded wrist step also moved other joints and the yaw step fell short,
+# so the pose change of a step was not a rotation about one fixed axis and the single-joint anchor abstained.  The
+# joint-space anchor uses the MEASURED joint changes of every joint instead: for a serial chain, with the measured
+# reference configuration q_ref as the home configuration, T(q) = exp([xi_1](q_1 - q_ref,1)) ... exp([xi_n](q_n - q_ref,n))
+# T(q_ref) exactly (product of exponentials), where xi_j are the spatial twists of the joints at q_ref.  Each trial steps
+# every joint by +-delta_j from q_ref, fits all twists by least squares to the measured (q, T) pairs, and takes the common
+# normal of the two wrist axes, a link parameter that does not depend on the configuration.  Coupled or incomplete joint
+# motion is then part of the data, not a violation of the model; the model's fit residual is gated instead.
+
+def _hat(w) -> np.ndarray:
+    return np.array([[0.0, -w[2], w[1]], [w[2], 0.0, -w[0]], [-w[1], w[0], 0.0]])
+
+
+def se3_exp(w, v, theta: float) -> np.ndarray:
+    """exp of the twist (w, v) scaled by theta; w a unit vector (revolute) or zero (prismatic).  Closed form (Murray, Li
+    and Sastry 1994, prop. 2.9): R = I + sin(theta) W + (1 - cos(theta)) W^2, p = (I - R)(w x v) + w w^T v theta."""
+    wx, wy, wz = float(w[0]), float(w[1]), float(w[2])
+    vx, vy, vz = float(v[0]), float(v[1]), float(v[2])
+    T = np.eye(4)
+    if wx * wx + wy * wy + wz * wz < 1e-24:
+        T[0, 3], T[1, 3], T[2, 3] = vx * theta, vy * theta, vz * theta
+        return T
+    s, c1 = math.sin(theta), 1.0 - math.cos(theta)
+    R = [[1.0 - c1 * (wy * wy + wz * wz), -s * wz + c1 * wx * wy, s * wy + c1 * wx * wz],
+         [s * wz + c1 * wx * wy, 1.0 - c1 * (wx * wx + wz * wz), -s * wx + c1 * wy * wz],
+         [-s * wy + c1 * wx * wz, s * wx + c1 * wy * wz, 1.0 - c1 * (wx * wx + wy * wy)]]
+    cx, cy, cz = wy * vz - wz * vy, wz * vx - wx * vz, wx * vy - wy * vx  # w x v
+    wv = (wx * vx + wy * vy + wz * vz) * theta
+    for r in range(3):
+        T[r, 0], T[r, 1], T[r, 2] = R[r]
+    T[0, 3] = cx - (R[0][0] * cx + R[0][1] * cy + R[0][2] * cz) + wx * wv
+    T[1, 3] = cy - (R[1][0] * cx + R[1][1] * cy + R[1][2] * cz) + wy * wv
+    T[2, 3] = cz - (R[2][0] * cx + R[2][1] * cy + R[2][2] * cz) + wz * wv
+    return T
+
+
+def _rotvec(R: np.ndarray) -> np.ndarray:
+    Rn = _orthonormalise(R)
+    ang = rotation_vector_angle(Rn)
+    w = np.array([Rn[2, 1] - Rn[1, 2], Rn[0, 2] - Rn[2, 0], Rn[1, 0] - Rn[0, 1]])
+    nw = float(np.linalg.norm(w))
+    if nw < 1e-15:
+        return np.zeros(3)
+    return w / nw * ang
+
+
+@dataclass
+class PoeTrialFit:
+    ok: bool
+    d_int_if: float = float("nan")  # common-normal distance of the two wrist axes, interface units
+    axes_angle_deg: float = float("nan")
+    rms_rot_rad: float = float("nan")  # fit residuals over all steps
+    rms_trans_rel: float = float("nan")  # translation residual / d_int
+    max_rot_rad: float = float("nan")
+    max_trans_rel: float = float("nan")
+    wrist_excitation_rad: List[float] = field(default_factory=list)  # smallest realized |dq| of each wrist joint in its own steps
+    n_steps: int = 0
+    reason: str = ""
+    twists: List[List[float]] = field(default_factory=list)
+
+    def to_dict(self):
+        return asdict(self)
+
+
+def poe_fit_trial(joint_types: str, q_ref: Sequence[float], T_ref: np.ndarray, qs: Sequence[Sequence[float]], Ts: Sequence[np.ndarray],
+                  pitch_index: int, yaw_index: int) -> PoeTrialFit:
+    """Fit the spatial twists of every joint at the measured reference configuration q_ref to the measured (q, T) steps,
+    and return the common normal of the two wrist axes.  joint_types: one letter per joint in chain order, 'R' or 'P'.
+    The initial guess of joint j is the screw of the step with the largest |dq_j| (dimensional.screw_axis)."""
+    from scipy.optimize import least_squares
+    n = len(joint_types)
+    q_ref = np.asarray(q_ref, dtype=float)
+    dQ = [np.asarray(q, dtype=float) - q_ref for q in qs]
+    Tr = np.asarray(T_ref, dtype=float)
+    if len(dQ) < 2 * n:
+        return PoeTrialFit(False, n_steps=len(dQ), reason=f"{len(dQ)} steps for {n} joints; at least {2 * n} are needed")
+    # initial guess and a length scale for the translation residuals
+    x0 = []
+    for j, jt in enumerate(joint_types):
+        k = int(np.argmax([abs(d[j]) for d in dQ]))
+        dj = dQ[k][j]
+        if abs(dj) < 1e-9:
+            return PoeTrialFit(False, n_steps=len(dQ), reason=f"joint {j} did not move in any step")
+        if jt == "R":
+            try:
+                ax = screw_axis(Tr, Ts[k])
+                w0 = np.asarray(ax.direction) * (1.0 if dj > 0 else -1.0)
+                p0 = np.asarray(ax.point)
+            except ValueError:
+                w0, p0 = np.array([0.0, 0.0, 1.0]), Tr[:3, 3].copy()
+            x0.extend(list(w0) + list(p0))
+        else:
+            t = (np.asarray(Ts[k])[:3, 3] - Tr[:3, 3]) / dj
+            nt = float(np.linalg.norm(t))
+            x0.extend(list(t / nt if nt > 0 else np.array([0.0, 0.0, 1.0])))
+    x0 = np.array(x0, dtype=float)
+
+    def unpack(x):
+        tw, i = [], 0
+        for jt in joint_types:
+            if jt == "R":
+                u, p = x[i:i + 3], x[i + 3:i + 6]
+                w = u / max(np.linalg.norm(u), 1e-12)
+                tw.append((w, -np.cross(w, p), p))
+                i += 6
+            else:
+                u = x[i:i + 3]
+                tw.append((np.zeros(3), u / max(np.linalg.norm(u), 1e-12), None))
+                i += 3
+        return tw
+
+    # length scale: the initial wrist common normal, else the size of the translations
+    try:
+        tw0 = unpack(x0)
+        c0 = np.cross(tw0[pitch_index][0], tw0[yaw_index][0])
+        sc = abs(float((tw0[yaw_index][2] - tw0[pitch_index][2]) @ (c0 / np.linalg.norm(c0))))
+    except Exception:
+        sc = 0.0
+    if not (sc > 0 and math.isfinite(sc)):
+        sc = max(1e-9, float(np.median([np.linalg.norm(np.asarray(T)[:3, 3] - Tr[:3, 3]) for T in Ts])))
+
+    def predict(tw, d):
+        T = np.eye(4)
+        for (w, v, _), th in zip(tw, d):
+            T = T @ se3_exp(w, v, th)
+        return T @ Tr
+
+    Tms = [np.asarray(T, dtype=float) for T in Ts]
+
+    def resid(x):
+        tw = unpack(x)
+        r = []
+        for d, Tm in zip(dQ, Tms):
+            Tp = predict(tw, d)
+            E = Tm[:3, :3] @ Tp[:3, :3].T  # small residual rotation: its skew part (sin of the angle along the axis)
+            r.extend([0.5 * (E[2, 1] - E[1, 2]), 0.5 * (E[0, 2] - E[2, 0]), 0.5 * (E[1, 0] - E[0, 1])])
+            r.extend(list((Tm[:3, 3] - Tp[:3, 3]) / sc))
+        i = 0
+        for jt in joint_types:  # gauges (consistent with the data): unit direction vectors; the point of a revolute axis closest to the origin
+            if jt == "R":
+                u, p = x[i:i + 3], x[i + 3:i + 6]
+                r.append(np.linalg.norm(u) - 1.0)
+                r.append(float(p @ (u / max(np.linalg.norm(u), 1e-12))) / sc)
+                i += 6
+            else:
+                r.append(np.linalg.norm(x[i:i + 3]) - 1.0)
+                i += 3
+        return np.array(r)
+
+    sol = least_squares(resid, x0, method="lm", xtol=1e-10, ftol=1e-10, gtol=1e-10, max_nfev=200)
+    tw = unpack(sol.x)
+    rot, tra = [], []
+    for d, Tm in zip(dQ, Ts):
+        Tp = predict(tw, d)
+        rot.append(float(np.linalg.norm(_rotvec(np.asarray(Tm)[:3, :3] @ Tp[:3, :3].T))))
+        tra.append(float(np.linalg.norm(np.asarray(Tm)[:3, 3] - Tp[:3, 3])))
+    wp, wy = tw[pitch_index][0], tw[yaw_index][0]
+    cn = np.cross(wp, wy)
+    s = float(np.linalg.norm(cn))
+    if s < 1e-6:
+        return PoeTrialFit(False, n_steps=len(dQ), reason="the fitted wrist axes are (nearly) parallel")
+    d_int = abs(float((tw[yaw_index][2] - tw[pitch_index][2]) @ (cn / s)))
+    exc = []
+    for idx in (pitch_index, yaw_index):
+        own = [abs(d[idx]) for d in dQ if int(np.argmax(np.abs(d))) == idx]
+        exc.append(float(min(own)) if own else 0.0)
+    return PoeTrialFit(True, d_int_if=d_int, axes_angle_deg=math.degrees(math.asin(min(1.0, s))), rms_rot_rad=float(np.sqrt(np.mean(np.square(rot)))),
+                       rms_trans_rel=float(np.sqrt(np.mean(np.square(tra)))) / d_int if d_int > 0 else float("inf"),
+                       max_rot_rad=float(max(rot)), max_trans_rel=float(max(tra)) / d_int if d_int > 0 else float("inf"),
+                       wrist_excitation_rad=exc, n_steps=len(dQ), twists=[list(w) + list(v) for w, v, _ in tw])
+
+
+def geometry_anchor_poe_decision(fits: Sequence[PoeTrialFit], L_phys_m: float, u_rel: float, expected_unit_m: Optional[float], tol,
+                                 rot_tol_rad: float = 0.02, trans_tol_rel: float = 0.02, min_excitation_rad: float = 0.05,
+                                 axes_angle_deg: Optional[float] = 90.0, axes_angle_tol_deg: float = 2.0, alpha: float = 0.05) -> GeometryAnchorDecision:
+    """Per-trial PoE fits -> lambda_hat interval -> eq. (6) decision, with the interval widened by u_rel as in
+    geometry_anchor_decision.  Gates (any failure -> undetermined, reported): the fit explains every step (largest rotation
+    residual <= rot_tol_rad, largest translation residual <= trans_tol_rel x d_int); each wrist joint moved by at least
+    min_excitation_rad in its own steps; the fitted wrist axes meet at the model's angle within axes_angle_tol_deg."""
+    fails: List[str] = []
+    ds = []
+    for i, f in enumerate(fits):
+        if not f.ok:
+            fails.append(f"trial {i}: {f.reason}")
+            continue
+        if f.max_rot_rad > rot_tol_rad:
+            fails.append(f"trial {i}: the joint-space model leaves a rotation residual of {f.max_rot_rad:.4f} rad (> {rot_tol_rad:g})")
+        if f.max_trans_rel > trans_tol_rel:
+            fails.append(f"trial {i}: the joint-space model leaves a translation residual of {f.max_trans_rel:.4f} x d_int (> {trans_tol_rel:g})")
+        if f.wrist_excitation_rad and min(f.wrist_excitation_rad) < min_excitation_rad:
+            fails.append(f"trial {i}: a wrist joint moved only {min(f.wrist_excitation_rad):.4f} rad in its own steps (< {min_excitation_rad:g})")
+        if axes_angle_deg is not None and abs(f.axes_angle_deg - axes_angle_deg) > axes_angle_tol_deg:
+            fails.append(f"trial {i}: fitted wrist axes at {f.axes_angle_deg:.2f} deg, model {axes_angle_deg} deg")
+        ds.append(f.d_int_if)
+    dmean = float(np.mean(ds)) if ds else float("nan")
+    lam = [L_phys_m / d for d in ds if d > 0]
+    e = estimate(lam, alpha)
+    lo_w, hi_w = e.ci_low * (1.0 - u_rel), e.ci_high * (1.0 + u_rel)
+    assumptions = ["the published pose is rigidly attached to the distal link; the declared joint chain (order and joint types) is the implementation's serial chain",
+                   "measured_js reports the joint values that produced measured_cp (the product-of-exponentials model is fitted to measured, not commanded, joint changes)",
+                   f"the implementation's wrist geometry equals the instrument's: pitch-to-yaw length L = {L_phys_m*1e3:.2f} mm +- {u_rel*100:.2f} % (declared)",
+                   "angles are unit-free; lambda_hat = L / d_int is the physical length of one interface unit",
+                   f"per-trial estimates are iid with a Student-t interval of the mean (alpha = {alpha})"]
+    if e.n < 3:
+        fails.append(f"only {e.n} trial(s) produced a fit; at least 3 are needed")
+    gates = not fails and e.n >= 3
+    if expected_unit_m is None or not gates:
+        return GeometryAnchorDecision(e.n, dmean, e.mean, [e.ci_low, e.ci_high], [lo_w, hi_w], u_rel, L_phys_m, expected_unit_m if expected_unit_m else float("nan"),
+                                      float("nan"), [float("nan"), float("nan")], Outcome.UNDETERMINED.value, gates, fails, assumptions)
+    widened = Estimate(e.n, e.mean, e.std, lo_w, hi_w, alpha)
+    outcome, e_pred = scale_decision(widened, expected_unit_m, tol)
+    return GeometryAnchorDecision(e.n, dmean, e.mean, [e.ci_low, e.ci_high], [lo_w, hi_w], u_rel, L_phys_m, float(expected_unit_m),
+                                  e_pred.mean, [e_pred.ci_low, e_pred.ci_high], outcome.value, gates, fails, assumptions)

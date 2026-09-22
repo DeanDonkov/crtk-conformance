@@ -85,7 +85,7 @@ def exp_K(out):
     for name, preset, over, e, what in cases:
         if RERUN and name not in RERUN:
             continue
-        rf = run_probe(lambda a, e=e: FrameSemanticsProbe(a, TOL, trials=10, samples_per_trial=5, expectations=e), preset, over, expectation=e)
+        rf = run_probe(lambda a, e=e: FrameSemanticsProbe(a, TOL, correlation_guard=False, trials=10, samples_per_trial=5, expectations=e), preset, over, expectation=e)
         rs = run_probe(lambda a, e=e: ScalingUnitsProbe(a, TOL, trials=9, step_if=0.005, settle_s=0.6, expectations=e, consistency_gate=False), preset, over, expectation=e)
         cc = rs["result"]["estimates"].get("command_feedback_consistency", {})
         rec = {"case": name, "what": what, "preset": preset, "overrides": over, "frame": rf, "scale": rs,
@@ -111,7 +111,7 @@ def exp_B(out, n_rep):
                 k += 1
                 if RERUN and name not in RERUN:
                     continue
-                rec = run_probe(lambda a: FrameSemanticsProbe(a, TOL, trials=10, samples_per_trial=5, expectations=E_ID), "reference", over, expectation=E_ID)
+                rec = run_probe(lambda a: FrameSemanticsProbe(a, TOL, correlation_guard=False, trials=10, samples_per_trial=5, expectations=E_ID), "reference", over, expectation=E_ID)
                 rec["truth"] = {"ratio": rs, "E_true_m": t, "truth_conformant": ratio <= 1, "noise_model": model, "noise_m": noise}
                 save(out, name, rec)
                 sd = rec["result"]["estimates"].get("spatial_decision", {})

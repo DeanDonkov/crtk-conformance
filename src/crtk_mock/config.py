@@ -63,6 +63,9 @@ class MockConfig:
     mix_b_m: float = 380e-6
     mix_hold_s: float = 0.2
     mix_on_anchor: bool = False  # apply the mixture to the out-of-band anchor instead of measured_cp (scale-probe study)
+    # 0.1.8: 'ar1' = the position noise of measured_cp and of local/measured_cp each follows an AR(1) process per publish
+    # step, e_k = ar_phi e_{k-1} + sqrt(1 - ar_phi^2) N(0, noise_m^2), so its marginal standard deviation is noise_m
+    ar_phi: float = 0.0
     # 0.1.6: command-loss model.  'iid' (default) = drop_prob per servo_cp, as before.  'gilbert_elliott' = two-state
     # burst loss: good -> bad with p_gb and bad -> good with p_bg per received command; loss probability loss_good / loss_bad
     drop_model: str = "iid"

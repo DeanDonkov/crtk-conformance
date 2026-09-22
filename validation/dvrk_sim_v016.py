@@ -272,7 +272,7 @@ def run_cli(name: str, outdir: str, probes: str, expectations: str, extra=None, 
     task[1] = str(tol_mm)
     cmd = [sys.executable, "-m", "crtk_conformance.cli", "run", "--namespace", NS, *task, "--probes", probes,
            "--enable-timeout-s", "15", "--out", os.path.join(outdir, f"{name}.json"), "--quiet",
-           "--liveness-rule", "0.1.6", "--no-consistency-gate"]  # 0.1.7: pin the rules of the archived v0.1.6 campaign
+           "--liveness-rule", "0.1.6", "--no-consistency-gate", "--no-correlation-guard", "--anchor-method", "single_joint"]  # 0.1.7/0.1.8: pin the rules of the archived v0.1.6 campaign
     if expectations:
         cmd += ["--expectations", expectations]
     cmd += list(extra or [])

@@ -54,6 +54,9 @@ class MockCRTKNode:
         self.mix_next = 0.0
         self.rng = random.Random(cfg.seed)
         self.nrng = np.random.default_rng(cfg.seed)
+        # 0.1.8: AR(1) position-noise states of measured_cp and local/measured_cp (noise_model 'ar1')
+        self.ar_m = self.nrng.normal(0.0, cfg.noise_m, 3) if cfg.noise_m > 0 else np.zeros(3)
+        self.ar_l = self.nrng.normal(0.0, cfg.noise_m, 3) if cfg.noise_m > 0 else np.zeros(3)
         self.lock = threading.Lock()
         # ground-truth tool pose in the arm-base frame, SI
         self.pose = G.make_pose(None, cfg.home_pose_m)
@@ -247,7 +250,12 @@ class MockCRTKNode:
             # unqualified topic: bound frame, interface units, noise
             T_if = self.T_bind @ pose
             if self.cfg.noise_m > 0:
-                T_if[:3, 3] += self.nrng.normal(0.0, self.cfg.noise_m, 3)
+                if self.cfg.noise_model == "ar1":
+                    phi = self.cfg.ar_phi
+                    self.ar_m = phi * self.ar_m + math.sqrt(max(0.0, 1.0 - phi * phi)) * self.nrng.normal(0.0, self.cfg.noise_m, 3)
+                    T_if[:3, 3] += self.ar_m
+                else:
+                    T_if[:3, 3] += self.nrng.normal(0.0, self.cfg.noise_m, 3)
             if self.cfg.noise_model == "mixture":
                 tnow = time.monotonic()
                 if tnow >= self.mix_next:
@@ -273,7 +281,12 @@ class MockCRTKNode:
             if self.pub_local is not None:
                 T_loc = pose.copy()
                 if self.cfg.noise_m > 0:
-                    T_loc[:3, 3] += self.nrng.normal(0.0, self.cfg.noise_m, 3)
+                    if self.cfg.noise_model == "ar1":
+                        phi = self.cfg.ar_phi
+                        self.ar_l = phi * self.ar_l + math.sqrt(max(0.0, 1.0 - phi * phi)) * self.nrng.normal(0.0, self.cfg.noise_m, 3)
+                        T_loc[:3, 3] += self.ar_l
+                    else:
+                        T_loc[:3, 3] += self.nrng.normal(0.0, self.cfg.noise_m, 3)
                 if self.cfg.orientation_noise_deg > 0:
                     T_loc[:3, :3] = self._rot_noise() @ T_loc[:3, :3]
                 T_loc[:3, 3] /= self.cfg.unit_m

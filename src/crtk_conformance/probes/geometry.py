@@ -28,7 +28,7 @@ from sensor_msgs.msg import JointState
 
 from .. import geometry as G
 from ..adapter import PlatformAdapter, pose_msg_to_matrix
-from ..dimensional import geometry_anchor_decision, screw_axis
+from ..dimensional import geometry_anchor_decision, geometry_anchor_poe_decision, poe_fit_trial, screw_axis
 from ..expectations import Expectations
 from ..thresholds import Tolerance
 from .base import Outcome, ProbeResult
@@ -52,7 +52,10 @@ class GeometryAnchorProbe:
     name = "GeometryAnchorProbe"
 
     def __init__(self, adapter: PlatformAdapter, tol: Tolerance, trials: int = 5, settle_s: float = 1.0, window_s: float = 0.3,
-                 expectations: Optional[Expectations] = None):
+                 expectations: Optional[Expectations] = None, method: Optional[str] = None):
+        """method: 'poe' (0.1.8 default: joint-space fit of every joint's twist to the measured joint changes) or
+        'single_joint' (0.1.6/0.1.7: the screw of each wrist step); None = the declaration's dimensional.anchor_method."""
+        self.method = method
         self.a = adapter
         self.tol = tol
         self.trials = trials
@@ -70,6 +73,66 @@ class GeometryAnchorProbe:
                 time.sleep(max(0.0, t_end - time.monotonic()))
                 return
             time.sleep(period)
+
+    def _settled_pose_and_joints(self, buf, buf_js, names, q):
+        """Stream q for settle_s + window_s; return (average measured_cp pose, average measured joints) over the last window_s."""
+        self._stream_jp(names, q, self.settle)
+        t0 = time.monotonic()
+        self._stream_jp(names, q, self.window)
+        samples = buf.since(t0)
+        js = [np.array(m.position[:len(names)], dtype=float) for _, m in buf_js.since(t0) if len(m.position) >= len(names)]
+        if not samples or not js:
+            return None, None
+        return G.average_pose([pose_msg_to_matrix(m) for _, m in samples]), np.mean(js, axis=0)
+
+    def _run_poe(self, res, buf, buf_js, names, q_ref, ip, iy, de):
+        jt = de.joint_types
+        if len(jt) != len(names):
+            res.decision_basis = f"joint_types declares {len(jt)} joints, measured_js has {len(names)}"
+            return None
+        first_p = jt.find("P")
+        deltas = []
+        for j, t in enumerate(jt):
+            if t == "P":
+                deltas.append(max(abs(q_ref[j]) * de.prismatic_step_rel, 1e-9))
+            elif j in (ip, iy) or (first_p >= 0 and j > first_p):
+                deltas.append(de.step_rad)
+            else:
+                deltas.append(de.outer_step_rad)
+        res.observations["poe_steps"] = {"joint_types": jt, "deltas": deltas}
+        fits, trials = [], []
+        for k in range(self.trials):
+            entry = {"trial": k}
+            T0, q0 = self._settled_pose_and_joints(buf, buf_js, names, q_ref)
+            qs, Ts, ok = [], [], T0 is not None
+            for j in range(len(jt)):
+                for sgn in (1.0, -1.0):
+                    if not ok:
+                        break
+                    qc = q_ref.copy(); qc[j] += sgn * deltas[j]
+                    T, qm = self._settled_pose_and_joints(buf, buf_js, names, qc)
+                    if T is None:
+                        ok = False
+                        break
+                    qs.append(qm.tolist()); Ts.append(T)
+            if not ok:
+                entry.update(ok=False, reason="no measured_cp or measured_js sample in a settle window")
+                trials.append(entry)
+                continue
+            try:
+                f = poe_fit_trial(jt, q0, T0, qs, Ts, ip, iy)
+            except Exception as e:  # a failed fit is reported, never raised
+                entry.update(ok=False, reason=f"fit failed: {e}")
+                trials.append(entry)
+                continue
+            fits.append(f)
+            entry.update(ok=f.ok, fit=f.to_dict(), q_ref_measured=q0.tolist(), q_steps_measured=qs,
+                         T_ref_measured=T0.tolist(), T_steps_measured=[T.tolist() for T in Ts])
+            trials.append(entry)
+        self._stream_jp(names, q_ref, self.settle)
+        res.observations["trials"] = trials
+        expected = de.expected_unit_m if de.declared else None
+        return geometry_anchor_poe_decision(fits, float(de.L_m), float(de.u_rel), expected, self.tol, axes_angle_deg=de.axes_angle_deg)
 
     def _settled_pose(self, buf, names, q) -> Optional[np.ndarray]:
         """Stream q for settle_s + window_s; return the average measured_cp pose over the last window_s."""
@@ -122,6 +185,14 @@ class GeometryAnchorProbe:
             res.duration_s = time.time() - t0
             return res
         res.observations["reference_joints"] = q_ref.tolist()
+        method = self.method or getattr(de, "anchor_method", "single_joint")
+        res.observations["anchor_method"] = method
+        if method == "poe":
+            dec = self._run_poe(res, buf, buf_js, names, q_ref, ip, iy, de)
+            if dec is None:
+                res.duration_s = time.time() - t0
+                return res
+            return self._finish(res, dec, de, t0, "joint-space product-of-exponentials fit")
         dq = float(de.delta_q_rad)
         pitch_axes, yaw_axes, trials = [], [], []
         for k in range(self.trials):
@@ -150,6 +221,9 @@ class GeometryAnchorProbe:
         expected = de.expected_unit_m if de.declared else None
         dec = geometry_anchor_decision(pitch_axes, yaw_axes, dq, float(de.L_m), float(de.u_rel), expected, self.tol,
                                        axes_angle_deg=de.axes_angle_deg)
+        return self._finish(res, dec, de, t0, "screws of single-joint steps")
+
+    def _finish(self, res, dec, de, t0, how):
         res.estimates["geometry_anchor"] = dec.to_dict()
         res.estimates["L_source"] = de.L_source
         res.observations["assumptions"] = dec.assumptions
@@ -162,7 +236,7 @@ class GeometryAnchorProbe:
             lo, hi = dec.lambda_ci_widened_m
             res.predicted_error_m = dec.predicted_error_m
             res.predicted_error_ci = dec.predicted_error_ci_m
-            res.decision_basis = (f"instrument-geometry anchor: common normal of the wrist axes d_int = {dec.d_int_mean_if:.6g} interface units, "
+            res.decision_basis = (f"instrument-geometry anchor ({how}): common normal of the wrist axes d_int = {dec.d_int_mean_if:.6g} interface units, "
                                   f"L = {dec.L_phys_m*1e3:.3f} mm -> lambda_hat = {dec.lambda_hat_m:.6g} m per unit "
                                   f"(95% {dec.lambda_ci_m[0]:.6g}..{dec.lambda_ci_m[1]:.6g}, widened by u_rel = {dec.u_rel:g} to {lo:.6g}..{hi:.6g}); "
                                   f"eq. (6) against the client's unit {dec.expected_unit_m}: |1-s| r_ws in {dec.predicted_error_ci_m[0]*1e3:.3f}..{dec.predicted_error_ci_m[1]*1e3:.3f} mm "

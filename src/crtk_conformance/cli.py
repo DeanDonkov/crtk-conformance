@@ -33,6 +33,8 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--calibration-commands", type=int, default=30, help="commands sent without a preceding silence to estimate baseline command loss (0.1.6; 0.1.5 used 12)")
     r.add_argument("--liveness-rule", choices=["0.1.7", "0.1.6", "0.1.5"], default="0.1.7", help="0.1.7: the 0.1.6 confirmation rule, and every faulted trial bounded by the time its FAULT was observed (sound under command loss); 0.1.6: a non-response counts as a stop policy only when confirmed at the same gap (see liveness.py); 0.1.5: the archived rule")
     r.add_argument("--no-consistency-gate", action="store_true", help="(0.1.6 behaviour) keep a unit verdict when the command/feedback consistency diagnostic is raised")
+    r.add_argument("--no-correlation-guard", action="store_true", help="(0.1.7 behaviour) frame probe: back-to-back trials, no resting window and no effective-sample-size guard")
+    r.add_argument("--anchor-method", choices=["poe", "single_joint"], default=None, help="geometry anchor: 'poe' (0.1.8 default: joint-space fit to the measured joint changes) or 'single_joint' (0.1.6/0.1.7); default: the declaration's dimensional.anchor_method")
     r.add_argument("--enable-timeout-s", type=float, default=3.0, help="how long ensure_enabled waits for ENABLED and homed after enable/home (0.1.6; implementation constant)")
     r.add_argument("--skip-rate-sweep", action="store_true", help="skip the effective-rate diagnostic sweep (campaign speed; the rate sub-verdict is undetermined in every case)")
     r.add_argument("--gap-max-s", type=float, default=2.0)
@@ -81,12 +83,14 @@ def run(args) -> int:
     results = []
     wanted = [s.strip() for s in args.probes.split(",") if s.strip()]
     if "frame" in wanted:
-        results.append(FrameSemanticsProbe(a, tol, trials=args.trials, expectations=exp, pairing_window_s=args.pairing_window_ms / 1000.0).run())
+        results.append(FrameSemanticsProbe(a, tol, trials=args.trials, expectations=exp, pairing_window_s=args.pairing_window_ms / 1000.0,
+                                           correlation_guard=not args.no_correlation_guard).run())
     if "scale" in wanted:
         results.append(ScalingUnitsProbe(a, tol, trials=args.trials, step_if=args.step_mm / 1000.0, settle_s=args.settle_s, expectations=exp,
                                          still_tol_m=args.still_tol_mm / 1000.0, consistency_gate=not args.no_consistency_gate).run())
     if "geometry" in wanted:
-        results.append(GeometryAnchorProbe(a, tol, trials=args.geometry_trials, settle_s=args.geometry_settle_s, expectations=exp).run())
+        results.append(GeometryAnchorProbe(a, tol, trials=args.geometry_trials, settle_s=args.geometry_settle_s, expectations=exp,
+                                           method=args.anchor_method).run())
     if "rate" in wanted:
         rates = tuple(float(x) for x in args.rates_hz.split(",") if x.strip())
         results.append(RateSensitivityProbe(a, tol, trials=args.temporal_trials, gap_max_s=args.gap_max_s, gap_min_s=args.gap_min_s,

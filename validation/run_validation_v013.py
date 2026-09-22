@@ -132,7 +132,7 @@ def exp_frame(out, quick):
             for ang in angles:
                 t = (direction * tn / 1000.0).tolist()
                 over = {"bind_translation_m": t, "bind_axis": axis, "bind_angle_deg": ang, "noise_m": noise / 1000.0, "seed": SEED0 + k}
-                rec = run_probe(lambda a: FrameSemanticsProbe(a, TOL, trials=trials, samples_per_trial=5, expectations=E_ID), "reference", over, expectation=E_ID)
+                rec = run_probe(lambda a: FrameSemanticsProbe(a, TOL, correlation_guard=False, trials=trials, samples_per_trial=5, expectations=E_ID), "reference", over, expectation=E_ID)
                 rec["truth"] = frame_truth(t, axis, ang, {"noise_m": noise / 1000.0})
                 save(out, f"F_id_{k:03d}", rec)
                 est = rec["result"]["estimates"]
@@ -170,7 +170,7 @@ def exp_frame(out, quick):
     cases.append(("F_oritol_violated", dict(JHU, bind_angle_deg=-153.0, noise_m=0.00002, seed=SEED0 + 631), e_jhu_ori, {"binding": "JHU rotated -153 deg", "orientation_tolerance_deg": 1.0, "residual_rotation_deg": 3.0,
                   "exact_max_error_m": exact_max_error(Rres, np.zeros(3), TOL.workspace_radius_m), "note": "positional effect of the 3 deg residual over r_ws: 2 sin(1.5 deg) x 0.1 m = 5.2 mm, so the positional verdict is divergent too"}))
     for name, over, exp, truth in cases:
-        rec = run_probe(lambda a, e=exp: FrameSemanticsProbe(a, TOL, trials=trials, samples_per_trial=5, expectations=e), "reference", over, expectation=exp)
+        rec = run_probe(lambda a, e=exp: FrameSemanticsProbe(a, TOL, correlation_guard=False, trials=trials, samples_per_trial=5, expectations=e), "reference", over, expectation=exp)
         rec["truth"] = truth
         save(out, name, rec)
         log(f"{name} -> {rec['result']['outcome']} | {rec['result']['decision_basis'][:110]}")
@@ -196,7 +196,7 @@ def exp_coverage(out, quick):
             a = PlatformAdapter(NS, anchor_topic=ANCHOR)
             disc = a.discover()
             for i in range(reps):
-                r = FrameSemanticsProbe(a, TOL, trials=trials, samples_per_trial=5, expectations=E_ID).run().to_dict()
+                r = FrameSemanticsProbe(a, TOL, correlation_guard=False, trials=trials, samples_per_trial=5, expectations=E_ID).run().to_dict()
                 sd = r["estimates"].get("spatial_decision") or {}
                 results.append({"replicate": i, "outcome": r["outcome"], "spatial_decision": sd, "predicted_abs_error_at_workspace_edge_m": r["estimates"].get("predicted_abs_error_at_workspace_edge_m"),
                                 "binding_translation_m": r["estimates"].get("binding_translation_m"), "binding_rotation_deg": r["estimates"].get("binding_rotation_deg")})
@@ -426,7 +426,7 @@ def exp_regression(out, quick):
         with mock_node("reference", over):
             a = PlatformAdapter(NS, anchor_topic=ANCHOR)
             disc = a.discover()
-            rs = [FrameSemanticsProbe(a, TOL, trials=5, expectations=e).run(), ScalingUnitsProbe(a, TOL, trials=6, settle_s=0.6, expectations=e).run(),
+            rs = [FrameSemanticsProbe(a, TOL, correlation_guard=False, trials=5, expectations=e).run(), ScalingUnitsProbe(a, TOL, trials=6, settle_s=0.6, expectations=e).run(),
                   RateSensitivityProbe(a, TOL, trials=2, gap_max_s=0.5, bisection_steps=3, rates_hz=(100, 500), expectations=e).run()]
             a.close()
         rec = {"case": name, "overrides": over, "expectation": e.to_dict(), "discovery": disc, "results": [r.to_dict() for r in rs], "event_log": name + ".events.jsonl"}
@@ -449,7 +449,7 @@ def exp_presets(out, quick):
             with mock_node(name, {"event_log_path": evlog(out, f"PRESET_{name}_{label}")}):
                 a = PlatformAdapter(NS, anchor_topic=ANCHOR)
                 disc = a.discover()
-                rs = [FrameSemanticsProbe(a, TOL, trials=5, expectations=e).run(), ScalingUnitsProbe(a, TOL, trials=6, settle_s=0.6, expectations=e).run(),
+                rs = [FrameSemanticsProbe(a, TOL, correlation_guard=False, trials=5, expectations=e).run(), ScalingUnitsProbe(a, TOL, trials=6, settle_s=0.6, expectations=e).run(),
                       RateSensitivityProbe(a, TOL, trials=2 if not quick else 1, gap_max_s=1.0, bisection_steps=4, rates_hz=(50, 100, 200, 500, 1000), expectations=e).run()]
                 rep = build_report(NS, TOL, disc, rs, os.environ.get("ROS_MASTER_URI", ""), expectations=e, parameters={"campaign": "v0.1.3 mock", "preset": name, "label": label, "event_log": f"PRESET_{name}_{label}.events.jsonl"})
                 a.close()
